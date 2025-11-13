@@ -6,6 +6,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import RoleSelector from '../components/auth/RoleSelector';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import LoadingModal from '../components/ui/LoadingModal';
 
 const schema = yup.object({
   userType: yup.string().required('Select user type'),
@@ -15,7 +16,7 @@ const schema = yup.object({
 });
 
 export default function Login() {
-  const { login } = useContext(AuthContext);
+  const { login, loading } = useContext(AuthContext);
   const navigate = useNavigate();
   const [userType, setUserType] = useState('Admin');
   const [role, setRole] = useState('');
@@ -25,21 +26,19 @@ export default function Login() {
     defaultValues: { userType: 'Admin', role: '' }
   });
 
-  useEffect(() => {
-    setValue('userType', userType);
-  }, [userType]);
-
-  useEffect(() => {
-    setValue('role', role);
-  }, [role, setValue]);
+  useEffect(() => { setValue('userType', userType); }, [userType, setValue]);
+  useEffect(() => { setValue('role', role); }, [role, setValue]);
 
   const onSubmit = async (data) => {
     const { username, password } = data;
+    // login() sets loading via AuthContext; we still use local feedback here
     const result = await login({ username, password });
     if (result.success) {
-      navigate('/dashboard');
+      // brief success modal handled by AuthContext/loading UI - navigate after small delay for UX
+      setTimeout(() => navigate('/dashboard'), 400);
     } else {
-      const msg = result.error?.detail || (result.error?.message) || 'Login failed';
+      // show failure then nothing (stay on page)
+      const msg = result.error?.detail || result.error?.message || 'Login failed';
       alert(msg);
       console.error('Login error', result.error);
     }
@@ -47,6 +46,7 @@ export default function Login() {
 
   return (
     <div className="page-container">
+      <LoadingModal open={loading} title={loading ? 'Logging in' : 'Please wait'} message={loading ? 'Logging in — verifying credentials' : ''} />
       <h1>Pragati Setu — Login</h1>
 
       <form onSubmit={handleSubmit(onSubmit)}>
