@@ -1,42 +1,276 @@
-/* src/styles.css - base styles + Loading modal + simple table layout */
+/* src/styles.css
+   Comprehensive UI stylesheet for Pragati Setu dashboard.
+   Includes: base/reset, layout (app-shell, left-nav, topnav, main-area),
+   cards, tables, forms, buttons, loading modal and responsive rules.
+*/
 
-/* reset-ish */
+/* ------------------------
+   Base / Reset
+   ------------------------ */
 * { box-sizing: border-box; }
-body { margin: 0; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:#f6f7fb; color:#111827; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: #f6f7fb;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-/* Page container */
-.page-container { max-width:980px; margin:40px auto; padding:20px; background: #fff; border-radius:8px; box-shadow:0 6px 20px rgba(6,7,15,0.06); }
-.small-muted { color:#6b7280; font-size:0.9rem; margin-top:4px; }
-.header-row { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:12px 0; border-bottom:1px solid #eef2f7; margin-bottom:16px; }
+/* Utility */
+.small-muted { color: #6b7280; font-size: 0.9rem; margin-top: 4px; }
+.muted { color: #9ca3af; }
+.hint { color: #94a3b8; font-size: 0.85rem; }
 
-/* forms */
-form label { display:block; margin-top:12px; font-weight:600; font-size:0.95rem; }
-input[type="text"], input[type="password"], select { width:100%; padding:8px 10px; font-size:1rem; border-radius:6px; border:1px solid #e6e9ef; margin-top:6px; }
-button { background:#0f172a; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
-button.secondary { background:#fff; color:#0f172a; border:1px solid #e6e9ef; }
-.form-row { margin-top:8px; }
+/* ------------------------
+   Buttons / Form Controls
+   ------------------------ */
+button {
+  background: #0f172a;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+button.secondary {
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid #e6e9ef;
+}
+.btn { display: inline-flex; align-items: center; gap: 8px; }
+.btn-flat { background: transparent; color: #0b5394; border: 1px solid transparent; padding: 6px 10px; }
+.btn-outline { background: transparent; color: #0f172a; border: 1px solid #e6e9ef; padding: 6px 10px; }
+.btn-sm { padding: 6px 8px; font-size: 0.85rem; border-radius: 6px; }
 
-/* errors */
-.error { color:#b91c1c; margin-top:6px; font-size:0.9rem; }
+/* form controls */
+label { display: block; margin-top: 12px; font-weight: 600; font-size: 0.95rem; }
+input[type="text"], input[type="password"], select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e6e9ef;
+  margin-top: 6px;
+  background: #fff;
+}
+textarea { min-height: 120px; resize: vertical; }
+.form-row { margin-top: 8px; }
+.error { color: #b91c1c; margin-top: 6px; font-size: 0.9rem; }
 
-/* left-nav */
-.left-nav { width:200px; padding:12px; background:#fff; border-right:1px solid #eef2f7; height:100vh; position:fixed; left:0; top:0; }
-.dashboard { display:flex; }
-.dashboard-main { margin-left:220px; padding:20px; flex:1; }
+/* ------------------------
+   Layout: App Shell / Navs
+   ------------------------ */
 
-/* cards */
-.card { background:#fff; padding:12px; border-radius:8px; box-shadow:0 2px 8px rgba(15,23,42,0.04); margin-bottom:12px; }
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
 
-/* table */
-.table-wrap { overflow:auto; background:#fff; border-radius:8px; border:1px solid #eef2f7; }
-table { border-collapse:collapse; width:100%; }
-th, td { padding:10px 12px; border-bottom:1px solid #f3f4f6; text-align:left; font-size:0.95rem; }
-th { background:#f8fafc; font-weight:700; position:sticky; top:0; z-index:1; }
+/* Left nav (two variants supported: .left-nav and more advanced .ln-*) */
+.left-nav,
+.ln {
+  width: 220px;
+  padding: 12px;
+  background: #fff;
+  border-right: 1px solid #eef2f7;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow: auto;
+  z-index: 50;
+}
 
-/* Pagination row */
-.pagination { display:flex; gap:8px; align-items:center; padding:12px; justify-content:flex-end; }
+/* compatibility simple left-nav */
+.left-nav ul { list-style: none; padding: 0; margin: 12px 0; }
+.left-nav li { margin-bottom: 8px; }
+.left-nav a { color: #0b5394; text-decoration: none; padding: 8px 6px; display: inline-block; }
 
-/* Loading modal backdrop + square */
+/* advanced left-nav (ln-*) used by newer components */
+.ln {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.ln-top { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 4px; }
+.ln-brand { display:flex; align-items:center; gap:8px; }
+.ln-logo {
+  width:38px; height:38px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+  background: linear-gradient(180deg, #0b5394, #07407a); color:#fff; font-weight:700; font-size:1rem;
+  box-shadow: 0 4px 14px rgba(11,83,148,0.12);
+}
+.ln-title { font-weight:700; color:#0b5394; }
+.ln-mode-btn { font-size:0.85rem; color:#374151; background:transparent; border:none; cursor:pointer; padding:6px; }
+
+.ln-nav { padding-top: 8px; }
+.ln-group { margin-bottom: 6px; }
+.ln-group-header {
+  width:100%;
+  text-align:left;
+  background:transparent;
+  border:none;
+  padding:8px;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  color:#0b5394;
+  font-weight:600;
+  border-radius:6px;
+}
+.ln-submenu { display:none; padding-left:8px; margin-top:6px; }
+.ln-submenu.show { display:block; }
+.ln-item {
+  display:block;
+  padding:6px 8px;
+  color:#0b5394;
+  text-decoration:none;
+  border-radius:6px;
+  margin-bottom:4px;
+}
+.ln-item:hover { background:#f1f5f9; }
+
+/* caret */
+.caret { transition: transform 0.18s ease; color:#6b7280; }
+.caret.open { transform: rotate(90deg); }
+
+/* ln-footer */
+.ln-footer { padding:12px; text-align:center; font-size:0.85rem; color:#9ca3af; }
+
+/* Main area when left nav present */
+.main-area {
+  margin-left: 220px; /* matches left-nav width */
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TopNav */
+.topnav {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 12px 18px;
+  border-bottom: 1px solid #eef2f7;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.topnav-left .app-title { font-size:1.05rem; font-weight:700; color:#0b5394; }
+.topnav-right { display:flex; align-items:center; gap:12px; }
+.topnav-user { font-weight:600; color:#0f172a; }
+
+/* Content area */
+.dashboard-main {
+  padding: 18px;
+  background: transparent;
+}
+
+/* container card layout */
+.page-container {
+  max-width: 980px;
+  margin: 24px auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(6,7,15,0.06);
+}
+
+/* header row used inside pages */
+.header-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  padding:12px 0;
+  border-bottom:1px solid #eef2f7;
+  margin-bottom:16px;
+}
+
+/* ------------------------
+   Cards / Utilities
+   ------------------------ */
+.card {
+  background: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.04);
+  margin-bottom: 12px;
+}
+.card h3 { margin: 0 0 8px 0; }
+
+/* small helper columns grid */
+.grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+/* ------------------------
+   Tables
+   ------------------------ */
+.table-wrap {
+  overflow: auto;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #eef2f7;
+  padding: 6px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th, td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  text-align: left;
+  font-size: 0.95rem;
+}
+th {
+  background: #f8fafc;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: #0b5394;
+}
+
+/* compact table style used by dashboard (s-table-compressed) */
+.s-table-compressed th, .s-table-compressed td {
+  padding: 8px 10px;
+  font-size: 0.92rem;
+}
+
+/* fallback empty state */
+.table-empty {
+  padding: 24px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* ------------------------
+   Pagination
+   ------------------------ */
+.pagination {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  padding:12px;
+  justify-content:flex-end;
+}
+
+/* ------------------------
+   Loading Modal
+   ------------------------ */
 .ps-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -47,7 +281,6 @@ th { background:#f8fafc; font-weight:700; position:sticky; top:0; z-index:1; }
   background: rgba(7,9,20,0.28);
   z-index: 2000;
 }
-
 .ps-modal-square {
   width: 320px;
   max-width: 92%;
@@ -57,7 +290,6 @@ th { background:#f8fafc; font-weight:700; position:sticky; top:0; z-index:1; }
   text-align: center;
   box-shadow: 0 12px 40px rgba(2,6,23,0.28);
 }
-
 .ps-spinner {
   margin: 6px auto 14px auto;
   width: 58px;
@@ -67,16 +299,71 @@ th { background:#f8fafc; font-weight:700; position:sticky; top:0; z-index:1; }
   border-top-color: #0f172a;
   animation: ps-spin 1s linear infinite;
 }
+@keyframes ps-spin { to { transform: rotate(360deg); } }
+.ps-modal-title { font-size: 1.1rem; margin: 6px 0; font-weight: 700; }
+.ps-modal-message { color: #6b7280; margin-top: 6px; font-size: 0.95rem; }
 
-@keyframes ps-spin {
-  to { transform: rotate(360deg); }
+/* ------------------------
+   Responsive
+   ------------------------ */
+@media (max-width: 980px) {
+  .left-nav, .ln { width: 180px; }
+  .main-area { margin-left: 180px; }
+}
+@media (max-width: 720px) {
+  .left-nav, .ln { display: none; }
+  .main-area { margin-left: 0; }
+  .topnav { padding: 10px; }
+  .header-row { flex-direction: column; align-items: flex-start; gap:8px; }
 }
 
-.ps-modal-title { font-size:1.1rem; margin:6px 0; font-weight:700; }
-.ps-modal-message { color:#6b7280; margin-top:6px; font-size:0.95rem; }
+/* ------------------------
+   Small tweaks for visual differences between dashboards
+   (so role-specific pages look noticeably different)
+   ------------------------ */
+.dashboard-main.partner { background: linear-gradient(180deg, #f8fbff, #fff); }
+.dashboard-main.admin { background: linear-gradient(180deg, #fffaf8, #fff); }
+.dashboard-main.region { background: linear-gradient(180deg, #f7fffb, #fff); }
 
-/* small responsive */
-@media (max-width:720px) {
-  .left-nav { display:none; }
-  .dashboard-main { margin-left:0; }
+/* small badges */
+.badge {
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:999px;
+  font-weight:600;
+  font-size:0.8rem;
+  background:#eef2ff;
+  color:#0b5394;
 }
+
+/* Quick links list */
+.quick-links { list-style: none; padding: 0; margin: 0; }
+.quick-links li { margin-bottom: 6px; }
+.quick-links a { color:#0b5394; text-decoration:none; }
+
+/* Misc helpers */
+.center { text-align:center; }
+.flex { display:flex; }
+.flex-col { display:flex; flex-direction:column; }
+.space-between { display:flex; justify-content:space-between; align-items:center; }
+
+/* table spinner area */
+.table-spinner { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:28px; }
+
+/* cancel / warn button */
+.btn-warning {
+  background: #f59e0b;
+  color: #fff;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-warning:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* make small table buttons look better */
+.btn-sm { padding: 6px 8px; font-size: 13px; border-radius: 6px; }
+.btn-flat { background: transparent; border: 1px solid #e6e9ef; color: #0f172a; padding: 8px 10px; border-radius: 6px; }
+.btn-outline { background: #fff; border: 1px solid #0f172a; color: #0f172a; padding: 8px 10px; border-radius: 6px; }
+
+/* End of file */
