@@ -1,165 +1,564 @@
 // src/api/axios.js
-/**
- * Axios instance used across the app.
- * - withCredentials=true so browser will send HttpOnly refresh cookie.
- * - Attaches Authorization header for protected endpoints (but NOT for /auth/* or /lookups/*).
- * - Attaches X-API headers only for /lookups/* endpoints (as before).
- * - Implements cookie-backed refresh flow and retries original requests after refresh.
- *
- * Key surgical changes:
- * - Strict detection of auth endpoints -> do NOT attach Authorization for them (prevents expired-token errors)
- * - Ensure refresh call itself doesn't send Authorization (backend expects cookie)
- * - When retrying original requests after refresh, only attach Authorization for non-auth, non-lookups endpoints
- */
+import axios from "axios";
+import {
+  getAccessToken,
+  getRefreshToken,
+  setAuth,
+  clearAuth,
+  getApiHeaders,
+} from "../utils/storage";
 
-import axios from 'axios';
-import { getAccessToken, setAuth, getRefreshToken, clearAuth } from '../utils/storage';
+// ------------------------
+// Axios instance
+// ------------------------
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+const baseURL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+
 const api = axios.create({
   baseURL,
-  timeout: 15000,
-  withCredentials: true, // important for refresh-cookie flow
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// helper: robustly detect paths (works for absolute or relative URLs in config.url)
-function pathContains(configOrUrl, substring) {
-  try {
-    let url = '';
-    if (typeof configOrUrl === 'string') {
-      url = configOrUrl;
-    } else if (configOrUrl && typeof configOrUrl.url === 'string') {
-      url = configOrUrl.url;
-      // include baseURL if available so absolute checks work
-      if (configOrUrl.baseURL) url = configOrUrl.baseURL + url;
-    } else {
-      return false;
-    }
-    return url.includes(substring);
-  } catch (e) {
-    return false;
-  }
+// ------------------------
+// Helpers
+// ------------------------
+
+function isAuthUrl(url = "") {
+  return url.startsWith("/auth/") || url.includes("/auth/");
 }
 
+function isLookupUrl(url = "") {
+  return url.startsWith("/lookups/") || url.includes("/lookups/");
+}
+
+// ------------------------
 // Request interceptor
-api.interceptors.request.use((config) => {
-  config.headers = config.headers || {};
+// ------------------------
 
-  const isAuthEndpoint = pathContains(config, '/auth/');
-  const isLookupEndpoint = pathContains(config, '/lookups/');
+api.interceptors.request.use(
+  (config) => {
+    const url = config.url || "";
 
-  // 1) Attach X-API headers for lookups (your app expects this)
-  if (isLookupEndpoint) {
-    const apiId = import.meta.env.VITE_API_ID;
-    const apiKey = import.meta.env.VITE_API_KEY;
-    if (apiId && apiKey) {
-      config.headers['X-API-ID'] = apiId;
-      config.headers['X-API-KEY'] = apiKey;
+    // Attach Authorization header for non-auth endpoints
+    if (!isAuthUrl(url)) {
+      const token = getAccessToken();
+      if (token) {
+        config.headers = config.headers || {};
+        config.headers["Authorization"] = `Bearer ${token}`;
+      }
     }
-  } else {
-    // ensure we do not accidentally send X-API headers to non-lookups endpoints
-    if (config.headers['X-API-ID']) delete config.headers['X-API-ID'];
-    if (config.headers['X-API-KEY']) delete config.headers['X-API-KEY'];
-  }
 
-  // 2) Attach Authorization header for non-auth AND non-lookups endpoints
-  // IMPORTANT: do NOT attach Authorization for /auth/* (login, refresh) and /lookups/*
-  if (!isAuthEndpoint && !isLookupEndpoint) {
-    const token = getAccessToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      if (config.headers.Authorization) delete config.headers.Authorization;
+    // Attach UPSRLM X-API headers for lookups endpoints
+    if (isLookupUrl(url)) {
+      const apiHdrs = getApiHeaders();
+      if (apiHdrs) {
+        config.headers = config.headers || {};
+        if (apiHdrs.apiId) config.headers["X-API-ID"] = apiHdrs.apiId;
+        if (apiHdrs.apiKey) config.headers["X-API-KEY"] = apiHdrs.apiKey;
+      }
     }
-  } else {
-    // ensure Authorization is not sent to auth or lookups endpoints
-    if (config.headers.Authorization) delete config.headers.Authorization;
-  }
 
-  return config;
-}, (err) => Promise.reject(err));
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// Refresh-handling
-const REFRESH_ENDPOINT = '/auth/refresh/';
+// ------------------------
+// Response interceptor (401 → refresh + retry)
+// ------------------------
 
 let isRefreshing = false;
-let refreshSubscribers = [];
+let refreshPromise = null;
 
-function subscribeTokenRefresh(cb) { refreshSubscribers.push(cb); }
-function onRefreshed(token) { refreshSubscribers.forEach(cb => cb(token)); refreshSubscribers = []; }
+/**
+ * Call /auth/refresh/ using cookies (ps_refresh).
+ * Store new access token via setAuth (keeps refresh from storage if present).
+ */
+async function performRefresh() {
+  if (!refreshPromise) {
+    isRefreshing = true;
+    const client = axios.create({
+      baseURL,
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
+    });
 
-async function attemptRefresh() {
-  // Make sure refresh call hits /auth/refresh/ WITHOUT Authorization header (request interceptor will remove it)
-  const res = await api.post(REFRESH_ENDPOINT);
-  return res.data?.access || null;
+    refreshPromise = client
+      .post("/auth/refresh/")
+      .then((res) => {
+        const data = res?.data || {};
+        const newAccess = data.access || data.access_token || null;
+        const existingRefresh = getRefreshToken();
+        if (newAccess) {
+          setAuth({
+            access: newAccess,
+            refresh: existingRefresh || data.refresh || null,
+            user: data.user || null,
+          });
+        }
+        return newAccess;
+      })
+      .catch((err) => {
+        clearAuth();
+        throw err;
+      })
+      .finally(() => {
+        isRefreshing = false;
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
 }
 
-// Response interceptor: handle 401 by attempting refresh
 api.interceptors.response.use(
-  (res) => res,
+  (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    if (!originalRequest) return Promise.reject(error);
+    const originalConfig = error?.config;
 
-    // If response is 401 and original request not retried yet
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      // If another refresh is ongoing, queue the request
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          subscribeTokenRefresh(async (newToken) => {
-            if (newToken) {
-              // attach new token only if not an auth/lookup endpoint
-              if (!pathContains(originalRequest, '/auth/') && !pathContains(originalRequest, '/lookups/')) {
-                originalRequest.headers = originalRequest.headers || {};
-                originalRequest.headers.Authorization = `Bearer ${newToken}`;
-              }
-              resolve(api(originalRequest));
-            } else {
-              reject(error);
-            }
-          });
-        });
-      }
-
-      // start refresh
-      isRefreshing = true;
-      try {
-        const newAccess = await attemptRefresh();
-        if (!newAccess) throw new Error('No new access token from refresh');
-
-        // persist token (keep refresh cookie server-side)
-        const prevUser = JSON.parse(localStorage.getItem('ps_user') || 'null');
-        setAuth({ access: newAccess, refresh: getRefreshToken(), user: prevUser });
-
-        // notify queued requests
-        onRefreshed(newAccess);
-        isRefreshing = false;
-
-        // retry original request: only add Authorization if it's not an auth/lookup endpoint
-        if (!pathContains(originalRequest, '/auth/') && !pathContains(originalRequest, '/lookups/')) {
-          originalRequest.headers = originalRequest.headers || {};
-          originalRequest.headers.Authorization = `Bearer ${newAccess}`;
-        } else {
-          // ensure no Authorization is present for auth/lookups
-          if (originalRequest.headers && originalRequest.headers.Authorization) {
-            delete originalRequest.headers.Authorization;
-          }
-        }
-
-        return api(originalRequest);
-      } catch (refreshErr) {
-        isRefreshing = false;
-        // clear local auth state, force re-login
-        clearAuth();
-        return Promise.reject(error);
-      }
+    if (!originalConfig) {
+      return Promise.reject(error);
     }
 
-    // for other cases, just forward
-    return Promise.reject(error);
+    const status = error?.response?.status;
+    const url = originalConfig.url || "";
+
+    // If not unauthorized, just bubble up
+    if (status !== 401) {
+      return Promise.reject(error);
+    }
+
+    // Avoid infinite loop
+    if (originalConfig._retry) {
+      clearAuth();
+      return Promise.reject(error);
+    }
+
+    // Do not auto-refresh for auth endpoints
+    if (isAuthUrl(url)) {
+      clearAuth();
+      return Promise.reject(error);
+    }
+
+    try {
+      originalConfig._retry = true;
+      const newAccess = await performRefresh();
+
+      if (newAccess) {
+        originalConfig.headers = originalConfig.headers || {};
+        originalConfig.headers["Authorization"] = `Bearer ${newAccess}`;
+      }
+
+      return api(originalConfig);
+    } catch (e) {
+      return Promise.reject(e);
+    }
   }
 );
+
+// ------------------------
+// Generic CRUD factory for DRF viewsets
+// ------------------------
+
+export function makeCrud(basePath) {
+  const path = basePath.endsWith("/") ? basePath : `${basePath}/`;
+
+  return {
+    list: (params) => api.get(path, { params }),
+    retrieve: (id, params) => api.get(`${path}${id}/`, { params }),
+    create: (data) => api.post(path, data),
+    update: (id, data) => api.put(`${path}${id}/`, data),
+    partialUpdate: (id, data) => api.patch(`${path}${id}/`, data),
+    destroy: (id) => api.delete(`${path}${id}/`),
+  };
+}
+
+// ------------------------
+// AUTH APIS
+// ------------------------
+
+export const AUTH_API = {
+  login: (data) => api.post("/auth/login/", data),
+  refresh: () => api.post("/auth/refresh/"), // cookie-based
+  logout: () => api.post("/auth/logout/"),
+  crpRequestOtp: (data) => api.post("/auth/crp-request-otp/", data),
+  crpVerifyOtp: (data) => api.post("/auth/crp-verify-otp/", data),
+};
+
+// ------------------------
+// LOOKUP / CORE APIS
+// ------------------------
+//
+// These map to core.api.views_lookups + UPSRLM proxy views + geo-scope.
+//
+
+export const LOOKUP_API = {
+  // Master geo units (via DRF router)
+  states: makeCrud("/lookups/states/"),
+  districts: makeCrud("/lookups/districts/"),
+  blocks: makeCrud("/lookups/blocks/"),
+  panchayats: makeCrud("/lookups/panchayats/"),
+  villages: makeCrud("/lookups/villages/"),
+
+  // SHG / VO / CLF master lists (DB backed)
+  clfList: makeCrud("/lookups/clf-list/"),
+  voList: makeCrud("/lookups/vo-list/"),
+  shgList: makeCrud("/lookups/shg-list/"),
+
+  // Beneficiary list under SHG (view)
+  // GET /lookups/beneficiary-list/?shg_code=... OR /lookups/beneficiary-list/<shg_code>/
+  beneficiaryList: (params) =>
+    api.get("/lookups/beneficiary-list/", { params }),
+  beneficiaryListByShg: (shgCode, params) =>
+    api.get(`/lookups/beneficiary-list/${encodeURIComponent(shgCode)}/`, {
+      params,
+    }),
+
+  // Beneficiary detail and related master tables
+  beneficiaryDetail: (memberCode, params) =>
+    api.get(`/lookups/beneficiary-detail/${encodeURIComponent(memberCode)}/`, {
+      params,
+    }),
+
+  // CLF / VO / SHG detail + members/etc (master_* tables)
+  clfDetail: (clfCode, params) =>
+    api.get(`/lookups/clf-detail/${encodeURIComponent(clfCode)}/`, { params }),
+  clfMembers: (clfCode, params) =>
+    api.get(`/lookups/clf-members/${encodeURIComponent(clfCode)}/`, { params }),
+  clfPanchayats: (clfCode, params) =>
+    api.get(`/lookups/clf-panchayats/${encodeURIComponent(clfCode)}/`, {
+      params,
+    }),
+  clfVillages: (clfCode, params) =>
+    api.get(`/lookups/clf-villages/${encodeURIComponent(clfCode)}/`, {
+      params,
+    }),
+  clfVos: (clfCode, params) =>
+    api.get(`/lookups/clf-vos/${encodeURIComponent(clfCode)}/`, { params }),
+
+  voDetail: (voCode, params) =>
+    api.get(`/lookups/vo-detail/${encodeURIComponent(voCode)}/`, { params }),
+  voMembers: (voCode, params) =>
+    api.get(`/lookups/vo-members/${encodeURIComponent(voCode)}/`, { params }),
+  voPanchayats: (voCode, params) =>
+    api.get(`/lookups/vo-panchayats/${encodeURIComponent(voCode)}/`, {
+      params,
+    }),
+  voVillages: (voCode, params) =>
+    api.get(`/lookups/vo-villages/${encodeURIComponent(voCode)}/`, { params }),
+  voShgs: (voCode, params) =>
+    api.get(`/lookups/vo-shgs/${encodeURIComponent(voCode)}/`, { params }),
+
+  shgDetail: (shgCode, params) =>
+    api.get(`/lookups/shg-detail/${encodeURIComponent(shgCode)}/`, { params }),
+  shgMembers: (shgCode, params) =>
+    api.get(`/lookups/shg-members/${encodeURIComponent(shgCode)}/`, { params }),
+
+  // ------------------------
+  // UPSRLM + APISetu proxies
+  // (core.api.upsrlm_views)
+  // ------------------------
+
+  // CLF via UPSRLM
+  upsrlmClfList: (blockId, params) =>
+    api.get(`/lookups/upsrlm-clf-list/${encodeURIComponent(blockId)}/`, {
+      params,
+    }),
+  upsrlmClfDetail: (clfCode, params) =>
+    api.get(`/lookups/upsrlm-clf-detail/${encodeURIComponent(clfCode)}/`, {
+      params,
+    }),
+  upsrlmClfPanchayats: (clfCode, params) =>
+    api.get(`/lookups/upsrlm-clf-panchayats/${encodeURIComponent(clfCode)}/`, {
+      params,
+    }),
+  upsrlmClfMembers: (clfCode, params) =>
+    api.get(`/lookups/upsrlm-clf-members/${encodeURIComponent(clfCode)}/`, {
+      params,
+    }),
+  upsrlmClfVillages: (clfCode, params) =>
+    api.get(`/lookups/upsrlm-clf-villages/${encodeURIComponent(clfCode)}/`, {
+      params,
+    }),
+
+  // VO via UPSRLM
+  upsrlmVoList: (blockId, params) =>
+    api.get(`/lookups/upsrlm-vo-list/${encodeURIComponent(blockId)}/`, {
+      params,
+    }),
+  upsrlmVoDetail: (voCode, params) =>
+    api.get(`/lookups/upsrlm-vo-detail/${encodeURIComponent(voCode)}/`, {
+      params,
+    }),
+  upsrlmVoPanchayats: (voCode, params) =>
+    api.get(`/lookups/upsrlm-vo-panchayats/${encodeURIComponent(voCode)}/`, {
+      params,
+    }),
+  upsrlmVoMembers: (voCode, params) =>
+    api.get(`/lookups/upsrlm-vo-members/${encodeURIComponent(voCode)}/`, {
+      params,
+    }),
+  upsrlmVoVillages: (voCode, params) =>
+    api.get(`/lookups/upsrlm-vo-villages/${encodeURIComponent(voCode)}/`, {
+      params,
+    }),
+  upsrlmVoShgs: (voCode, params) =>
+    api.get(`/lookups/upsrlm-vo-shgs/${encodeURIComponent(voCode)}/`, {
+      params,
+    }),
+
+  // SHG via UPSRLM (list/details/members)
+  upsrlmShgList: (blockId, params) =>
+    api.get(`/lookups/upsrlm-shg-list/${encodeURIComponent(blockId)}/`, {
+      params,
+    }),
+  upsrlmShgDetail: (shgCode, params) =>
+    api.get(`/lookups/upsrlm-shg-detail/${encodeURIComponent(shgCode)}/`, {
+      params,
+    }),
+  upsrlmShgMembers: (shgCode, params) =>
+    api.get(`/lookups/upsrlm-shg-members/${encodeURIComponent(shgCode)}/`, {
+      params,
+    }),
+
+  // ------------------------
+  // Geo-scope mapping by user
+  // ------------------------
+
+  // GET /lookups/user-geoscope/<user_id>/
+  userGeoscopeByUserId: (userId, params) =>
+    api.get(`/lookups/user-geoscope/${encodeURIComponent(userId)}/`, {
+      params,
+    }),
+};
+
+// ------------------------
+// epSakhi APIS
+// ------------------------
+//
+// These map to epSakhi.api.urls viewsets and custom views.
+//
+
+export const EPSAKHI_API = {
+  // CRP master + mapping
+  crp: makeCrud("/epsakhi/crps/"),
+  crpPanchayatMap: makeCrud("/epsakhi/crp-panchayat-mapping/"),
+
+  // BeneficiaryRecorded + related enterprise forms
+  beneficiaryRecorded: makeCrud("/epsakhi/beneficiary-recorded/"),
+  existingEnterprise: makeCrud("/epsakhi/existing-enterprises/"),
+  newEnterprise: makeCrud("/epsakhi/new-enterprises/"),
+  enterpriseLoanDetails: makeCrud("/epsakhi/enterprise-loan-details/"),
+  enterpriseSupportDetails: makeCrud("/epsakhi/enterprise-support-details/"),
+  enterpriseTrainingReqs: makeCrud("/epsakhi/enterprise-training-reqs/"),
+  enterpriseMedia: makeCrud("/epsakhi/enterprise-media/"),
+  enterpriseProducts: makeCrud("/epsakhi/enterprise-products/"),
+  enterpriseTypes: makeCrud("/epsakhi/enterprise-types/"),
+  noEnterpriseForms: makeCrud("/epsakhi/no-enterprise-forms/"),
+  noEnterpriseWages: makeCrud("/epsakhi/no-enterprise-wages/"),
+
+  // ------------------------
+  // Custom epSakhi views
+  // ------------------------
+
+  // Beneficiaries under SHG (LokOS) → BeneficiaryRecorded join
+  // GET /epsakhi/beneficiary-recorded/by-shg/<shg_code>/
+  beneficiaryRecordedByShg: (shgCode, params) =>
+    api.get(
+      `/epsakhi/beneficiary-recorded/by-shg/${encodeURIComponent(shgCode)}/`,
+      { params }
+    ),
+
+  // Detail by member code
+  // GET /epsakhi/beneficiary-recorded/by-member/<member_code>/
+  beneficiaryRecordedByMember: (memberCode, params) =>
+    api.get(
+      `/epsakhi/beneficiary-recorded/by-member/${encodeURIComponent(memberCode)}/`,
+      { params }
+    ),
+
+  // CRP → Panchayats linkage
+  // POST /epsakhi/crp/<id>/link-panchayats/
+  crpLinkPanchayats: (crpId, data) =>
+    api.post(
+      `/epsakhi/crp/${encodeURIComponent(crpId)}/link-panchayats/`,
+      data
+    ),
+
+  // GET /epsakhi/crp/<id>/panchayats/
+  crpPanchayats: (crpId, params) =>
+    api.get(`/epsakhi/crp/${encodeURIComponent(crpId)}/panchayats/`, {
+      params,
+    }),
+
+  // CRP detail by LokOS member code
+  crpDetailByMember: (memberCode, params) =>
+    api.get(`/epsakhi/crp/by-member/${encodeURIComponent(memberCode)}/`, {
+      params,
+    }),
+
+  // CRP detail by MasterUser (login) id
+  crpDetailByUserId: (userId, params) =>
+    api.get(`/epsakhi/crp/by-user-id/${encodeURIComponent(userId)}/`, {
+      params,
+    }),
+
+  // Panchayats under CRP (by CRP id or user id)
+  // GET /epsakhi/panchayats-under-crp/<crp_id>/
+  panchayatsUnderCrp: (crpId, params) =>
+    api.get(`/epsakhi/panchayats-under-crp/${encodeURIComponent(crpId)}/`, {
+      params,
+    }),
+
+  // GET /epsakhi/panchayats-under-crp/id/<user_id>/
+  panchayatsUnderCrpByUserId: (userId, params) =>
+    api.get(`/epsakhi/panchayats-under-crp/id/${encodeURIComponent(userId)}/`, {
+      params,
+    }),
+
+  // UPSRLM SHG wrappers used by app (epSakhi views wrapping core UPSRLM)
+  // GET /epsakhi/upsrlm-shg-list/<block_id>/
+  upsrlmShgList: (blockId, params) =>
+    api.get(`/epsakhi/upsrlm-shg-list/${encodeURIComponent(blockId)}/`, {
+      params,
+    }),
+  // GET /epsakhi/upsrlm-shg-detail/<shg_code>/
+  upsrlmShgDetail: (shgCode, params) =>
+    api.get(`/epsakhi/upsrlm-shg-detail/${encodeURIComponent(shgCode)}/`, {
+      params,
+    }),
+  // GET /epsakhi/upsrlm-shg-members/<shg_code>/
+  upsrlmShgMembers: (shgCode, params) =>
+    api.get(`/epsakhi/upsrlm-shg-members/${encodeURIComponent(shgCode)}/`, {
+      params,
+    }),
+
+  // Export endpoints for reporting, etc (if present)
+  // You can hang any future custom epSakhi URLs here.
+};
+
+// ------------------------
+// TMS APIS (Training Management System)
+// ------------------------
+//
+// These map to TMS.api.urls router viewsets + dashboard views.
+//
+
+export const TMS_API = {
+  // 1. Master / configuration viewsets
+  trainingThemes: makeCrud("/tms/training-themes/"),
+  trainingSubThemes: makeCrud("/tms/training-subthemes/"),
+  trainingCategories: makeCrud("/tms/training-categories/"),
+  trainingTypologies: makeCrud("/tms/training-typologies/"),
+  trainingTypes: makeCrud("/tms/training-types/"),
+  trainingTopics: makeCrud("/tms/training-topics/"),
+
+  trainingPlans: makeCrud("/tms/training-plans/"),
+
+  // Master trainer + certificates
+  masterTrainers: makeCrud("/tms/master-trainers/"),
+  masterTrainerCertificates: makeCrud("/tms/master-trainer-certificates/"),
+
+  // Training partner master + related
+  trainingPartners: makeCrud("/tms/training-partners/"),
+  trainingPartnerBanks: makeCrud("/tms/training-partner-banks/"),
+  trainingPartnerContactPersons: makeCrud(
+    "/tms/training-partner-contact-persons/"
+  ),
+  trainingPartnerCentres: makeCrud("/tms/training-partner-centres/"),
+  trainingPartnerCentreRooms: makeCrud("/tms/training-partner-centre-rooms/"),
+  tpcpCentreLinks: makeCrud("/tms/tpcp-centre-links/"),
+  trainingPartnerSubmissions: makeCrud("/tms/training-partner-submissions/"),
+  trainingPartnerTargets: makeCrud("/tms/training-partner-targets/"),
+
+  // TRP user scope mapping
+  trpUserScopes: makeCrud("/tms/trp-user-scopes/"),
+
+  // Training Request workflow
+  trainingRequests: makeCrud("/tms/training-requests/"),
+  trBeneficiaries: makeCrud("/tms/training-request-beneficiaries/"),
+  trTrainers: makeCrud("/tms/training-request-trainers/"),
+
+  // Batch workflow
+  batches: makeCrud("/tms/batches/"),
+  batchMasterTrainers: makeCrud("/tms/batch-master-trainers/"),
+  batchBeneficiaries: makeCrud("/tms/batch-beneficiaries/"),
+  batchTrainers: makeCrud("/tms/batch-trainers/"),
+  batchEkyc: makeCrud("/tms/batch-ekyc/"),
+  batchAttendance: makeCrud("/tms/batch-attendance/"),
+  participantAttendance: makeCrud("/tms/participant-attendance/"),
+  tpBatchCostBreakups: makeCrud("/tms/tp-batch-cost-breakups/"),
+  batchCosts: makeCrud("/tms/batch-costs/"),
+  batchMedia: makeCrud("/tms/batch-media/"),
+  batchClosureRequests: makeCrud("/tms/batch-closure-requests/"),
+  trClosures: makeCrud("/tms/tr-closures/"),
+  batchParticipantCertificates: makeCrud(
+    "/tms/batch-participant-certificates/"
+  ),
+
+  // ------------------------
+  // Dashboards / reports
+  // ------------------------
+
+  bmmu: {
+    dashboard: (params) => api.get("/tms/bmmu/dashboard/", { params }),
+    trainingsList: (params) => api.get("/tms/bmmu/trainings-list/", { params }),
+    requests: (params) => api.get("/tms/bmmu/requests/", { params }),
+    requestDetail: (requestId, params) =>
+      api.get(`/tms/bmmu/requests/${encodeURIComponent(requestId)}/`, {
+        params,
+      }),
+    batchesForRequest: (requestId, params) =>
+      api.get(`/tms/bmmu/requests/${encodeURIComponent(requestId)}/batches/`, {
+        params,
+      }),
+    batchDetail: (batchId, params) =>
+      api.get(`/tms/bmmu/batches/${encodeURIComponent(batchId)}/`, { params }),
+    batchAttendanceByDate: (batchId, params) =>
+      api.get(
+        `/tms/bmmu/batches/${encodeURIComponent(batchId)}/attendance-by-date/`,
+        { params }
+      ),
+  },
+
+  smmu: {
+    dashboard: (params) => api.get("/tms/smmu/dashboard/", { params }),
+    requests: (params) => api.get("/tms/smmu/requests/", { params }),
+    requestDetail: (requestId, params) =>
+      api.get(`/tms/smmu/requests/${encodeURIComponent(requestId)}/`, {
+        params,
+      }),
+    partnerTargets: (params) =>
+      api.get("/tms/smmu/partner-targets/", { params }),
+  },
+
+  dmmu: {
+    dashboard: (params) => api.get("/tms/dmmu/dashboard/", { params }),
+    requests: (params) => api.get("/tms/dmmu/requests/", { params }),
+    requestDetail: (requestId, params) =>
+      api.get(`/tms/dmmu/requests/${encodeURIComponent(requestId)}/`, {
+        params,
+      }),
+    batchDetail: (batchId, params) =>
+      api.get(`/tms/dmmu/batches/${encodeURIComponent(batchId)}/detail/`, {
+        params,
+      }),
+    batchAttendanceByDate: (batchId, params) =>
+      api.get(
+        `/tms/dmmu/batches/${encodeURIComponent(batchId)}/attendance-by-date/`,
+        { params }
+      ),
+  },
+};
+
+// ------------------------
+// NEW API add-on Section
+// ------------------------
+
+// ------------------------
+// Default export
+// ------------------------
 
 export default api;
