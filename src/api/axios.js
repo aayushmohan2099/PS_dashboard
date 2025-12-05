@@ -41,24 +41,50 @@ function isLookupUrl(url = "") {
 api.interceptors.request.use(
   (config) => {
     const url = config.url || "";
+    config.headers = config.headers || {};
+    config.withCredentials = true;
 
-    // Attach Authorization header for non-auth endpoints
-    if (!isAuthUrl(url)) {
-      const token = getAccessToken();
-      if (token) {
-        config.headers = config.headers || {};
-        config.headers["Authorization"] = `Bearer ${token}`;
-      }
+    const auth = isAuthUrl(url);
+    const lookup = isLookupUrl(url);
+
+    // LOOKUPS: only X-API headers, NO Authorization
+    if (lookup) {
+      // remove any Authorization if present
+      delete config.headers["Authorization"];
+
+      const apiHdrs = (getApiHeaders && getApiHeaders()) || {};
+      const apiId =
+        apiHdrs.apiId ||
+        apiHdrs["X-API-ID"] ||
+        "TH_EPS.BDOuser_test.co.in";
+      const apiKey =
+        apiHdrs.apiKey ||
+        apiHdrs["X-API-KEY"] ||
+        "wFR8IpSeNMawCF4RPLXit1POGuQAJTSmRexBBOwO";
+
+      config.headers["X-API-ID"] = apiId;
+      config.headers["X-API-KEY"] = apiKey;
+
+      return config;
     }
 
-    // Attach UPSRLM X-API headers for lookups endpoints
-    if (isLookupUrl(url)) {
-      const apiHdrs = getApiHeaders();
-      if (apiHdrs) {
-        config.headers = config.headers || {};
-        if (apiHdrs.apiId) config.headers["X-API-ID"] = apiHdrs.apiId;
-        if (apiHdrs.apiKey) config.headers["X-API-KEY"] = apiHdrs.apiKey;
-      }
+    // AUTH: no Authorization, no X-API
+    if (auth) {
+      delete config.headers["Authorization"];
+      delete config.headers["X-API-ID"];
+      delete config.headers["X-API-KEY"];
+      return config;
+    }
+
+    // OTHER API endpoints: Bearer token, no X-API
+    delete config.headers["X-API-ID"];
+    delete config.headers["X-API-KEY"];
+
+    const token = getAccessToken();
+    if (token) {
+      config.headers["Authorization"] = `Bearer ${token}`;
+    } else {
+      delete config.headers["Authorization"];
     }
 
     return config;
@@ -136,8 +162,11 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Do not auto-refresh for auth endpoints
-    if (isAuthUrl(url)) {
+    const auth = isAuthUrl(url);
+    const lookup = isLookupUrl(url);
+
+    // Do not auto-refresh for auth or lookup endpoints
+    if (auth || lookup) {
       clearAuth();
       return Promise.reject(error);
     }
@@ -226,7 +255,9 @@ export const LOOKUP_API = {
   clfDetail: (clfCode, params) =>
     api.get(`/lookups/clf-detail/${encodeURIComponent(clfCode)}/`, { params }),
   clfMembers: (clfCode, params) =>
-    api.get(`/lookups/clf-members/${encodeURIComponent(clfCode)}/`, { params }),
+    api.get(`/lookups/clf-members/${encodeURIComponent(clfCode)}/`, {
+      params,
+    }),
   clfPanchayats: (clfCode, params) =>
     api.get(`/lookups/clf-panchayats/${encodeURIComponent(clfCode)}/`, {
       params,
@@ -247,12 +278,16 @@ export const LOOKUP_API = {
       params,
     }),
   voVillages: (voCode, params) =>
-    api.get(`/lookups/vo-villages/${encodeURIComponent(voCode)}/`, { params }),
+    api.get(`/lookups/vo-villages/${encodeURIComponent(voCode)}/`, {
+      params,
+    }),
   voShgs: (voCode, params) =>
     api.get(`/lookups/vo-shgs/${encodeURIComponent(voCode)}/`, { params }),
 
   shgDetail: (shgCode, params) =>
-    api.get(`/lookups/shg-detail/${encodeURIComponent(shgCode)}/`, { params }),
+    api.get(`/lookups/shg-detail/${encodeURIComponent(shgCode)}/`, {
+      params,
+    }),
   shgMembers: (shgCode, params) =>
     api.get(`/lookups/shg-members/${encodeURIComponent(shgCode)}/`, { params }),
 
@@ -311,17 +346,13 @@ export const LOOKUP_API = {
 
   // SHG via UPSRLM (list/details/members)
   upsrlmShgList: (blockId, params) =>
-    api.get(`/lookups/upsrlm-shg-list/${encodeURIComponent(blockId)}/`, {
+    api.get(`/upsrlm-shg-list/${encodeURIComponent(blockId)}/`, {
       params,
     }),
   upsrlmShgDetail: (shgCode, params) =>
-    api.get(`/lookups/upsrlm-shg-detail/${encodeURIComponent(shgCode)}/`, {
-      params,
-    }),
+    api.get(`/upsrlm-shg-detail/${encodeURIComponent(shgCode)}/`, { params }),
   upsrlmShgMembers: (shgCode, params) =>
-    api.get(`/lookups/upsrlm-shg-members/${encodeURIComponent(shgCode)}/`, {
-      params,
-    }),
+    api.get(`/upsrlm-shg-members/${encodeURIComponent(shgCode)}/`, { params }),
 
   // ------------------------
   // Geo-scope mapping by user
@@ -375,7 +406,9 @@ export const EPSAKHI_API = {
   // GET /epsakhi/beneficiary-recorded/by-member/<member_code>/
   beneficiaryRecordedByMember: (memberCode, params) =>
     api.get(
-      `/epsakhi/beneficiary-recorded/by-member/${encodeURIComponent(memberCode)}/`,
+      `/epsakhi/beneficiary-recorded/by-member/${encodeURIComponent(
+        memberCode
+      )}/`,
       { params }
     ),
 
@@ -421,17 +454,17 @@ export const EPSAKHI_API = {
   // UPSRLM SHG wrappers used by app (epSakhi views wrapping core UPSRLM)
   // GET /epsakhi/upsrlm-shg-list/<block_id>/
   upsrlmShgList: (blockId, params) =>
-    api.get(`/epsakhi/upsrlm-shg-list/${encodeURIComponent(blockId)}/`, {
+    api.get(`/upsrlm-shg-list/${encodeURIComponent(blockId)}/`, {
       params,
     }),
   // GET /epsakhi/upsrlm-shg-detail/<shg_code>/
   upsrlmShgDetail: (shgCode, params) =>
-    api.get(`/epsakhi/upsrlm-shg-detail/${encodeURIComponent(shgCode)}/`, {
+    api.get(`/upsrlm-shg-detail/${encodeURIComponent(shgCode)}/`, {
       params,
     }),
   // GET /epsakhi/upsrlm-shg-members/<shg_code>/
   upsrlmShgMembers: (shgCode, params) =>
-    api.get(`/epsakhi/upsrlm-shg-members/${encodeURIComponent(shgCode)}/`, {
+    api.get(`/upsrlm-shg-members/${encodeURIComponent(shgCode)}/`, {
       params,
     }),
 
@@ -518,7 +551,9 @@ export const TMS_API = {
       api.get(`/tms/bmmu/batches/${encodeURIComponent(batchId)}/`, { params }),
     batchAttendanceByDate: (batchId, params) =>
       api.get(
-        `/tms/bmmu/batches/${encodeURIComponent(batchId)}/attendance-by-date/`,
+        `/tms/bmmu/batches/${encodeURIComponent(
+          batchId
+        )}/attendance-by-date/`,
         { params }
       ),
   },
@@ -547,7 +582,9 @@ export const TMS_API = {
       }),
     batchAttendanceByDate: (batchId, params) =>
       api.get(
-        `/tms/dmmu/batches/${encodeURIComponent(batchId)}/attendance-by-date/`,
+        `/tms/dmmu/batches/${encodeURIComponent(
+          batchId
+        )}/attendance-by-date/`,
         { params }
       ),
   },
