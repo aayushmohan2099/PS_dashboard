@@ -13,7 +13,13 @@ import { getUser } from '../../utils/storage';
 
 export default function LeftNav() {
   const [mode, setMode] = useState(0); // simple mode (kept for compatibility)
-  const [openGroups, setOpenGroups] = useState({ tms: true, epsakhi: true, lpdidi: false, ecom: false, apps: false });
+  const [openGroups, setOpenGroups] = useState({
+    tms: true,
+    epsakhi: true,
+    lpdidi: false,
+    ecom: false,
+    apps: false,
+  });
   const [currentUser, setCurrentUser] = useState(null);
   const [geo, setGeo] = useState(null);
   const [roleName, setRoleName] = useState(null);
@@ -48,125 +54,110 @@ export default function LeftNav() {
     sessionStorage.setItem('ps_leftnav_mode', String(mode));
   }, [mode]);
 
-  const toggleMode = () => setMode((m) => (m + 1) % 3);
-  const toggleGroup = (k) => setOpenGroups((g) => ({ ...g, [k]: !g[k] }));
+  const toggleGroup = (key) => {
+    setOpenGroups((g) => ({
+      ...g,
+      [key]: !g[key],
+    }));
+  };
 
-  const navClass = ['left-nav', 'left-nav-compact', 'left-nav-hidden'][mode] || 'left-nav';
+  const isRegionRole = roleName && ['bmmu', 'dmmu', 'dcnrlm', 'smmu'].includes(roleName);
+  const isAdminRole = roleName && ['state_admin', 'pmu_admin'].includes(roleName);
+  const isPartnerRole = roleName && ['training_partner', 'master_trainer'].includes(roleName);
+  const isCrpRole = roleName && ['crp_ep', 'crp_ld'].includes(roleName);
 
-  // Role buckets
-  const regionRoles = new Set(['bmmu','dmmu','dcnrlm','smmu']);
-  const adminRoles = new Set(['state_admin','pmu_admin']);
-  const partnerRoles = new Set(['training_partner','master_trainer','crp_ep','crp_ld']);
-
-  const renderItem = (label, href='#') => (
-    <a className="ln-item" href={href} target="_blank" rel="noreferrer">{label}</a>
+  const renderItem = (label, to) => (
+    <NavLink
+      key={to}
+      to={to}
+      className={({ isActive }) =>
+        'ln-item' + (isActive ? ' active' : '')
+      }
+    >
+      {label}
+    </NavLink>
   );
 
   return (
-    <aside className={navClass} aria-label="Primary navigation">
-      <div className="ln-top">
-        <div className="ln-brand" title="Pragati Setu">
-          <div className="ln-logo" aria-hidden>PS</div>
-          {mode === 0 && <div className="ln-title">Pragati Setu</div>}
+    <aside className="left-nav ln">
+      <div className="ln-header">
+        <div className="ln-title">Pragati Setu</div>
+        <div className="ln-subtitle">
+          {roleName ? roleName.toUpperCase() : 'USER'}
         </div>
-
-        <button className="ln-mode-btn" onClick={toggleMode} aria-label="Toggle navigation mode" style={{background:'transparent',border:'none',cursor:'pointer'}}>
-          {mode === 0 ? 'Compact' : mode === 1 ? 'Hide' : 'Show'}
-        </button>
+        {currentUser?.username && (
+          <div className="small-muted">Logged in as {currentUser.username}</div>
+        )}
       </div>
 
-      <nav className="ln-nav" style={{paddingTop:8}}>
-        {/* REGION roles */}
-        {regionRoles.has(roleName) && (
+      <nav className="ln-body">
+        {/* TMS group */}
+        <div className="ln-group">
+          <button
+            className="ln-group-header"
+            onClick={() => toggleGroup('tms')}
+            aria-expanded={!!openGroups.tms}
+          >
+            <span>Training Management</span>
+            <span className={`caret ${openGroups.tms ? 'open' : ''}`}>▸</span>
+          </button>
+          <div className={`ln-submenu ${openGroups.tms ? 'show' : ''}`}>
+            {renderItem('Dashboard', '/dashboard')}
+            {renderItem('Batches', '/dashboard/tms/batches')}
+            {renderItem('Trainers', '/dashboard/tms/trainers')}
+            {renderItem('Participants', '/dashboard/tms/participants')}
+          </div>
+        </div>
+
+        {/* EPSakhi group */}
+        <div className="ln-group">
+          <button
+            className="ln-group-header"
+            onClick={() => toggleGroup('epsakhi')}
+            aria-expanded={!!openGroups.epsakhi}
+          >
+            <span>EP-Sakhi</span>
+            <span className={`caret ${openGroups.epsakhi ? 'open' : ''}`}>▸</span>
+          </button>
+          <div className={`ln-submenu ${openGroups.epsakhi ? 'show' : ''}`}>
+            {renderItem('CRP Analytics', '/dashboard/epsakhi/crp-analytics')}
+            {renderItem('Beneficiaries', '/dashboard/epsakhi/beneficiaries')}
+            {renderItem('Enterprises', '/dashboard/epsakhi/enterprises')}
+          </div>
+        </div>
+
+        {/* Placeholders for other groups; logic for roleDisplay kept very simple */}
+        {(isRegionRole || isAdminRole || isPartnerRole || isCrpRole) && (
           <>
+            {/* Lakhpati Didi */}
             <div className="ln-group">
-              <button className="ln-group-header" onClick={() => toggleGroup('tms')} aria-expanded={!!openGroups.tms}>
-                <span>TMS Portal</span>
-                <span className={`caret ${openGroups.tms ? 'open' : ''}`}>▸</span>
-              </button>
-              <div className={`ln-submenu ${openGroups.tms ? 'show' : ''}`}>
-                {renderItem('My Trainings', '/dashboard/tms/my-trainings')}
-                {renderItem('Block Summary', '/dashboard/tms/block-summary')}
-                {renderItem('Training Calendar', '/dashboard/tms/calendar')}
-              </div>
-            </div>
-
-            <div className="ln-group">
-              <button className="ln-group-header" onClick={() => toggleGroup('epsakhi')} aria-expanded={!!openGroups.epsakhi}>
-                <span>epSakhi</span>
-                <span className={`caret ${openGroups.epsakhi ? 'open' : ''}`}>▸</span>
-              </button>
-              <div className={`ln-submenu ${openGroups.epsakhi ? 'show' : ''}`}>
-                {renderItem('Enterprises Overview', '/dashboard/epsakhi/overview')}
-                {renderItem('Collected Data', '/dashboard/epsakhi/data')}
-                {renderItem('Reports', '/dashboard/epsakhi/reports')}
-              </div>
-            </div>
-
-            <div className="ln-group">
-              <button className="ln-group-header" onClick={() => toggleGroup('lpdidi')} aria-expanded={!!openGroups.lpdidi}>
-                <span>Lakhpati Sakhi</span>
+              <button
+                className="ln-group-header"
+                onClick={() => toggleGroup('lpdidi')}
+                aria-expanded={!!openGroups.lpdidi}
+              >
+                <span>Lakhpati Didi</span>
                 <span className={`caret ${openGroups.lpdidi ? 'open' : ''}`}>▸</span>
               </button>
               <div className={`ln-submenu ${openGroups.lpdidi ? 'show' : ''}`}>
-                {renderItem('Overview', '/dashboard/lakhpati/overview')}
-                {renderItem('Beneficiaries', '/dashboard/lakhpati/beneficiaries')}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* PARTNER roles */}
-        {partnerRoles.has(roleName) && (
-          <>
-            <div className="ln-group">
-              <button className="ln-group-header" onClick={() => toggleGroup('partner_tms')} aria-expanded={!!openGroups.tms}>
-                <span>Partner — TMS</span>
-                <span className={`caret ${openGroups.tms ? 'open' : ''}`}>▸</span>
-              </button>
-              <div className={`ln-submenu ${openGroups.tms ? 'show' : ''}`}>
-                {renderItem('My Trainings', '/dashboard/tms/my-trainings')}
-                {renderItem('Participant Lists', '/dashboard/partner/participants')}
-                {renderItem('Reports', '/dashboard/partner/reports')}
+                {renderItem('Overview', '/dashboard/lpdidi')}
+                {renderItem('Households', '/dashboard/lpdidi/households')}
               </div>
             </div>
 
+            {/* E-commerce */}
             <div className="ln-group">
-              <button className="ln-group-header" onClick={() => toggleGroup('partner_epsakhi')} aria-expanded={!!openGroups.epsakhi}>
-                <span>Partner — epSakhi</span>
-                <span className={`caret ${openGroups.epsakhi ? 'open' : ''}`}>▸</span>
+              <button
+                className="ln-group-header"
+                onClick={() => toggleGroup('ecom')}
+                aria-expanded={!!openGroups.ecom}
+              >
+                <span>E-Commerce</span>
+                <span className={`caret ${openGroups.ecom ? 'open' : ''}`}>▸</span>
               </button>
-              <div className={`ln-submenu ${openGroups.epsakhi ? 'show' : ''}`}>
-                {renderItem('Register Enterprise', '/dashboard/epsakhi/register')}
-                {renderItem('My Enterprises', '/dashboard/epsakhi/my-enterprises')}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ADMIN roles */}
-        {adminRoles.has(roleName) && (
-          <>
-            <div className="ln-group">
-              <button className="ln-group-header" onClick={() => toggleGroup('admin_tms')} aria-expanded={!!openGroups.tms}>
-                <span>Admin — TMS</span>
-                <span className={`caret ${openGroups.tms ? 'open' : ''}`}>▸</span>
-              </button>
-              <div className={`ln-submenu ${openGroups.tms ? 'show' : ''}`}>
-                {renderItem('All Trainings', '/admin/tms/trainings')}
-                {renderItem('Manage Partners', '/admin/tms/partners')}
-                {renderItem('Settings', '/admin/tms/settings')}
-              </div>
-            </div>
-
-            <div className="ln-group">
-              <button className="ln-group-header" onClick={() => toggleGroup('admin_epsakhi')} aria-expanded={!!openGroups.epsakhi}>
-                <span>Admin — epSakhi</span>
-                <span className={`caret ${openGroups.epsakhi ? 'open' : ''}`}>▸</span>
-              </button>
-              <div className={`ln-submenu ${openGroups.epsakhi ? 'show' : ''}`}>
-                {renderItem('User Management', '/admin/epsakhi/users')}
-                {renderItem('Data Exports', '/admin/epsakhi/exports')}
+              <div className={`ln-submenu ${openGroups.ecom ? 'show' : ''}`}>
+                {renderItem('Products', '/dashboard/ecom/products')}
+                {renderItem('Orders', '/dashboard/ecom/orders')}
               </div>
             </div>
           </>
@@ -174,7 +165,11 @@ export default function LeftNav() {
 
         {/* COMMON section */}
         <div className="ln-group">
-          <button className="ln-group-header" onClick={() => toggleGroup('apps')} aria-expanded={!!openGroups.apps}>
+          <button
+            className="ln-group-header"
+            onClick={() => toggleGroup('apps')}
+            aria-expanded={!!openGroups.apps}
+          >
             <span>Common</span>
             <span className={`caret ${openGroups.apps ? 'open' : ''}`}>▸</span>
           </button>
@@ -187,7 +182,11 @@ export default function LeftNav() {
       </nav>
 
       <div className="ln-footer">
-        {mode === 0 ? <small className="muted">Govt. of State — Internal</small> : <small className="muted">PS</small>}
+        {mode === 0 ? (
+          <small className="muted">Govt. of State — Internal</small>
+        ) : (
+          <small className="muted">PS</small>
+        )}
       </div>
     </aside>
   );
