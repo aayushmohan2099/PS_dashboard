@@ -1,0 +1,1 @@
+// src/pages/TMS/BMMU/bmmu_training_detail.jsx
