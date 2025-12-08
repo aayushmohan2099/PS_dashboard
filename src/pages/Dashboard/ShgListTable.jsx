@@ -1,17 +1,20 @@
 // src/pages/Dashboard/ShgListTable.jsx
 import React, { useEffect, useState } from "react";
-import api from "../../api/axios";
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { EPSAKHI_API } from "../../api/axios";
+import { faEye } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
+// Simple in-memory cache for SHG lists (per block + filters)
+const shgListCache = new Map();
 
 /**
  * SHG list for a given block.
- * - Uses /upsrlm-shg-list/<block_id>/
+ * - Uses EPSAKHI_API.upsrlmShgList(blockId, params) → /upsrlm-shg-list/<block_id>/
  * - Correct pagination – supports both {data, meta} and {results, count} shapes.
  *
  * Props:
  *  - blockId           (required)
- *  - onSelectShg(shg)  -> called when user clicks "View Members"
+ *  - onSelectShg(shg)  -> called when user clicks "View"
  *  - selectedShgCode   -> optional, to highlight current selection
  */
 export default function ShgListTable({ blockId, onSelectShg, selectedShgCode }) {
@@ -22,24 +25,39 @@ export default function ShgListTable({ blockId, onSelectShg, selectedShgCode }) 
   const [search, setSearch] = useState("");
   const [ordering, setOrdering] = useState("");
 
-  async function load(page = 1) {
+  async function load(page = 1, { force = false } = {}) {
     if (!blockId) return;
+
+    const pageSize = meta.page_size || 20;
+    const cacheKey = JSON.stringify({
+      blockId,
+      page,
+      page_size: pageSize,
+      search: search || "",
+      ordering: ordering || "",
+    });
+
+    // Use cached list when not forcing a refresh
+    if (!force && shgListCache.has(cacheKey)) {
+      const cached = shgListCache.get(cacheKey);
+      setRows(cached.rows || []);
+      setMeta(cached.meta || { page, page_size: pageSize, total: 0 });
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      const res = await api.get(
-        `/upsrlm-shg-list/${encodeURIComponent(blockId)}/`,
-        {
-          params: {
-            page,
-            page_size: meta.page_size || 20,
-            search: search || undefined,
-            ordering: ordering || undefined,
-          },
-        }
-      );
+      const params = {
+        block_id: blockId,
+        page,
+        page_size: pageSize,
+        search: search || undefined,
+        ordering: ordering || undefined,
+      };
 
+      const res = await EPSAKHI_API.upsrlmShgList(blockId, params);
       const payload = res?.data || {};
 
       // Support both shapes:
@@ -52,17 +70,20 @@ export default function ShgListTable({ blockId, onSelectShg, selectedShgCode }) 
           ? payload.results
           : [];
 
-      const totalFromMeta = payload.meta?.total;
-      const totalFromCount = typeof payload.count === "number" ? payload.count : data.length;
+      const totalFromMeta =
+        typeof payload.meta?.total === "number" ? payload.meta.total : undefined;
+      const totalFromCount =
+        typeof payload.count === "number" ? payload.count : data.length;
 
       const newMeta = {
         page: payload.meta?.page ?? page,
-        page_size: payload.meta?.page_size ?? meta.page_size ?? 20,
+        page_size: payload.meta?.page_size ?? pageSize,
         total: totalFromMeta ?? totalFromCount,
       };
 
       setRows(data);
       setMeta(newMeta);
+      shgListCache.set(cacheKey, { rows: data, meta: newMeta });
     } catch (e) {
       console.error("Failed to load SHG list", e?.response?.data || e.message || e);
       setError(
@@ -80,10 +101,18 @@ export default function ShgListTable({ blockId, onSelectShg, selectedShgCode }) 
     setRows([]);
     setMeta({ page: 1, page_size: 20, total: 0 });
     if (blockId) {
-      load(1);
+      load(1, { force: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blockId, search, ordering]);
+
+  if (!blockId) {
+    return (
+      <div className="card" style={{ marginTop: 16 }}>
+        <p className="muted">Select a block to view SHGs.</p>
+      </div>
+    );
+  }
 
   const totalPages =
     meta && meta.page_size > 0
@@ -92,7 +121,7 @@ export default function ShgListTable({ blockId, onSelectShg, selectedShgCode }) 
 
   return (
     <div className="card" style={{ marginTop: 16 }}>
-      <div className="header-row">
+      <div className="header-row space-between">
         <div>
           <h2>Self Help Groups (SHGs)</h2>
           <p className="muted" style={{ marginTop: 4 }}>
@@ -100,6 +129,13 @@ export default function ShgListTable({ blockId, onSelectShg, selectedShgCode }) 
             and ordering to narrow down.
           </p>
         </div>
+        <button
+          className="btn-sm btn-flat"
+          onClick={() => load(meta.page || 1, { force: true })}
+          disabled={loading}
+        >
+          Refresh
+        </button>
       </div>
 
       <div className="filters-row">
@@ -121,7 +157,10 @@ export default function ShgListTable({ blockId, onSelectShg, selectedShgCode }) 
           <option value="village_name">Village (A–Z)</option>
           <option value="-village_name">Village (Z–A)</option>
         </select>
-        <button className="btn-sm btn-outline" onClick={() => load(1)}>
+        <button
+          className="btn-sm btn-outline"
+          onClick={() => load(1, { force: true })}
+        >
           Apply
         </button>
       </div>
@@ -156,7 +195,10 @@ export default function ShgListTable({ blockId, onSelectShg, selectedShgCode }) 
                   const code =
                     shg.shg_code || shg.code || shg.id || `${shg.shg_name}-${idx}`;
                   const isSelected =
-                    selectedShgCode && selectedShgCode === shg.shg_code;
+                    selectedShgCode &&
+                    (selectedShgCode === shg.shg_code ||
+                      selectedShgCode === code);
+
                   return (
                     <tr
                       key={code}
@@ -164,17 +206,23 @@ export default function ShgListTable({ blockId, onSelectShg, selectedShgCode }) 
                     >
                       <td>{shg.shg_name || shg.name || "-"}</td>
                       <td>{shg.shg_code || shg.code || "-"}</td>
-                      <td>{shg.shgType || "-"}</td>
-                      <td>{shg.socialCategory}</td>
-                      <td>                   
+                      <td>{shg.shg_type || shg.shgType || "-"}</td>
+                      <td>{shg.social_category || shg.socialCategory || "-"}</td>
+                      <td>
                         <button
                           className="btn-sm btn-outline"
                           onClick={() => onSelectShg && onSelectShg(shg)}
                           style={{ transition: "0.5s" }}
-                          onMouseEnter={(e) => (e.currentTarget.querySelector("svg").style.color = "blue")}
-                          onMouseLeave={(e) => (e.currentTarget.querySelector("svg").style.color = "black")}
-
-                        ><FontAwesomeIcon icon={faEye} />
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.querySelector("svg").style.color =
+                              "blue")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.querySelector("svg").style.color =
+                              "black")
+                          }
+                        >
+                          <FontAwesomeIcon icon={faEye} />
                         </button>
                       </td>
                     </tr>

@@ -2,6 +2,9 @@
 import React, { useEffect, useState } from "react";
 import { LOOKUP_API } from "../../api/axios";
 
+// Cache for SHG detail keyed by shg_code
+const shgDetailCache = new Map();
+
 /**
  * Shows SHG detail using:
  *   GET /upsrlm-shg-detail/<shg_code>/
@@ -10,35 +13,52 @@ import { LOOKUP_API } from "../../api/axios";
  *  - shg (object) -> must contain shg_code, shg_name, village_name etc.
  */
 export default function ShgDetailCard({ shg }) {
-  // Prefer shg.shg_code coming from /upsrlm-shg-list/, but fall back safely
-  const shgCode = shg?.shg_code || shg?.nic_shg_code || shg?.code;
+  const shgCode = shg?.code || shg?.shg_code;
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState("");
+  const [reloadToken, setReloadToken] = useState(0); // increments when Refresh is clicked
 
   useEffect(() => {
     if (!shgCode) {
       setDetail(null);
       setError("");
+      setReloadToken(0);
       return;
     }
 
     let cancelled = false;
 
     async function load() {
+      const force = reloadToken > 0;
+      const cacheKey = shgCode;
+
       setLoading(true);
       setError("");
-      setDetail(null);
 
       try {
+        // Use cache if not forcing
+        if (!force && shgDetailCache.has(cacheKey)) {
+          const cached = shgDetailCache.get(cacheKey);
+          if (!cancelled) {
+            setDetail(cached);
+          }
+          return;
+        }
+
         const res = await LOOKUP_API.upsrlmShgDetail(shgCode, {});
         const payload = res?.data || {};
-        const data = payload.data || payload;
+        const data = payload.data || payload || null;
+
         if (!cancelled) {
-          setDetail(data || null);
+          setDetail(data);
         }
+        shgDetailCache.set(cacheKey, data);
       } catch (e) {
-        console.error("SHG detail failed", e?.response?.data || e.message || e);
+        console.error(
+          "SHG detail failed",
+          e?.response?.data || e.message || e
+        );
         if (!cancelled) {
           setError(
             e?.response?.data?.detail ||
@@ -57,30 +77,37 @@ export default function ShgDetailCard({ shg }) {
     return () => {
       cancelled = true;
     };
-  }, [shgCode]);
+  }, [shgCode, reloadToken]);
 
   if (!shgCode) {
     return null;
   }
 
-  const d = detail || {};
-  const firstAddress =
-    Array.isArray(d.shg_addresses) && d.shg_addresses.length > 0
-      ? d.shg_addresses[0]
-      : null;
-  const firstBank =
-    Array.isArray(d.shg_banks) && d.shg_banks.length > 0
-      ? d.shg_banks[0]
-      : null;
+  const effective = detail || {};
+  const addr =
+    (Array.isArray(effective.shg_addresses) &&
+      effective.shg_addresses[0]) ||
+    {};
+  const bank =
+    (Array.isArray(effective.shg_banks) && effective.shg_banks[0]) || {};
 
   return (
     <div className="card soft" style={{ marginTop: 16 }}>
-      <h3 style={{ marginTop: 0 }}>
-        SHG Detail –{" "}
-        <span style={{ color: "#111827" }}>
-          {d.shg_name || shg.shg_name || shg.shg_code || shgCode}
-        </span>
-      </h3>
+      <div className="header-row space-between" style={{ marginBottom: 8 }}>
+        <h3 style={{ marginTop: 0, marginBottom: 0 }}>
+          SHG Detail –{" "}
+          <span style={{ color: "#111827" }}>
+            {effective.shg_name || shg.shg_name || shg.shg_code}
+          </span>
+        </h3>
+        <button
+          className="btn-sm btn-flat"
+          onClick={() => setReloadToken((t) => t + 1)}
+          disabled={loading}
+        >
+          Refresh
+        </button>
+      </div>
 
       {loading ? (
         <div className="table-spinner">
@@ -92,328 +119,114 @@ export default function ShgDetailCard({ shg }) {
         <p className="muted">No detail available for this SHG.</p>
       ) : (
         <>
-          {/* BASIC INFO */}
-          <h4 style={{ marginTop: 12 }}>Basic Information</h4>
-          <table className="table table-compact">
-            <tbody>
-              <tr>
-                <td>
-                  <strong>SHG Name</strong>
-                </td>
-                <td>{d.shg_name || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>SHG Code</strong>
-                </td>
-                <td>{d.shg_code || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>NIC SHG Code</strong>
-                </td>
-                <td>{d.nic_shg_code || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>SHG Type</strong>
-                </td>
-                <td>{d.shg_type || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Social Category</strong>
-                </td>
-                <td>{d.social_category || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Special SHG</strong>
-                </td>
-                <td>{d.special_shg ? "Yes" : "No"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Formation Date</strong>
-                </td>
-                <td>{d.formation_date || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Co-option Date</strong>
-                </td>
-                <td>{d.cooption_date || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Meeting Frequency</strong>
-                </td>
-                <td>{d.meeting_frequency || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>PFMS Verified</strong>
-                </td>
-                <td>{d.pfms_verified ? "Yes" : "No"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Is Complete</strong>
-                </td>
-                <td>{d.is_complete === "1" ? "Yes" : d.is_complete || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Bookkeeper ID</strong>
-                </td>
-                <td>{d.bookkeeper_id || "-"}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          {/* CLF / VO INFO */}
-          <h4 style={{ marginTop: 16 }}>CLF & VO Information</h4>
-          <table className="table table-compact">
-            <tbody>
-              <tr>
-                <td>
-                  <strong>CLF Name</strong>
-                </td>
-                <td>{d.clf_name || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>CLF Code</strong>
-                </td>
-                <td>{d.clf_code || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>CLF ID</strong>
-                </td>
-                <td>{d.clf_id || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>VO Name</strong>
-                </td>
-                <td>{d.vo_name || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>VO Code</strong>
-                </td>
-                <td>{d.vo_code || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>VO ID</strong>
-                </td>
-                <td>{d.vo_id || "-"}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          {/* ADDRESS INFO */}
-          <h4 style={{ marginTop: 16 }}>Address & Location</h4>
-          {firstAddress ? (
+          <div className="table-wrapper">
             <table className="table table-compact">
               <tbody>
                 <tr>
                   <td>
-                    <strong>Village</strong>
+                    <strong>SHG Name</strong>
                   </td>
-                  <td>{firstAddress.village_name || "-"}</td>
+                  <td>{effective.shg_name || "-"}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Gram Panchayat</strong>
+                    <strong>SHG Code</strong>
                   </td>
-                  <td>{firstAddress.panchayat_name || "-"}</td>
+                  <td>{effective.shg_code || "-"}</td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>SHG Type</strong>
+                  </td>
+                  <td>{effective.shg_type || "-"}</td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>Social Category</strong>
+                  </td>
+                  <td>{effective.social_category || "-"}</td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>Formation Date</strong>
+                  </td>
+                  <td>{effective.formation_date || "-"}</td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>Meeting Frequency</strong>
+                  </td>
+                  <td>{effective.meeting_frequency || "-"}</td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>Village</strong>
+                  </td>
+                  <td>{addr.village_name || "-"}</td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>Panchayat</strong>
+                  </td>
+                  <td>{addr.panchayat_name || "-"}</td>
                 </tr>
                 <tr>
                   <td>
                     <strong>Block</strong>
                   </td>
-                  <td>{firstAddress.block_name || "-"}</td>
+                  <td>{addr.block_name || "-"}</td>
                 </tr>
                 <tr>
                   <td>
                     <strong>District</strong>
                   </td>
-                  <td>{firstAddress.district_name || "-"}</td>
+                  <td>{addr.district_name || "-"}</td>
                 </tr>
-                <tr>
-                  <td>
-                    <strong>State</strong>
-                  </td>
-                  <td>{firstAddress.state_name || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>PIN Code</strong>
-                  </td>
-                  <td>{firstAddress.postal_code || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Address Line 1</strong>
-                  </td>
-                  <td>{firstAddress.address_line1 || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Address Line 2</strong>
-                  </td>
-                  <td>{firstAddress.address_line2 || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Latitude</strong>
-                  </td>
-                  <td>{d.latitude || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Longitude</strong>
-                  </td>
-                  <td>{d.longitude || "-"}</td>
-                </tr>
-              </tbody>
-            </table>
-          ) : (
-            <p className="muted">No address information available.</p>
-          )}
-
-          {/* BANK INFO */}
-          <h4 style={{ marginTop: 16 }}>Primary Bank Account</h4>
-          {firstBank ? (
-            <table className="table table-compact">
-              <tbody>
                 <tr>
                   <td>
                     <strong>Bank Name</strong>
                   </td>
-                  <td>{firstBank.bank_name || "-"}</td>
+                  <td>{bank.bank_name || "-"}</td>
                 </tr>
                 <tr>
                   <td>
                     <strong>Branch</strong>
                   </td>
-                  <td>{firstBank.bank_branch_name || "-"}</td>
+                  <td>{bank.bank_branch_name || "-"}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Account Number</strong>
+                    <strong>Account No.</strong>
                   </td>
-                  <td>{firstBank.account_no || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Account Opening Date</strong>
-                  </td>
-                  <td>{firstBank.account_opening_date || "-"}</td>
+                  <td>{bank.account_no || "-"}</td>
                 </tr>
                 <tr>
                   <td>
                     <strong>IFSC</strong>
                   </td>
-                  <td>{firstBank.ifsc_code || firstBank.pfms_ifsc_code || "-"}</td>
+                  <td>{bank.ifsc_code || "-"}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>PFMS Account Holder Name</strong>
+                    <strong>PFMS Verified</strong>
                   </td>
-                  <td>{firstBank.pfms_account_holder_name || "-"}</td>
+                  <td>{effective.pfms_verified ? "Yes" : "No"}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>LokOS Account Holder Name</strong>
+                    <strong>Updated By</strong>
                   </td>
-                  <td>{firstBank.lokos_account_holder_name || "-"}</td>
+                  <td>{effective.updated_by || "-"}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>PFMS Vendor Code</strong>
+                    <strong>Updated Date</strong>
                   </td>
-                  <td>{firstBank.pfms_vendor_code || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>PFMS Verification</strong>
-                  </td>
-                  <td>
-                    {firstBank.pfms_verification === 1
-                      ? "Verified"
-                      : firstBank.pfms_verification ?? "-"}
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Is Default Account</strong>
-                  </td>
-                  <td>{firstBank.is_default ? "Yes" : "No"}</td>
+                  <td>{effective.updated_date || "-"}</td>
                 </tr>
               </tbody>
             </table>
-          ) : (
-            <p className="muted">No bank account information available.</p>
-          )}
-
-          {/* META INFO */}
-          <h4 style={{ marginTop: 16 }}>Meta Information</h4>
-          <table className="table table-compact">
-            <tbody>
-              <tr>
-                <td>
-                  <strong>Created By</strong>
-                </td>
-                <td>{d.created_by || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Created Date</strong>
-                </td>
-                <td>{d.created_date || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Updated By</strong>
-                </td>
-                <td>{d.updated_by || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Updated Date</strong>
-                </td>
-                <td>{d.updated_date || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>GUID</strong>
-                </td>
-                <td>{d.guid || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>UUID</strong>
-                </td>
-                <td>{d.uuid || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>State MIS ID</strong>
-                </td>
-                <td>{d.state_mis_id || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Internal ID</strong>
-                </td>
-                <td>{d.id || "-"}</td>
-              </tr>
-            </tbody>
-          </table>
+          </div>
         </>
       )}
     </div>

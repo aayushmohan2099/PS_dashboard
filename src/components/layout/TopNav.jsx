@@ -1,13 +1,11 @@
 // src/components/layout/TopNav.jsx
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+import React, { useContext } from "react";
+import { AuthContext } from "../../contexts/AuthContext";
 
 export default function TopNav({ left = null, right = null }) {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout } = useContext(AuthContext) || {};
 
-  // try to read cached geoscope for contextual title
+  // try to read cached geoscope for contextual title / scope
   let geo = null;
   try {
     geo = JSON.parse(localStorage.getItem("ps_user_geoscope") || "null");
@@ -35,42 +33,39 @@ export default function TopNav({ left = null, right = null }) {
   }
 
   const handleLogout = () => {
-    logout(); // clears tokens + user + geoscope
-    navigate("/login");
+    if (logout) {
+      logout();
+    }
   };
+
+  const defaultRight = (
+    <>
+      <div className="topnav-user">
+        {user?.username ? `Hi, ${user.username}` : "Welcome"}
+        {scopeLabel && (
+          <span
+            style={{
+              marginLeft: 8,
+              fontSize: 12,
+              color: "#6B7280",
+            }}
+          >
+            ({scopeLabel})
+          </span>
+        )}
+      </div>
+      <button className="btn btn-ghost" onClick={handleLogout}>
+        Logout
+      </button>
+    </>
+  );
 
   return (
     <header className="topnav">
       <div className="topnav-left">
         {left || <div className="app-title">Pragati Setu — Dashboard</div>}
-        {scopeLabel && (
-          <div style={{ marginLeft: 12, fontSize: 13, color: "#666" }}>
-            {scopeLabel}
-          </div>
-        )}
       </div>
-
-      <div className="topnav-right">
-        {right || (
-          <>
-            <div
-              className="topnav-user"
-              style={{ marginRight: 12, fontWeight: 500 }}
-            >
-              {user?.full_name || user?.username || "User"}
-            </div>
-
-            <button
-              className="btn btn-ghost"
-              onClick={handleLogout}
-              title="Logout"
-              style={{ color: "#d9534f", fontWeight: 600 }}
-            >
-              Logout
-            </button>
-          </>
-        )}
-      </div>
+      <div className="topnav-right">{right || defaultRight}</div>
     </header>
   );
 }

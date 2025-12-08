@@ -15,6 +15,7 @@ export const GENERAL_ROLES = [
   { id: 'master_trainer', label: 'MASTER TRAINER' },
   { id: 'crp_ep', label: 'ENTERPRISE CRP' },
   { id: 'crp_ld', label: 'LAKHPATI CRP' },
+  { id: 'contact_person', label: 'TP CONTACT PERSON' },    
 ];
 
 export default function RoleSelector({ userType = 'Admin', value = '', onChange = () => {} }) {

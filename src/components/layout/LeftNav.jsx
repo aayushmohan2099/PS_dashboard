@@ -90,20 +90,19 @@ export default function LeftNav() {
         {/* ---------------- TMS & Training Management ---------------- */}
         <div className="ln-group">
           <button
-            type="button"
             className="ln-group-header"
-            onClick={() => toggleGroup("tms")}
+            onClick={() => toggleGroup('tms')}
+            aria-expanded={!!openGroups.tms}
           >
-            <span>TMS & Training Management</span>
-            <span className="ln-chevron">{openGroups.tms ? "▾" : "▸"}</span>
+            <span>Training Management</span>
+            <span className={`caret ${openGroups.tms ? 'open' : ''}`}>▸</span>
           </button>
-          <div
-            className={classNames(
-              "ln-group-body",
-              openGroups.tms ? "open" : "collapsed"
-            )}
-          >
-            {renderItem("Dashboard", "/dashboard")}
+          <div className={`ln-submenu ${openGroups.tms ? 'show' : ''}`}>
+            {/* send user into TMS app, which uses tms_LeftNav.jsx */}
+            {renderItem('Dashboard', '/tms')}
+            {renderItem('Batches', '/tms/batches')}
+            {renderItem('Trainers', '/tms/trainers')}
+            {renderItem('Participants', '/tms/participants')}
           </div>
         </div>
 

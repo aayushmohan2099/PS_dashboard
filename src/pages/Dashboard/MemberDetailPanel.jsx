@@ -2,6 +2,16 @@
 import React, { useEffect, useState } from "react";
 import { EPSAKHI_API } from "../../api/axios";
 
+// Cache for member detail keyed by (shgCode + memberCode)
+const memberDetailCache = new Map();
+
+function boolText(v) {
+  if (v === true) return "Yes";
+  if (v === false) return "No";
+  if (v === null || v === undefined || v === "") return "-";
+  return String(v);
+}
+
 /**
  * Shows full member detail from UPSRLM using upsrlm-shg-members:
  *   GET /upsrlm-shg-members/<shg_code>/?search=<member_code>
@@ -14,18 +24,34 @@ export default function MemberDetailPanel({ shgCode, memberCode }) {
   const [loading, setLoading] = useState(false);
   const [record, setRecord] = useState(null);
   const [error, setError] = useState("");
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
-    if (!shgCode || !memberCode) return;
+    if (!shgCode || !memberCode) {
+      setRecord(null);
+      setError("");
+      setReloadToken(0);
+      return;
+    }
 
     let cancelled = false;
 
     async function load() {
+      const force = reloadToken > 0;
+      const cacheKey = `${shgCode}:${memberCode}`;
+
       setLoading(true);
       setError("");
-      setRecord(null);
 
       try {
+        if (!force && memberDetailCache.has(cacheKey)) {
+          const cached = memberDetailCache.get(cacheKey);
+          if (!cancelled) {
+            setRecord(cached);
+          }
+          return;
+        }
+
         const res = await EPSAKHI_API.upsrlmShgMembers(shgCode, {
           page: 1,
           page_size: 50,
@@ -33,11 +59,7 @@ export default function MemberDetailPanel({ shgCode, memberCode }) {
         });
 
         const payload = res?.data || {};
-        const data = Array.isArray(payload.data)
-          ? payload.data
-          : Array.isArray(payload.results)
-          ? payload.results
-          : [];
+        const data = Array.isArray(payload.data) ? payload.data : [];
         const first = data[0] || null;
 
         if (!cancelled) {
@@ -48,6 +70,7 @@ export default function MemberDetailPanel({ shgCode, memberCode }) {
             );
           }
         }
+        memberDetailCache.set(cacheKey, first);
       } catch (e) {
         console.error(
           "Failed to load member detail from UPSRLM",
@@ -71,396 +94,175 @@ export default function MemberDetailPanel({ shgCode, memberCode }) {
     return () => {
       cancelled = true;
     };
-  }, [shgCode, memberCode]);
-
-  if (!memberCode) {
-    return (
-      <div className="card soft" style={{ marginTop: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Beneficiary Detail</h3>
-        <p className="muted">Click on a member to see full detail.</p>
-      </div>
-    );
-  }
-
-  const d = record || {};
-  const memberAddresses =
-    (Array.isArray(d.member_addresses) && d.member_addresses) || [];
-  const memberBanks =
-    (Array.isArray(d.member_banks) && d.member_banks) || [];
-  const memberPhones =
-    (Array.isArray(d.member_phones) && d.member_phones) || [];
-  const memberDesignations =
-    (Array.isArray(d.member_designations) && d.member_designations) || [];
-
-  const firstAddress = memberAddresses[0] || null;
-  const firstBank = memberBanks[0] || null;
-
-  const boolText = (v) => {
-    if (v === null || v === undefined || v === "") return "-";
-    const yes =
-      v === true ||
-      v === 1 ||
-      v === "1" ||
-      String(v).toLowerCase() === "true" ||
-      String(v).toLowerCase() === "yes";
-    const no =
-      v === false ||
-      v === 0 ||
-      v === "0" ||
-      String(v).toLowerCase() === "false" ||
-      String(v).toLowerCase() === "no";
-    if (yes) return "Yes";
-    if (no) return "No";
-    return String(v);
-  };
+  }, [shgCode, memberCode, reloadToken]);
 
   return (
     <div className="card soft" style={{ marginTop: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Beneficiary Detail</h3>
+      <div className="header-row space-between">
+        <h3 style={{ marginTop: 0, marginBottom: 0 }}>
+          Beneficiary Detail – UPSRLM
+        </h3>
+        {memberCode && (
+          <button
+            className="btn-sm btn-flat"
+            disabled={loading}
+            onClick={() => setReloadToken((t) => t + 1)}
+          >
+            Refresh
+          </button>
+        )}
+      </div>
 
-      {loading ? (
+      {!memberCode ? (
+        <p className="muted">Click on a member to see full detail.</p>
+      ) : loading ? (
         <div className="table-spinner">
           <span>Loading beneficiary detail…</span>
         </div>
       ) : error ? (
-        <div className="alert alert-danger">{error}</div>
+        <div className="alert alert-danger" style={{ marginTop: 8 }}>
+          {error}
+        </div>
       ) : !record ? (
         <p className="muted">No detail available for this member.</p>
       ) : (
         <div style={{ marginTop: 8 }}>
-          {/* Header */}
           <div style={{ marginBottom: 8 }}>
-            <strong>{d.member_name || "Member"}</strong>{" "}
-            {d.member_code && (
+            <strong>{record.member_name || "Member"}</strong>{" "}
+            {record.member_code && (
               <span className="small-muted">
-                (Code: {d.member_code}
-                {d.nic_member_code ? `, NIC: ${d.nic_member_code}` : ""})
+                (Code: {record.member_code})
               </span>
             )}
           </div>
 
-          {/* BASIC INFO */}
-          <h4 style={{ marginTop: 12 }}>Basic Information</h4>
-          <table className="table table-compact">
-            <tbody>
-              <tr>
-                <td style={{ width: "38%" }}>
-                  <strong>Member Name</strong>
-                </td>
-                <td>{d.member_name || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Member Code</strong>
-                </td>
-                <td>{d.member_code || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>NIC Member Code</strong>
-                </td>
-                <td>{d.nic_member_code || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>DOB</strong>
-                </td>
-                <td>{d.dob || d.DOB || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Gender</strong>
-                </td>
-                <td>{d.gender || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Marital Status</strong>
-                </td>
-                <td>{d.marital_status || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Father / Husband Type</strong>
-                </td>
-                <td>{d.father_husband || d.father_husband_type || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Relation Name</strong>
-                </td>
-                <td>{d.relation_name || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Joining Date</strong>
-                </td>
-                <td>{d.joining_date || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Education</strong>
-                </td>
-                <td>{d.education || "-"}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          {/* SOCIO-ECONOMIC INFO */}
-          <h4 style={{ marginTop: 16 }}>Socio-economic Information</h4>
-          <table className="table table-compact">
-            <tbody>
-              <tr>
-                <td style={{ width: "38%" }}>
-                  <strong>Religion</strong>
-                </td>
-                <td>{d.religion || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Social Category</strong>
-                </td>
-                <td>{d.social_category || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>BPL</strong>
-                </td>
-                <td>{d.bpl || d.BPL || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>PIP Category</strong>
-                </td>
-                <td>{d.pip_category || d.PIP_CATEGORY || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>PLD Status</strong>
-                </td>
-                <td>{boolText(d.pld_status)}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Aadhaar Verified</strong>
-                </td>
-                <td>{boolText(d.aadhar_verified)}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          {/* ADDRESS INFO */}
-          <h4 style={{ marginTop: 16 }}>Address & Location</h4>
-          {firstAddress ? (
-            <table className="table table-compact">
+          <div className="table-wrapper">
+            <table
+              className="table table-compact"
+              style={{ width: "100%", borderCollapse: "collapse" }}
+            >
               <tbody>
                 <tr>
-                  <td style={{ width: "38%" }}>
-                    <strong>Address Line 1</strong>
-                  </td>
-                  <td>{firstAddress.address_line1 || "-"}</td>
+                  <td style={{ width: "30%", fontWeight: 600 }}>DOB</td>
+                  <td>{record.dob || "-"}</td>
                 </tr>
                 <tr>
-                  <td>
-                    <strong>Address Line 2</strong>
-                  </td>
-                  <td>{firstAddress.address_line2 || "-"}</td>
+                  <td style={{ fontWeight: 600 }}>Gender</td>
+                  <td>{record.gender || "-"}</td>
                 </tr>
                 <tr>
-                  <td>
-                    <strong>Village</strong>
-                  </td>
-                  <td>{firstAddress.village_name || "-"}</td>
+                  <td style={{ fontWeight: 600 }}>Marital Status</td>
+                  <td>{record.marital_status || "-"}</td>
                 </tr>
                 <tr>
-                  <td>
-                    <strong>Gram Panchayat</strong>
-                  </td>
-                  <td>{firstAddress.panchayat_name || "-"}</td>
+                  <td style={{ fontWeight: 600 }}>Father / Husband</td>
+                  <td>{record.relation_name || "-"}</td>
                 </tr>
                 <tr>
-                  <td>
-                    <strong>Block</strong>
-                  </td>
-                  <td>{firstAddress.block_name || "-"}</td>
+                  <td style={{ fontWeight: 600 }}>Religion</td>
+                  <td>{record.religion || "-"}</td>
                 </tr>
                 <tr>
-                  <td>
-                    <strong>District</strong>
-                  </td>
-                  <td>{firstAddress.district_name || "-"}</td>
+                  <td style={{ fontWeight: 600 }}>Social Category</td>
+                  <td>{record.social_category || "-"}</td>
                 </tr>
                 <tr>
-                  <td>
-                    <strong>State</strong>
-                  </td>
-                  <td>{firstAddress.state_name || "-"}</td>
+                  <td style={{ fontWeight: 600 }}>Education</td>
+                  <td>{record.education || "-"}</td>
                 </tr>
                 <tr>
+                  <td style={{ fontWeight: 600 }}>Aadhaar Verified</td>
+                  <td>{boolText(record.aadhar_verified)}</td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 600 }}>PLD Status</td>
+                  <td>{boolText(record.pld_status)}</td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Joining Date</td>
+                  <td>{record.joining_date || "-"}</td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Created By</td>
+                  <td>{record.created_by || "-"}</td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Created Date</td>
+                  <td>{record.created_date || "-"}</td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Updated By</td>
+                  <td>{record.updated_by || "-"}</td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Updated Date</td>
+                  <td>{record.updated_date || "-"}</td>
+                </tr>
+
+                {/* Address */}
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Address</td>
                   <td>
-                    <strong>PIN Code</strong>
+                    {Array.isArray(record.member_addresses) &&
+                    record.member_addresses.length > 0 ? (
+                      <>
+                        {record.member_addresses[0].village_name || "-"},{" "}
+                        {record.member_addresses[0].panchayat_name || "-"},{" "}
+                        {record.member_addresses[0].block_name || "-"},{" "}
+                        {record.member_addresses[0].district_name || "-"} (
+                        {record.member_addresses[0].state_name || "-"})
+                      </>
+                    ) : (
+                      "-"
+                    )}
                   </td>
-                  <td>{firstAddress.postal_code || "-"}</td>
+                </tr>
+
+                {/* Phones */}
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Mobile</td>
+                  <td>
+                    {Array.isArray(record.member_phones) &&
+                    record.member_phones.length > 0
+                      ? record.member_phones[0].phone_no
+                      : "-"}
+                  </td>
+                </tr>
+
+                {/* Bank */}
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Bank Account</td>
+                  <td>
+                    {Array.isArray(record.member_banks) &&
+                    record.member_banks.length > 0 ? (
+                      <>
+                        {record.member_banks[0].bank_name || "-"} /{" "}
+                        {record.member_banks[0].bank_branch_name || "-"} –{" "}
+                        {record.member_banks[0].account_no || "-"}
+                      </>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                </tr>
+
+                {/* Designations */}
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Designation</td>
+                  <td>
+                    {Array.isArray(record.member_designations) &&
+                    record.member_designations.length > 0 ? (
+                      record.member_designations
+                        .map((d) => d.designation)
+                        .join(", ")
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                 </tr>
               </tbody>
             </table>
-          ) : (
-            <p className="muted">No address information available.</p>
-          )}
-
-          {/* BANK INFO */}
-          <h4 style={{ marginTop: 16 }}>Primary Bank Account</h4>
-          {firstBank ? (
-            <table className="table table-compact">
-              <tbody>
-                <tr>
-                  <td style={{ width: "38%" }}>
-                    <strong>Bank Name</strong>
-                  </td>
-                  <td>{firstBank.bank_name || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Branch</strong>
-                  </td>
-                  <td>{firstBank.bank_branch_name || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Account Number</strong>
-                  </td>
-                  <td>{firstBank.account_no || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Account Opening Date</strong>
-                  </td>
-                  <td>{firstBank.account_open_date || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>IFSC</strong>
-                  </td>
-                  <td>{firstBank.ifsc_code || "-"}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Is Default Account</strong>
-                  </td>
-                  <td>{boolText(firstBank.is_default_account)}</td>
-                </tr>
-              </tbody>
-            </table>
-          ) : (
-            <p className="muted">No bank information available.</p>
-          )}
-
-          {/* PHONES & DESIGNATIONS */}
-          <h4 style={{ marginTop: 16 }}>Phones & Designations</h4>
-          <div className="flex" style={{ gap: 12, alignItems: "flex-start" }}>
-            <div style={{ flex: 1 }}>
-              <h5 style={{ marginTop: 0 }}>Phones</h5>
-              {memberPhones.length === 0 ? (
-                <p className="muted">No phone numbers available.</p>
-              ) : (
-                <table className="table table-compact">
-                  <thead>
-                    <tr>
-                      <th>Phone Number</th>
-                      <th>Default</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {memberPhones.map((p, idx) => (
-                      <tr key={p.member_phone_details_id || idx}>
-                        <td>{p.phone_no || "-"}</td>
-                        <td>{boolText(p.is_default)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            <div style={{ flex: 1 }}>
-              <h5 style={{ marginTop: 0 }}>Designations in SHG</h5>
-              {memberDesignations.length === 0 ? (
-                <p className="muted">No designation information available.</p>
-              ) : (
-                <table className="table table-compact">
-                  <thead>
-                    <tr>
-                      <th>Designation</th>
-                      <th>Signatory</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {memberDesignations.map((dsg, idx) => (
-                      <tr key={dsg.member_code || idx}>
-                        <td>{dsg.designation || "-"}</td>
-                        <td>{boolText(dsg.is_signatory)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
           </div>
-
-          {/* META INFO */}
-          <h4 style={{ marginTop: 16 }}>Meta Information</h4>
-          <table className="table table-compact">
-            <tbody>
-              <tr>
-                <td style={{ width: "38%" }}>
-                  <strong>Created By</strong>
-                </td>
-                <td>{d.created_by || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Created Date</strong>
-                </td>
-                <td>{d.created_date || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Updated By</strong>
-                </td>
-                <td>{d.updated_by || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Updated Date</strong>
-                </td>
-                <td>{d.updated_date || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Member ID</strong>
-                </td>
-                <td>{d.member_id || d.MEMBER_ID || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Member GUID</strong>
-                </td>
-                <td>{d.member_guid || d.MEMBER_GUID || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>State MIS ID</strong>
-                </td>
-                <td>{d.state_mis_id || "-"}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Token</strong>
-                </td>
-                <td>{d.token || "-"}</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       )}
     </div>

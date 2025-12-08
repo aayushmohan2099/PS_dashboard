@@ -1,7 +1,22 @@
+// src/pages/Dashboard/ShgMemberListTable.jsx
 import React, { useEffect, useState } from "react";
 import { EPSAKHI_API } from "../../api/axios";
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
+// Cache for SHG member lists per (shgCode + filters)
+const shgMembersCache = new Map();
+
+function calculateAge(dob) {
+  if (!dob) return "";
+  const d = new Date(dob);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) {
+    age -= 1;
+  }
+  return age;
+}
 
 /**
  * Member list for a selected SHG.
@@ -13,27 +28,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
  *  - onSelectMember(member) -> called when user clicks "View Detail"
  *  - selectedMemberCode      -> optional, for highlight
  */
-
-// helper: calculate age from dob ("YYYY-MM-DD")
-function calculateAge(dob) {
-  if (!dob) return "";
-  const d = new Date(dob);
-  if (Number.isNaN(d.getTime())) return "";
-  const today = new Date();
-  let age = today.getFullYear() - d.getFullYear();
-  const m = today.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) {
-    age--;
-  }
-  return age >= 0 ? age : "";
-}
-
 export default function ShgMemberListTable({
   shg,
   onSelectMember,
   selectedMemberCode,
 }) {
-  const shgCode = shg?.code;
+  const shgCode = shg?.code || shg?.shg_code;
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState({ page: 1, page_size: 20, total: 0 });
   const [loading, setLoading] = useState(false);
@@ -41,32 +41,58 @@ export default function ShgMemberListTable({
 
   const [search, setSearch] = useState("");
   const [ordering, setOrdering] = useState("");
-  const [onlyPld, setOnlyPld] = useState(false); // Potential Lakhpati Didis
+  const [onlyPld, setOnlyPld] = useState(false); // working PLD filter
+  const [reloadToken, setReloadToken] = useState(0);
 
-  async function load(page = 1) {
+  async function load(page = 1, { force = false } = {}) {
     if (!shgCode) return;
+
+    const pageSize = meta.page_size || 20;
+    const cacheKey = JSON.stringify({
+      shgCode,
+      page,
+      page_size: pageSize,
+      search: search || "",
+      ordering: ordering || "",
+      onlyPld: !!onlyPld,
+    });
+
+    if (!force && shgMembersCache.has(cacheKey)) {
+      const cached = shgMembersCache.get(cacheKey);
+      setRows(cached.rows || []);
+      setMeta(cached.meta || { page, page_size: pageSize, total: 0 });
+      return;
+    }
+
     setLoading(true);
     setError("");
+
     try {
       const res = await EPSAKHI_API.upsrlmShgMembers(shgCode, {
         page,
-        page_size: meta.page_size || 20,
+        page_size: pageSize,
         search: search || undefined,
         ordering: ordering || undefined,
-        // pld_status filter expected by backend
-        pld_status: onlyPld ? true : undefined,
+        pld_status: onlyPld ? "true" : undefined,
       });
 
       const payload = res?.data || {};
       const data = Array.isArray(payload.data) ? payload.data : [];
       const m = payload.meta || {
         page,
-        page_size: meta.page_size || 20,
+        page_size: pageSize,
         total: data.length,
       };
 
+      const newMeta = {
+        page: m.page || page,
+        page_size: m.page_size || pageSize,
+        total: m.total ?? m.count ?? data.length,
+      };
+
       setRows(data);
-      setMeta(m);
+      setMeta(newMeta);
+      shgMembersCache.set(cacheKey, { rows: data, meta: newMeta });
     } catch (e) {
       console.error(
         "Failed to load SHG members",
@@ -82,15 +108,15 @@ export default function ShgMemberListTable({
     }
   }
 
-  // reload whenever shg / filters change
+  // reload whenever shg / filters / reloadToken change
   useEffect(() => {
     setRows([]);
     setMeta({ page: 1, page_size: 20, total: 0 });
     if (shgCode) {
-      load(1);
+      load(1, { force: reloadToken > 0 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shgCode, search, ordering, onlyPld]);
+  }, [shgCode, search, ordering, onlyPld, reloadToken]);
 
   if (!shgCode) {
     return (
@@ -107,15 +133,22 @@ export default function ShgMemberListTable({
 
   return (
     <div className="card" style={{ marginTop: 16 }}>
-      <div className="header-row">
+      <div className="header-row space-between">
         <div>
           <h3>
             Members in SHG:{" "}
             <span style={{ color: "#111827" }}>
-              {shg.shg_name || shg.shg_code}
+              {shg.shg_name || shg.name || shg.shg_code || shg.code}
             </span>
           </h3>
         </div>
+        <button
+          className="btn-sm btn-flat"
+          onClick={() => setReloadToken((t) => t + 1)}
+          disabled={loading}
+        >
+          Refresh
+        </button>
       </div>
 
       <div className="filters-row">
@@ -134,6 +167,8 @@ export default function ShgMemberListTable({
           <option value="">Order by…</option>
           <option value="member_name">Name (A–Z)</option>
           <option value="-member_name">Name (Z–A)</option>
+          <option value="dob">Age (Youngest first)</option>
+          <option value="-dob">Age (Oldest first)</option>
         </select>
         <label
           className="small-muted"
@@ -144,9 +179,12 @@ export default function ShgMemberListTable({
             checked={onlyPld}
             onChange={(e) => setOnlyPld(e.target.checked)}
           />
-          Potential Lakhpati Didis in SHG
+          Only working PLD status
         </label>
-        <button className="btn-sm btn-outline" onClick={() => load(1)}>
+        <button
+          className="btn-sm btn-outline"
+          onClick={() => load(1, { force: true })}
+        >
           Apply
         </button>
       </div>
@@ -166,7 +204,7 @@ export default function ShgMemberListTable({
       ) : (
         <>
           <div className="table-wrapper">
-            <table className="table">
+            <table className="table table-compact">
               <thead>
                 <tr>
                   <th>Member Name</th>
@@ -175,49 +213,38 @@ export default function ShgMemberListTable({
                   <th>Gender</th>
                   <th>Marital Status</th>
                   <th>Designation</th>
-                  <th>Phone</th>
+                  <th>Mobile</th>
                   <th>Religion</th>
                   <th>Social Category</th>
                   <th>Aadhaar No</th>
                   <th>Aadhaar Verified</th>
+                  <th>PLD Status</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((m) => {
-                  const code = m.member_code || m.lokos_member_code || m.id;
-
-                  // age
-                  const age = calculateAge(m.dob);
-
-                  // designation(s)
-                  const designation =
-                    Array.isArray(m.member_designations) &&
-                    m.member_designations.length > 0
-                      ? m.member_designations
-                          .map((d) => d.designation)
-                          .filter(Boolean)
-                          .join(", ")
-                      : "-";
-
-                  // phone from member_phones (default or first), fallback to mobile fields
-                  let phone = "-";
-                  if (
-                    Array.isArray(m.member_phones) &&
-                    m.member_phones.length > 0
-                  ) {
-                    const def =
-                      m.member_phones.find((p) => p.is_default) ||
-                      m.member_phones[0];
-                    phone = def.phone_no ?? "-";
-                  } else {
-                    phone = m.mobile || m.phone_no || "-";
-                  }
-
+                  const code =
+                    m.member_code || m.lokos_member_code || m.id;
                   const isSelected =
                     selectedMemberCode &&
                     code &&
                     selectedMemberCode === code;
+
+                  const age = calculateAge(m.dob);
+                  const phone =
+                    (Array.isArray(m.member_phones) &&
+                      m.member_phones.find((p) => p.is_default)?.phone_no) ||
+                    (Array.isArray(m.member_phones) &&
+                      m.member_phones[0]?.phone_no) ||
+                    m.mobile ||
+                    m.phone_no ||
+                    "-";
+
+                  const designation =
+                    (Array.isArray(m.member_designations) &&
+                      m.member_designations[0]?.designation) ||
+                    "";
 
                   return (
                     <tr
@@ -225,26 +252,26 @@ export default function ShgMemberListTable({
                       className={isSelected ? "row-selected" : ""}
                     >
                       <td>{m.member_name || "-"}</td>
-                      <td>{m.member_code || m.lokos_member_code || "-"}</td>
-                      <td>{age !== "" ? age : "-"}</td>
+                      <td>{code || "-"}</td>
+                      <td>{age || "-"}</td>
                       <td>{m.gender || "-"}</td>
                       <td>{m.marital_status || "-"}</td>
-                      <td>{designation}</td>
+                      <td>{designation || "-"}</td>
                       <td>{phone}</td>
                       <td>{m.religion || "-"}</td>
                       <td>{m.social_category || "-"}</td>
                       <td>{m.aadhar_no || "-"}</td>
                       <td>{m.aadhar_verified ? "Yes" : "No"}</td>
+                      <td>{m.pld_status ? "Yes" : "No"}</td>
                       <td>
                         <button
                           className="btn-sm btn-outline"
-                          onClick={() => onSelectMember && onSelectMember(m)}
-                          style={{ transition: "0.5s" }}
-                          onMouseEnter={(e) => (e.currentTarget.querySelector("svg").style.color = "blue")}
-                          onMouseLeave={(e) => (e.currentTarget.querySelector("svg").style.color = "black")}
-
-                        ><FontAwesomeIcon icon={faEye} />
-                        </button>                        
+                          onClick={() =>
+                            onSelectMember && onSelectMember(m)
+                          }
+                        >
+                          View Detail
+                        </button>
                       </td>
                     </tr>
                   );
