@@ -1,1 +1,0 @@
-// src/pages/TMS/MT/mt_base_trainer.jsx

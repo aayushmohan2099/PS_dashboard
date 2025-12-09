@@ -16,6 +16,9 @@ import MemberDetailPanel from "./MemberDetailPanel";
 // If you have TMS LeftNav and want TMS roles to default to it:
 import TmsLeftNav from "../TMS/layout/tms_LeftNav";
 
+// NEW: canonical role helper
+import { getCanonicalRole } from "../../utils/roleUtils";
+
 // ---- helpers -----------------------------------------------------
 
 const REGION_ROLES = new Set(["bmmu", "dmmu", "dcnrlm"]);
@@ -26,23 +29,6 @@ const PARTNER_ROLES = new Set([
   "crp_ld",
 ]);
 const ADMIN_ROLES = new Set(["state_admin", "pmu_admin", "smmu"]);
-
-// normalise whatever backend sends (BMMU_USER, DMMU_ROLE, etc.)
-function normalizeRoleName(raw) {
-  if (!raw) return "";
-  const v = String(raw).toLowerCase();
-  if (v.startsWith("bmmu")) return "bmmu";
-  if (v.startsWith("dmmu")) return "dmmu";
-  if (v.startsWith("dcnrlm")) return "dcnrlm";
-  if (v.includes("state") && v.includes("admin")) return "state_admin";
-  if (v.includes("pmu")) return "pmu_admin";
-  if (v.includes("smmu")) return "smmu";
-  if (v.includes("training_partner")) return "training_partner";
-  if (v.includes("master_trainer")) return "master_trainer";
-  if (v.includes("crp_ep")) return "crp_ep";
-  if (v.includes("crp_ld")) return "crp_ld";
-  return v;
-}
 
 // key used to store geoscope in localStorage (LeftNav / TopNav already expect this)
 const GEOSCOPE_KEY = "ps_user_geoscope";
@@ -904,7 +890,6 @@ function SmmuDashboard() {
   );
 }
 
-
 // -----------------------------------------------------------------
 // Base DashboardHome
 // -----------------------------------------------------------------
@@ -989,7 +974,8 @@ export default function DashboardHome() {
             if (parsed && parsed.user_id === user.id) {
               if (!cancelled) {
                 setGeo(parsed);
-                setRoleNameNormalized(normalizeRoleName(parsed.role || user.role_name));
+                // Use canonical helper
+                setRoleNameNormalized(getCanonicalRole(parsed || user));
                 setLoading(false);
               }
               return;
@@ -1005,14 +991,16 @@ export default function DashboardHome() {
         if (!cancelled) {
           setGeo(payload);
           window.localStorage.setItem(GEOSCOPE_KEY, JSON.stringify(payload));
-          setRoleNameNormalized(normalizeRoleName(payload.role || user.role_name));
+          // Use canonical helper
+          setRoleNameNormalized(getCanonicalRole(payload || user));
           setLoading(false);
         }
       } catch (err) {
         console.error("Error loading user geoscope", err);
         if (!cancelled) {
           setGeoError("Could not resolve your geographical scope. Please contact administrator.");
-          setRoleNameNormalized(normalizeRoleName(user?.role_name));
+          // fallback: canonicalise from user object
+          setRoleNameNormalized(getCanonicalRole(user || {}));
           setLoading(false);
         }
       }

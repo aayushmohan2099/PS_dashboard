@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 import api from "../api/axios";
 import { getUser, setAuth, clearAuth, getAccessToken } from "../utils/storage";
+import { getCanonicalRole } from "../utils/roleUtils";
 
 export const AuthContext = createContext(null);
 
@@ -73,6 +74,7 @@ export const AuthProvider = ({ children }) => {
    */
   const logout = () => {
     clearAuth();
+    try { localStorage.removeItem('ps_user_geoscope'); } catch(e) {}
     setUser(null);
     setIsAuthenticated(false);
   };
@@ -118,6 +120,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         setUser,
         refreshAccess,
+        roleKey: getCanonicalRole(user),
       }}
     >
       {children}

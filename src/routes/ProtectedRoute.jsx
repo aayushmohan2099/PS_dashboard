@@ -2,6 +2,7 @@
 import React, { useContext } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
+import { getCanonicalRole } from '../utils/roleUtils';
 
 export default function ProtectedRoute({ allowedRoles = null, redirectTo = '/login' }) {
   const { isAuthenticated, user } = useContext(AuthContext);
@@ -9,19 +10,32 @@ export default function ProtectedRoute({ allowedRoles = null, redirectTo = '/log
   if (!isAuthenticated) return <Navigate to={redirectTo} replace />;
 
   if (allowedRoles && user) {
-    // Determine role id or role name from user
-    // Backend returns role as numeric id in user.role, and role_name as user.role_name
-    const roleId = (typeof user.role === 'number') ? user.role : (user.role && user.role.id) || null;
-    const roleName = user.role_name || (user.role && user.role.name) || null;
+    const allowed = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
 
-    const allowed = allowedRoles.map(r => (typeof r === 'string' && /^\d+$/.test(r) ? Number(r) : r));
+    // numeric allowed roles (numbers or numeric strings)
+    const allowedNums = allowed
+      .map(a => (typeof a === 'string' && /^\d+$/.test(a) ? Number(a) : a))
+      .filter(a => typeof a === 'number' && !Number.isNaN(a))
+      .map(Number);
 
-    const allowedById = allowed.some(ar => typeof ar === 'number' && roleId === ar);
-    const allowedByName = allowed.some(ar => typeof ar === 'string' && roleName && roleName.toLowerCase() === ar.toLowerCase());
+    // string allowed roles (canonical keys)
+    const allowedKeys = allowed
+      .filter(a => typeof a === 'string' && isNaN(Number(a)))
+      .map(s => String(s).toLowerCase());
 
-    if (!(allowedById || allowedByName)) {
-      return <Navigate to="/unauthorized" replace />;
+    // check user numeric role id
+    const userRoleId = Number(user.role_id ?? user.role);
+    if (!Number.isNaN(userRoleId) && allowedNums.includes(userRoleId)) {
+      return <Outlet />;
     }
+
+    // check canonical key match
+    const userKey = getCanonicalRole(user);
+    if (userKey && allowedKeys.includes(userKey)) {
+      return <Outlet />;
+    }
+
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <Outlet />;

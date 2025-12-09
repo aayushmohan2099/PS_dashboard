@@ -1,1 +1,0 @@
-// src/pages/TMS/BMMU/bmmu_batch_detail.jsx

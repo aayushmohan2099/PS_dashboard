@@ -1,0 +1,1 @@
+// src/pages/TMS/TRs/training_batch_detail.jsx

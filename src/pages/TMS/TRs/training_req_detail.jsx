@@ -1,0 +1,1 @@
+// src/pages/TMS/TRs/training_req_detail.jsx
