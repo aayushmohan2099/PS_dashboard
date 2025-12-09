@@ -100,7 +100,7 @@ export default function MemberDetailPanel({ shgCode, memberCode }) {
     <div className="card soft" style={{ marginTop: 16 }}>
       <div className="header-row space-between">
         <h3 style={{ marginTop: 0, marginBottom: 0 }}>
-          Beneficiary Detail – UPSRLM
+          Beneficiary Detail
         </h3>
         {memberCode && (
           <button
