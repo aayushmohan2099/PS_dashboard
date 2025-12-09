@@ -1,20 +1,21 @@
 // src/components/layout/LeftNav.jsx
-import React, { useEffect, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 // render TMS left nav when in /tms space
 import TmsLeftNav from "../../pages/TMS/layout/tms_LeftNav";
+
+// Use role utils provided in your frontend snapshot
+import { getCanonicalRole } from "../../utils/roleUtils";
 
 function classNames(...args) {
   return args.filter(Boolean).join(" ");
 }
 
 /**
- * Role mapping (DB values) -> canonical short role key used across the app
+ * Fallback role mapping (if roleUtils isn't behaving as expected).
  * Keep this in sync with your roles table.
- *
- * role id -> canonical role string (lowercase keys used elsewhere: 'bmmu','dmmu','smmu','training_partner','crp_ld','crp_ep','master_trainer','state_admin','pmu_admin','dcnrlm','tp_contact_person')
  */
 const ROLE_ID_MAP = {
   1: "bmmu",
@@ -30,9 +31,7 @@ const ROLE_ID_MAP = {
   11: "tp_contact_person",
 };
 
-function resolveRoleKey(user) {
-  // Prefer numeric role (role_id or role), fall back to role_name string,
-  // then try localStorage geoscope role (ps_user_geoscope) as fallback.
+function resolveRoleKeyFallback(user) {
   if (!user) return "";
 
   const maybeRoleId = Number(user.role_id ?? user.role);
@@ -40,10 +39,8 @@ function resolveRoleKey(user) {
     return ROLE_ID_MAP[maybeRoleId];
   }
 
-  // If role_name present (string), normalise
   if (user.role_name) {
     const rn = String(user.role_name).toLowerCase();
-    // map some obvious string forms to canonical keys
     if (rn.includes("bmmu")) return "bmmu";
     if (rn.includes("dmmu")) return "dmmu";
     if (rn.includes("smmu") || rn.includes("state_mission")) return "smmu";
@@ -57,7 +54,6 @@ function resolveRoleKey(user) {
     if (rn.includes("pmu_admin")) return "pmu_admin";
   }
 
-  // final fallback: try ps_user_geoscope stored role (string)
   try {
     const geo = JSON.parse(window.localStorage.getItem("ps_user_geoscope") || "null");
     if (geo?.role) {
@@ -77,8 +73,22 @@ function resolveRoleKey(user) {
   return "";
 }
 
+/**
+ * Map canonical role key -> TMS dashboard route
+ */
+const ROLE_TMS_ROUTE = {
+  bmmu: "/tms/bmmu/dashboard",
+  dmmu: "/tms/dmmu/dashboard",
+  smmu: "/tms/smmu/dashboard",
+  training_partner: "/tms/tp/dashboard",
+  master_trainer: "/tms/mt/dashboard",
+  tp_contact_person: "/tms/cp/dashboard",
+  default: "/tms",
+};
+
 export default function LeftNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [openGroups, setOpenGroups] = useState({
     beneficiary: true,
@@ -88,19 +98,23 @@ export default function LeftNav() {
     ecommerce: false,
   });
 
-  const roleKey = resolveRoleKey(user);
+  // If inside /tms path, return the specialized TMS left nav (unchanged)
+  if (location.pathname.startsWith("/tms")) {
+    return <TmsLeftNav />;
+  }
 
-  // role buckets (using canonical role keys)
-  const isRegionRole = ["bmmu", "dmmu", "dcnrlm", "smmu"].includes(roleKey);
-  const isAdminRole = ["state_admin", "pmu_admin"].includes(roleKey);
-  const isPartnerRole = ["training_partner", "master_trainer"].includes(roleKey);
-  const isCrpRole = ["crp_ep", "crp_ld"].includes(roleKey);
+  // Resolve role key using getCanonicalRole; fallback if needed
+  let roleKey = "";
+  try {
+    roleKey = getCanonicalRole ? getCanonicalRole(user) : "";
+  } catch (err) {
+    roleKey = "";
+  }
+  if (!roleKey) roleKey = resolveRoleKeyFallback(user);
 
-  // TMS-only: TP, MT, Contact Person
-  const isTmsOnlyRole = ["training_partner", "master_trainer", "tp_contact_person"].includes(roleKey);
-
-  // DCNRLM should not see Training Management System
-  const isDcnrlm = roleKey === "dcnrlm";
+  // Determine tmsRoute
+  let tmsRoute = ROLE_TMS_ROUTE.default;
+  if (roleKey && ROLE_TMS_ROUTE[roleKey]) tmsRoute = ROLE_TMS_ROUTE[roleKey];
 
   function toggleGroup(key) {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -122,141 +136,102 @@ export default function LeftNav() {
     );
   }
 
-  // If we are in /tms path, render TMS left nav
-  if (location.pathname.startsWith("/tms")) {
-    return <TmsLeftNav />;
-  }
-
   return (
     <aside className="left-nav">
       <div className="ln-header">
         <div className="ln-title">Pragati Setu</div>
-        <div className="ln-subtitle">{user?.username || ""}</div>
+        <div className="ln-subtitle">{user?.username || user?.first_name || ""}</div>
       </div>
 
       <nav className="ln-nav">
-        {/* ---------------- Beneficiary Management (new app) ---------------- */}
-        {!isTmsOnlyRole && (
+        {/* ---------------- Beneficiary Management — only for BMMU / DMMU / SMMU ---------------- */}
+        {(roleKey === "bmmu" || roleKey === "dmmu" || roleKey === "smmu") && (
           <div className="ln-group">
             <button
               type="button"
               className="ln-group-header"
               onClick={() => toggleGroup("beneficiary")}
+              aria-expanded={!!openGroups.beneficiary}
             >
               <span>Beneficiary Management</span>
-              <span className="ln-chevron">
-                {openGroups.beneficiary ? "▾" : "▸"}
-              </span>
+              <span className="ln-chevron">{openGroups.beneficiary ? "▾" : "▸"}</span>
             </button>
-            <div
-              className={classNames(
-                "ln-group-body",
-                openGroups.beneficiary ? "open" : "collapsed"
-              )}
-            >
-              {/* For now, Beneficiary Management = role-specific dashboard at /dashboard */}
-              {renderItem("Overview", "/dashboard")}
+            <div className={classNames("ln-group-body", openGroups.beneficiary ? "open" : "collapsed")}>
+              {renderItem("Dashboard Home", "/dashboard")}
             </div>
           </div>
         )}
 
-        {/* ---------------- TMS & Training Management ---------------- */}
-        {/* Hide TMS for DCNRLM */}
-        {!isDcnrlm && (
-          <div className="ln-group">
-            <button
-              className="ln-group-header"
-              onClick={() => toggleGroup("tms")}
-              aria-expanded={!!openGroups.tms}
-            >
-              <span>Training Management</span>
-              <span className={`caret ${openGroups.tms ? "open" : ""}`}>
-                ▸
-              </span>
-            </button>
-            <div className={`ln-submenu ${openGroups.tms ? "show" : ""}`}>
-              {/* Enter TMS area - TmsLeftNav will take over when pathname starts with /tms */}
-              {renderItem("Dashboard", "/tms")}
-              {renderItem("Batches", "/tms/batches")}
-              {renderItem("Trainers", "/tms/trainers")}
-              {renderItem("Participants", "/tms/participants")}
-            </div>
+        {/* ---------------- TMS (only header + single nav to role dashboard) ---------------- */}
+        <div className="ln-group">
+          <button
+            className="ln-group-header"
+            onClick={() => {
+              // toggle visual open state and navigate to role-specific TMS dashboard
+              toggleGroup("tms");
+              navigate(tmsRoute);
+            }}
+            aria-expanded={!!openGroups.tms}
+          >
+            <span>Training Management</span>
+            <span className={`caret ${openGroups.tms ? "open" : ""}`}>▸</span>
+          </button>
+
+          {/* only show single link - no submenu items */}
+          <div className={`ln-submenu ${openGroups.tms ? "show" : ""}`}>
+            <NavLink to={tmsRoute} className="ln-item">
+              <span>Go to Training Management</span>
+            </NavLink>
           </div>
-        )}
+        </div>
 
-        {/* ---------------- EP-Sakhi & Enterprise Profiling ---------------- */}
-        {!isTmsOnlyRole && (
-          <div className="ln-group">
-            <button
-              type="button"
-              className="ln-group-header"
-              onClick={() => toggleGroup("epsakhi")}
-            >
-              <span>EP-Sakhi & Enterprise Profiling</span>
-              <span className="ln-chevron">
-                {openGroups.epsakhi ? "▾" : "▸"}
-              </span>
-            </button>
-            <div
-              className={classNames(
-                "ln-group-body",
-                openGroups.epsakhi ? "open" : "collapsed"
-              )}
-            >
-              {renderItem("Dashboard", "/dashboard")}
-            </div>
+        {/* ---------------- EP-Sakhi & Enterprise Profiling (restored) ---------------- */}
+        <div className="ln-group">
+          <button
+            type="button"
+            className="ln-group-header"
+            onClick={() => toggleGroup("epsakhi")}
+            aria-expanded={!!openGroups.epsakhi}
+          >
+            <span>EP-Sakhi & Enterprise Profiling</span>
+            <span className="ln-chevron">{openGroups.epsakhi ? "▾" : "▸"}</span>
+          </button>
+          <div className={classNames("ln-group-body", openGroups.epsakhi ? "open" : "collapsed")}>
+            {renderItem("Dashboard", "/dashboard")}
           </div>
-        )}
+        </div>
 
-        {/* ---------------- Lakhpati Didi & E-commerce ---------------- */}
-        {(isRegionRole || isAdminRole || isPartnerRole || isCrpRole) && (
-          <>
-            <div className="ln-group">
-              <button
-                type="button"
-                className="ln-group-header"
-                onClick={() => toggleGroup("lakhpati")}
-              >
-                <span>Lakhpati Didi & Analytics</span>
-                <span className="ln-chevron">
-                  {openGroups.lakhpati ? "▾" : "▸"}
-                </span>
-              </button>
-              <div
-                className={classNames(
-                  "ln-group-body",
-                  openGroups.lakhpati ? "open" : "collapsed"
-                )}
-              >
-                {renderItem("Dashboard", "/dashboard")}
-              </div>
-            </div>
+        {/* ---------------- Lakhpati Didi & Analytics (restored) ---------------- */}
+        <div className="ln-group">
+          <button
+            type="button"
+            className="ln-group-header"
+            onClick={() => toggleGroup("lakhpati")}
+            aria-expanded={!!openGroups.lakhpati}
+          >
+            <span>Lakhpati Didi & Analytics</span>
+            <span className="ln-chevron">{openGroups.lakhpati ? "▾" : "▸"}</span>
+          </button>
+          <div className={classNames("ln-group-body", openGroups.lakhpati ? "open" : "collapsed")}>
+            {renderItem("Dashboard", "/dashboard")}
+          </div>
+        </div>
 
-            {/* E-Commerce hidden for TMS-only roles */}
-            {!isTmsOnlyRole && (
-              <div className="ln-group">
-                <button
-                  type="button"
-                  className="ln-group-header"
-                  onClick={() => toggleGroup("ecommerce")}
-                >
-                  <span>E-Commerce</span>
-                  <span className="ln-chevron">
-                    {openGroups.ecommerce ? "▾" : "▸"}
-                  </span>
-                </button>
-                <div
-                  className={classNames(
-                    "ln-group-body",
-                    openGroups.ecommerce ? "open" : "collapsed"
-                  )}
-                >
-                  {renderItem("Marketplace", "/dashboard")}
-                </div>
-              </div>
-            )}
-          </>
-        )}
+        {/* ---------------- E-Commerce (restored) ---------------- */}
+        <div className="ln-group">
+          <button
+            type="button"
+            className="ln-group-header"
+            onClick={() => toggleGroup("ecommerce")}
+            aria-expanded={!!openGroups.ecommerce}
+          >
+            <span>E-Commerce</span>
+            <span className="ln-chevron">{openGroups.ecommerce ? "▾" : "▸"}</span>
+          </button>
+          <div className={classNames("ln-group-body", openGroups.ecommerce ? "open" : "collapsed")}>
+            {renderItem("Marketplace", "/dashboard")}
+          </div>
+        </div>
       </nav>
     </aside>
   );

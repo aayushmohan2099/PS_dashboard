@@ -6,6 +6,12 @@ import Login from "./pages/Login";
 import DashboardHome from "./pages/Dashboard/DashboardHome";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
+// TMS pages (dashboards + SMMU targets page)
+import BmmuTmsDashboard from "./pages/TMS/BMMU/bmmu_tms_dashboard";
+import DmmuTmsDashboard from "./pages/TMS/DMMU/dmmu_tms_dashboard";
+import SmmuTmsDashboard from "./pages/TMS/SMMU/smmu_tms_dashboard";
+import SmmuCreatePartnerTargets from "./pages/TMS/SMMU/smmu_create_tp_targets";
+
 // tiny placeholder landing for /tms — replace later with a full TMS landing or redirect
 function TmsLanding() {
   return (
@@ -32,9 +38,14 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardHome />} />
         <Route path="/dashboard/*" element={<DashboardHome />} />
 
-        {/* TMS stub routes — landing + wildcard.
-            Replace TmsLanding with your real TMS entry or per-role redirects when ready. */}
+        {/* TMS routes: explicit dashboards + SMMU partner-targets */}
         <Route path="/tms" element={<TmsLanding />} />
+        <Route path="/tms/bmmu/dashboard" element={<BmmuTmsDashboard />} />
+        <Route path="/tms/dmmu/dashboard" element={<DmmuTmsDashboard />} />
+        <Route path="/tms/smmu/dashboard" element={<SmmuTmsDashboard />} />
+        <Route path="/tms/smmu/partner-targets" element={<SmmuCreatePartnerTargets />} />
+
+        {/* keep a fallback for other TMS paths (landing for now) */}
         <Route path="/tms/*" element={<TmsLanding />} />
       </Route>
 

@@ -1,11 +1,14 @@
 // src/pages/TMS/layout/tms_LeftNav.jsx
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../contexts/AuthContext";
 
 /**
  * TMS Left Nav — role aware
  * Uses numeric role ids first (from login response), then falls back to role_name or geoscope.
+ *
+ * This version is fixed-position and small-width; it applies a matching left-margin
+ * to the main-area to avoid compressing the header/content.
  */
 
 // map numeric role id -> canonical key
@@ -29,7 +32,6 @@ function getRoleKey(user) {
   const id = Number(user.role_id ?? user.role);
   if (!Number.isNaN(id) && ROLE_ID_MAP[id]) return ROLE_ID_MAP[id];
 
-  // fallback to role_name string
   if (user.role_name) {
     const rn = String(user.role_name).toLowerCase();
     if (rn.includes("bmmu")) return "bmmu";
@@ -43,7 +45,6 @@ function getRoleKey(user) {
     if (rn.includes("crp_ld")) return "crp_ld";
   }
 
-  // try geoscope
   try {
     const geo = JSON.parse(window.localStorage.getItem("ps_user_geoscope") || "null");
     if (geo?.role) {
@@ -65,8 +66,21 @@ function getRoleKey(user) {
 
 function renderNavItem(item) {
   return (
-    <NavLink key={item.key} to={item.to} className={({ isActive }) => "ln-item" + (isActive ? " active" : "")}>
-      <span>{item.label}</span>
+    <NavLink
+      key={item.key}
+      to={item.to}
+      className={({ isActive }) => "ln-item" + (isActive ? " active" : "")}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "8px 10px",
+        borderRadius: 6,
+        textDecoration: "none",
+        color: "#0b2540",
+      }}
+    >
+      <span style={{ fontSize: 14 }}>{item.label}</span>
     </NavLink>
   );
 }
@@ -157,35 +171,111 @@ export default function TmsLeftNav() {
       ? "Contact Person"
       : "TMS User";
 
+  // final width used by nav (px)
+  const NAV_WIDTH = 220;
+
+  // apply margin to main area so header/content aren't smushed
+  useEffect(() => {
+    const mainArea = document.querySelector(".main-area");
+    const appShell = document.querySelector(".app-shell");
+    const originalMainMarginLeft = mainArea ? mainArea.style.marginLeft : null;
+    const originalAppPaddingLeft = appShell ? appShell.style.paddingLeft : null;
+
+    // nav is fixed; push main area right by NAV_WIDTH
+    if (mainArea) {
+      mainArea.style.marginLeft = `${NAV_WIDTH}px`;
+    }
+    // as fallback, also apply small padding to app shell
+    if (appShell) {
+      appShell.style.paddingLeft = "";
+    }
+
+    return () => {
+      if (mainArea) mainArea.style.marginLeft = originalMainMarginLeft || "";
+      if (appShell) appShell.style.paddingLeft = originalAppPaddingLeft || "";
+    };
+  }, []);
+
+  // compact styles to reduce left nav footprint and beautify
+  const asideStyle = {
+    width: NAV_WIDTH,
+    minWidth: NAV_WIDTH,
+    position: "fixed",
+    left: 0,
+    top: 0,
+    height: "100vh",
+    background: "#ffffff",
+    borderRight: "1px solid #eef2f6",
+    padding: "12px 12px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+    zIndex: 30,
+    overflowY: "auto",
+  };
+
+  const logoStyle = {
+    padding: "10px 8px",
+    borderRadius: 8,
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    background: "#fbfdff",
+    alignItems: "flex-start",
+  };
+
+  const logoTitle = { fontSize: 16, fontWeight: 700, color: "#0b2540" };
+  const logoSub = { fontSize: 12, color: "#6c757d" };
+  const logoBadge = { marginTop: 6, background: "#eef6ff", color: "#0b2540", fontSize: 11, padding: "4px 6px", borderRadius: 6 };
+
+  const groupHeaderStyle = { fontSize: 12, color: "#6b7280", fontWeight: 600, padding: "6px 4px" };
+  const submenuStyle = { display: "flex", flexDirection: "column", gap: 6, padding: "6px 2px" };
+
   return (
-    <aside className="leftnav tms-leftnav">
-      <div className="ln-logo" onClick={() => navigate("/dashboard")} style={{ cursor: "pointer" }}>
-        <div className="ln-logo-title">Pragati Setu</div>
-        <div className="ln-logo-subtitle">Training Management System</div>
-        <div className="ln-logo-badge">{roleLabel}</div>
+    <aside className="leftnav tms-leftnav" style={asideStyle}>
+      <div style={logoStyle} onClick={() => navigate("/dashboard")}>
+        <div style={logoTitle}>Pragati Setu</div>
+        <div style={logoSub}>Training Management</div>
+        <div style={logoBadge}>{roleLabel}</div>
       </div>
 
-      <nav className="ln-menu">
-        <div className="ln-group">
-          <div className="ln-group-header">
-            <span>TMS Navigation</span>
+      <nav className="ln-menu" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {(roleKey === "bmmu" || roleKey === "dmmu" || roleKey === "smmu") && (
+          <div className="ln-group">
+            <div className="ln-group-header" style={groupHeaderStyle}>
+              <span>Beneficiary Management</span>
+            </div>
+            <div className="ln-submenu show" style={submenuStyle}>
+              <NavLink to="/dashboard" className="ln-item" style={{ textDecoration: "none", color: "#0b2540", padding: "8px 10px", borderRadius: 6 }}>
+                <span style={{ fontSize: 14 }}>Dashboard Home</span>
+              </NavLink>
+            </div>
           </div>
-          <div className="ln-submenu show">{menu.map((item) => renderNavItem(item))}</div>
-        </div>
+        )}
 
         <div className="ln-group">
-          <div className="ln-group-header">
+          <div className="ln-group-header" style={groupHeaderStyle}>
+            <span>TMS Navigation</span>
+          </div>
+          <div className="ln-submenu show" style={submenuStyle}>
+            {menu.map((item) => renderNavItem(item))}
+          </div>
+        </div>
+
+        <div className="ln-group" style={{ marginTop: "auto" }}>
+          <div className="ln-group-header" style={groupHeaderStyle}>
             <span>Quick Actions</span>
           </div>
-          <div className="ln-submenu show">
-            <NavLink to="/tms/training-plans" className="ln-item">
-              <span>Training Plans</span>
+          <div className="ln-submenu show" style={submenuStyle}>
+            <NavLink to="/tms/training-plans" className="ln-item" style={{ textDecoration: "none", color: "#0b2540", padding: "8px 10px", borderRadius: 6 }}>
+              <span style={{ fontSize: 14 }}>Training Plans</span>
             </NavLink>
-            <NavLink to="/tms/training-themes" className="ln-item">
-              <span>Training Themes</span>
+            <NavLink to="/tms/training-themes" className="ln-item" style={{ textDecoration: "none", color: "#0b2540", padding: "8px 10px", borderRadius: 6 }}>
+              <span style={{ fontSize: 14 }}>Training Themes</span>
             </NavLink>
-            <NavLink to="/tms/training-requests" className="ln-item">
-              <span>All Requests</span>
+            <NavLink to="/tms/training-requests" className="ln-item" style={{ textDecoration: "none", color: "#0b2540", padding: "8px 10px", borderRadius: 6 }}>
+              <span style={{ fontSize: 14 }}>All Requests</span>
             </NavLink>
           </div>
         </div>
