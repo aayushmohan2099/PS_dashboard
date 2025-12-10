@@ -1,5 +1,5 @@
 // src/pages/Dashboard/ShgMemberListTable.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { EPSAKHI_API } from "../../api/axios";
 
 // Cache for SHG member lists per (shgCode + filters)
@@ -20,18 +20,24 @@ function calculateAge(dob) {
 
 /**
  * Member list for a selected SHG.
- * - Uses /upsrlm-shg-members/<shg_code>/
- * - Correct pagination based on backend meta: { meta: { page, page_size, total }, data: [...] }
  *
  * Props:
- *  - shg        (object)  -> must contain shg_code
- *  - onSelectMember(member) -> called when user clicks "View Detail"
- *  - selectedMemberCode      -> optional, for highlight
+ *  - shg                 (object)  -> must contain shg_code or code
+ *  - onSelectMember(member) -> called when user clicks "View Detail" (legacy)
+ *  - onToggleMember(member, checked) -> called for checkbox selection/unselection (new)
+ *  - selectedMemberCodes  (Set|Array) -> optional controlled selection (member_code values)
+ *  - selectedMemberCode   -> optional single-code highlight (backwards compatibility)
+ *
+ * Notes:
+ *  - When checkbox is checked we call both `onToggleMember(member, true)` and also `onSelectMember(member)` (to maintain existing behavior that expects a full member object).
+ *  - When checkbox is unchecked we call `onToggleMember(member, false)`.
  */
 export default function ShgMemberListTable({
   shg,
   onSelectMember,
-  selectedMemberCode,
+  onToggleMember,
+  selectedMemberCodes,
+  selectedMemberCode, // legacy single highlight prop
 }) {
   const shgCode = shg?.code || shg?.shg_code;
   const [rows, setRows] = useState([]);
@@ -43,6 +49,26 @@ export default function ShgMemberListTable({
   const [ordering, setOrdering] = useState("");
   const [onlyPld, setOnlyPld] = useState(false); // working PLD filter
   const [reloadToken, setReloadToken] = useState(0);
+
+  // internal selected set (if parent doesn't control selection)
+  const [internalSelected, setInternalSelected] = useState(() => new Set());
+
+  // compute a Set from selectedMemberCodes prop for quick lookup
+  const controlledSelectedSet = useMemo(() => {
+    if (!selectedMemberCodes) return null;
+    if (selectedMemberCodes instanceof Set) return selectedMemberCodes;
+    if (Array.isArray(selectedMemberCodes)) return new Set(selectedMemberCodes.map(String));
+    // fallback: single code string
+    return new Set([String(selectedMemberCodes)]);
+  }, [selectedMemberCodes]);
+
+  // helper: is a given member considered selected (controlled -> prop, else internal)
+  function isMemberSelected(member) {
+    const code = member?.member_code || member?.lokos_member_code || member?.id;
+    if (!code) return false;
+    if (controlledSelectedSet) return controlledSelectedSet.has(String(code));
+    return internalSelected.has(String(code));
+  }
 
   async function load(page = 1, { force = false } = {}) {
     if (!shgCode) return;
@@ -94,15 +120,8 @@ export default function ShgMemberListTable({
       setMeta(newMeta);
       shgMembersCache.set(cacheKey, { rows: data, meta: newMeta });
     } catch (e) {
-      console.error(
-        "Failed to load SHG members",
-        e?.response?.data || e.message || e
-      );
-      setError(
-        e?.response?.data?.detail ||
-          e.message ||
-          "Failed to load SHG members from UPSRLM."
-      );
+      console.error("Failed to load SHG members", e?.response?.data || e.message || e);
+      setError(e?.response?.data?.detail || e.message || "Failed to load SHG members from UPSRLM.");
     } finally {
       setLoading(false);
     }
@@ -112,6 +131,8 @@ export default function ShgMemberListTable({
   useEffect(() => {
     setRows([]);
     setMeta({ page: 1, page_size: 20, total: 0 });
+    // reset internal selection when shg changes
+    setInternalSelected(new Set());
     if (shgCode) {
       load(1, { force: reloadToken > 0 });
     }
@@ -130,6 +151,32 @@ export default function ShgMemberListTable({
     meta && meta.page_size > 0
       ? Math.max(1, Math.ceil((meta.total || 0) / meta.page_size))
       : 1;
+
+  // Toggle handler when user checks/unchecks a row
+  function handleToggleRow(member, checked) {
+    const code = member?.member_code || member?.lokos_member_code || member?.id;
+    if (!code) return;
+
+    // if parent controls selection via selectedMemberCodes prop, just call callback
+    if (controlledSelectedSet) {
+      if (onToggleMember) onToggleMember(member, !!checked);
+      // also keep legacy callback for add
+      if (checked && onSelectMember) onSelectMember(member);
+      return;
+    }
+
+    // otherwise maintain internal state
+    setInternalSelected((prev) => {
+      const copy = new Set(prev);
+      if (checked) copy.add(String(code));
+      else copy.delete(String(code));
+      return copy;
+    });
+
+    // call callbacks
+    if (onToggleMember) onToggleMember(member, !!checked);
+    if (checked && onSelectMember) onSelectMember(member);
+  }
 
   return (
     <div className="card" style={{ marginTop: 16 }}>
@@ -151,7 +198,7 @@ export default function ShgMemberListTable({
         </button>
       </div>
 
-      <div className="filters-row">
+      <div className="filters-row" style={{ gap: 8 }}>
         <input
           type="text"
           className="input"
@@ -207,6 +254,7 @@ export default function ShgMemberListTable({
             <table className="table table-compact">
               <thead>
                 <tr>
+                  <th style={{ width: 40 }}>{" "}</th>
                   <th>Member Name</th>
                   <th>Member Code</th>
                   <th>Age</th>
@@ -224,19 +272,16 @@ export default function ShgMemberListTable({
               </thead>
               <tbody>
                 {rows.map((m) => {
-                  const code =
-                    m.member_code || m.lokos_member_code || m.id;
+                  const code = m.member_code || m.lokos_member_code || m.id;
                   const isSelected =
-                    selectedMemberCode &&
-                    code &&
-                    selectedMemberCode === code;
+                    (selectedMemberCode && code && selectedMemberCode === code) ||
+                    isMemberSelected(m);
 
                   const age = calculateAge(m.dob);
                   const phone =
                     (Array.isArray(m.member_phones) &&
                       m.member_phones.find((p) => p.is_default)?.phone_no) ||
-                    (Array.isArray(m.member_phones) &&
-                      m.member_phones[0]?.phone_no) ||
+                    (Array.isArray(m.member_phones) && m.member_phones[0]?.phone_no) ||
                     m.mobile ||
                     m.phone_no ||
                     "-";
@@ -251,6 +296,14 @@ export default function ShgMemberListTable({
                       key={code || `${m.member_name}-${Math.random()}`}
                       className={isSelected ? "row-selected" : ""}
                     >
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={!!isSelected}
+                          onChange={(e) => handleToggleRow(m, e.target.checked)}
+                        />
+                      </td>
+
                       <td>{m.member_name || "-"}</td>
                       <td>{code || "-"}</td>
                       <td>{age || "-"}</td>
@@ -264,11 +317,10 @@ export default function ShgMemberListTable({
                       <td>{m.aadhar_verified ? "Yes" : "No"}</td>
                       <td>{m.pld_status ? "Yes" : "No"}</td>
                       <td>
+                        {/* Legacy action kept for backward compatibility */}
                         <button
                           className="btn-sm btn-outline"
-                          onClick={() =>
-                            onSelectMember && onSelectMember(m)
-                          }
+                          onClick={() => onSelectMember && onSelectMember(m)}
                         >
                           View Detail
                         </button>
@@ -281,7 +333,7 @@ export default function ShgMemberListTable({
           </div>
 
           {meta && meta.total > meta.page_size && (
-            <div className="pagination">
+            <div className="pagination" style={{ marginTop: 8 }}>
               <button
                 className="btn-sm btn-flat"
                 disabled={meta.page <= 1}

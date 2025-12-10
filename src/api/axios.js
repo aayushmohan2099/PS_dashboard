@@ -194,13 +194,36 @@ api.interceptors.response.use(
 export function makeCrud(basePath) {
   const path = basePath.endsWith("/") ? basePath : `${basePath}/`;
 
+  // NOTE: return several common aliases so callers across the app
+  // can use either `list`/`retrieve` or `detail`/`get` etc.
   return {
+    // List collection: GET /resource/?params
     list: (params) => api.get(path, { params }),
-    retrieve: (id, params) => api.get(`${path}${id}/`, { params }),
+
+    // Retrieve single: GET /resource/:id/
+    retrieve: (id, params) =>
+      api.get(`${path}${encodeURIComponent(id)}/`, { params }),
+
+    // alias common name 'detail' used in some components
+    detail: (id, params) =>
+      api.get(`${path}${encodeURIComponent(id)}/`, { params }),
+
+    // alias 'get' for convenience
+    get: (id, params) =>
+      api.get(`${path}${encodeURIComponent(id)}/`, { params }),
+
+    // Create: POST /resource/
     create: (data) => api.post(path, data),
-    update: (id, data) => api.put(`${path}${id}/`, data),
-    partialUpdate: (id, data) => api.patch(`${path}${id}/`, data),
-    destroy: (id) => api.delete(`${path}${id}/`),
+
+    // Update (full): PUT /resource/:id/
+    update: (id, data) => api.put(`${path}${encodeURIComponent(id)}/`, data),
+
+    // Partial update: PATCH /resource/:id/
+    partialUpdate: (id, data) =>
+      api.patch(`${path}${encodeURIComponent(id)}/`, data),
+
+    // Destroy: DELETE /resource/:id/
+    destroy: (id) => api.delete(`${path}${encodeURIComponent(id)}/`),
   };
 }
 
@@ -513,6 +536,10 @@ export const TMS_API = {
   trainingRequests: makeCrud("/tms/training-requests/"),
   trBeneficiaries: makeCrud("/tms/training-request-beneficiaries/"),
   trTrainers: makeCrud("/tms/training-request-trainers/"),
+
+  // For BMMU TMS Dashboard
+  trainingRequestBeneficiaries: makeCrud("/tms/training-request-beneficiaries/"),
+  trainingRequestTrainers: makeCrud("/tms/training-request-trainers/"),  
 
   // Batch workflow
   batches: makeCrud("/tms/batches/"),
