@@ -1,5 +1,5 @@
 // src/pages/TMS/layout/tms_LeftNav.jsx
-import React, { useContext, useEffect } from "react";
+import React, { useContext, useEffect, useMemo } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../contexts/AuthContext";
 
@@ -40,13 +40,20 @@ function getRoleKey(user) {
     if (rn.includes("training_partner")) return "training_partner";
     if (rn.includes("master_trainer")) return "master_trainer";
     if (rn.includes("dcnrlm")) return "dcnrlm";
-    if (rn.includes("contact") || rn.includes("tp_cp") || rn.includes("tp_contact")) return "tp_contact_person";
+    if (
+      rn.includes("contact") ||
+      rn.includes("tp_cp") ||
+      rn.includes("tp_contact")
+    )
+      return "tp_contact_person";
     if (rn.includes("crp_ep")) return "crp_ep";
     if (rn.includes("crp_ld")) return "crp_ld";
   }
 
   try {
-    const geo = JSON.parse(window.localStorage.getItem("ps_user_geoscope") || "null");
+    const geo = JSON.parse(
+      window.localStorage.getItem("ps_user_geoscope") || "null"
+    );
     if (geo?.role) {
       const g = String(geo.role).toLowerCase();
       if (g.includes("bmmu")) return "bmmu";
@@ -55,7 +62,12 @@ function getRoleKey(user) {
       if (g.includes("training_partner")) return "training_partner";
       if (g.includes("master_trainer")) return "master_trainer";
       if (g.includes("dcnrlm")) return "dcnrlm";
-      if (g.includes("contact") || g.includes("tp_cp") || g.includes("tp_contact")) return "tp_contact_person";
+      if (
+        g.includes("contact") ||
+        g.includes("tp_cp") ||
+        g.includes("tp_contact")
+      )
+        return "tp_contact_person";
     }
   } catch (e) {
     // ignore
@@ -87,41 +99,129 @@ function renderNavItem(item) {
 
 const MENU = {
   bmmu: [
-    { label: "TMS Dashboard", to: "/tms/bmmu/dashboard", key: "bmmu-dashboard" },
-    { label: "Create Training Request", to: "/tms/bmmu/create-tr", key: "bmmu-create-tr" },
-    { label: "Training Plans", to: "/tms/training-plans", key: "bmmu-training-plans" },
-    { label: "Master Trainers (Block)", to: "/tms/bmmu/master-trainers", key: "bmmu-mt" },
-    { label: "Training Requests", to: "/tms/bmmu/requests", key: "bmmu-requests" },
-    { label: "Batches & Schedules", to: "/tms/bmmu/batches", key: "bmmu-batches" },
-    { label: "Attendance & Completion", to: "/tms/bmmu/attendance", key: "bmmu-attendance" },
+    {
+      label: "TMS Dashboard",
+      to: "/tms/bmmu/dashboard",
+      key: "bmmu-dashboard",
+    },
+    {
+      label: "Create Training Request",
+      to: "/tms/bmmu/create-tr",
+      key: "bmmu-create-tr",
+    },
+    {
+      label: "Training Plans",
+      to: "/tms/training-plans",
+      key: "bmmu-training-plans",
+    },
+    {
+      label: "Master Trainers (Block)",
+      to: "/tms/bmmu/master-trainers",
+      key: "bmmu-mt",
+    },
+    {
+      label: "Training Requests",
+      to: "/tms/bmmu/requests",
+      key: "bmmu-requests",
+    },
+    {
+      label: "Batches & Schedules",
+      to: "/tms/bmmu/batches",
+      key: "bmmu-batches",
+    },
+    {
+      label: "Attendance & Completion",
+      to: "/tms/bmmu/attendance",
+      key: "bmmu-attendance",
+    },
     { label: "Reports", to: "/tms/bmmu/reports", key: "bmmu-reports" },
   ],
 
   dmmu: [
-    { label: "TMS Dashboard", to: "/tms/dmmu/dashboard", key: "dmmu-dashboard" },
-    { label: "Create / Review TRs", to: "/tms/dmmu/requests", key: "dmmu-requests" },
-    { label: "Block-wise Progress", to: "/tms/dmmu/block-progress", key: "dmmu-block-progress" },
-    { label: "Assign Master Trainers", to: "/tms/dmmu/assign-mt", key: "dmmu-assign-mt" },
+    {
+      label: "TMS Dashboard",
+      to: "/tms/dmmu/dashboard",
+      key: "dmmu-dashboard",
+    },
+    {
+      label: "Create / Review TRs",
+      to: "/tms/dmmu/requests",
+      key: "dmmu-requests",
+    },
+    {
+      label: "Block-wise Progress",
+      to: "/tms/dmmu/block-progress",
+      key: "dmmu-block-progress",
+    },
+    {
+      label: "Assign Master Trainers",
+      to: "/tms/dmmu/assign-mt",
+      key: "dmmu-assign-mt",
+    },
     { label: "Training Batches", to: "/tms/dmmu/batches", key: "dmmu-batches" },
-    { label: "Attendance Aggregation", to: "/tms/dmmu/attendance", key: "dmmu-attendance" },
+    {
+      label: "Attendance Aggregation",
+      to: "/tms/dmmu/attendance",
+      key: "dmmu-attendance",
+    },
     { label: "Reports", to: "/tms/dmmu/reports", key: "dmmu-reports" },
   ],
 
   smmu: [
-    { label: "TMS Dashboard", to: "/tms/smmu/dashboard", key: "smmu-dashboard" },
-    { label: "Create Partner Targets", to: "/tms/smmu/partner-targets", key: "smmu-targets" },
-    { label: "Training Plans & Themes", to: "/tms/training-plans", key: "smmu-plans" },
-    { label: "All Training Batches", to: "/tms/smmu/batches", key: "smmu-batches" },
-    { label: "Monitoring & Evaluation", to: "/tms/smmu/monitoring", key: "smmu-monitoring" },
+    {
+      label: "TMS Dashboard",
+      to: "/tms/smmu/dashboard",
+      key: "smmu-dashboard",
+    },
+    {
+      label: "Create Partner Targets",
+      to: "/tms/smmu/partner-targets",
+      key: "smmu-targets",
+    },
+    {
+      label: "Training Plans & Themes",
+      to: "/tms/training-plans",
+      key: "smmu-plans",
+    },
+    {
+      label: "All Training Batches",
+      to: "/tms/smmu/batches",
+      key: "smmu-batches",
+    },
+    {
+      label: "Monitoring & Evaluation",
+      to: "/tms/smmu/monitoring",
+      key: "smmu-monitoring",
+    },
     { label: "State Reports", to: "/tms/smmu/reports", key: "smmu-reports" },
   ],
 
   training_partner: [
-    { label: "Partner Dashboard", to: "/tms/tp/dashboard", key: "tp-dashboard" },
-    { label: "My Training Requests", to: "/tms/tp/requests", key: "tp-requests" },
-    { label: "Create / Manage Centres", to: "/tms/tp/centres", key: "tp-centres" },
-    { label: "Contact Persons (CP)", to: "/tms/tp/contact-persons", key: "tp-cps" },
-    { label: "Create Batch", to: "/tms/tp/create-batch", key: "tp-create-batch" },
+    {
+      label: "Partner Dashboard",
+      to: "/tms/tp/dashboard",
+      key: "tp-dashboard",
+    },
+    {
+      label: "My Training Requests",
+      to: "/tms/tp/requests",
+      key: "tp-requests",
+    },
+    {
+      label: "Create / Manage Centres",
+      to: "/tms/tp/centres",
+      key: "tp-centres",
+    },
+    {
+      label: "Contact Persons (CP)",
+      to: "/tms/tp/contact-persons",
+      key: "tp-cps",
+    },
+    {
+      label: "Create Batch",
+      to: "/tms/tp/create-batch",
+      key: "tp-create-batch",
+    },
     { label: "Uploads & Closure", to: "/tms/tp/closures", key: "tp-closures" },
     { label: "Reports", to: "/tms/tp/reports", key: "tp-reports" },
   ],
@@ -129,14 +229,26 @@ const MENU = {
   master_trainer: [
     { label: "MT Dashboard", to: "/tms/mt/dashboard", key: "mt-dashboard" },
     { label: "Assigned Batches", to: "/tms/mt/batches", key: "mt-batches" },
-    { label: "Attendance / Assessments", to: "/tms/mt/attendance", key: "mt-attendance" },
-    { label: "Profile & Availability", to: "/tms/mt/profile", key: "mt-profile" },
+    {
+      label: "Attendance / Assessments",
+      to: "/tms/mt/attendance",
+      key: "mt-attendance",
+    },
+    {
+      label: "Profile & Availability",
+      to: "/tms/mt/profile",
+      key: "mt-profile",
+    },
   ],
 
   contact_person: [
     { label: "CP Dashboard", to: "/tms/cp/dashboard", key: "cp-dashboard" },
     { label: "My Assigned Centres", to: "/tms/cp/centres", key: "cp-centres" },
-    { label: "Batch Attendance", to: "/tms/cp/attendance", key: "cp-attendance" },
+    {
+      label: "Batch Attendance",
+      to: "/tms/cp/attendance",
+      key: "cp-attendance",
+    },
     { label: "Participant EKYC", to: "/tms/cp/ekyc", key: "cp-ekyc" },
   ],
 };
@@ -145,7 +257,11 @@ const DEFAULT_MENU = [
   { label: "TMS Home", to: "/tms", key: "tms-home" },
   { label: "Training Plans", to: "/tms/training-plans", key: "tms-plans" },
   { label: "Training Themes", to: "/tms/training-themes", key: "tms-themes" },
-  { label: "Training Requests", to: "/tms/training-requests", key: "tms-requests" },
+  {
+    label: "Training Requests",
+    to: "/tms/training-requests",
+    key: "tms-requests",
+  },
   { label: "Reports", to: "/tms/reports", key: "tms-reports" },
 ];
 
@@ -160,16 +276,16 @@ export default function TmsLeftNav() {
     roleKey === "bmmu"
       ? "BMMU"
       : roleKey === "dmmu"
-      ? "DMMU"
-      : roleKey === "smmu"
-      ? "SMMU"
-      : roleKey === "training_partner"
-      ? "Training Partner"
-      : roleKey === "master_trainer"
-      ? "Master Trainer"
-      : roleKey === "tp_contact_person" || roleKey === "contact_person"
-      ? "Contact Person"
-      : "TMS User";
+        ? "DMMU"
+        : roleKey === "smmu"
+          ? "SMMU"
+          : roleKey === "training_partner"
+            ? "Training Partner"
+            : roleKey === "master_trainer"
+              ? "Master Trainer"
+              : roleKey === "tp_contact_person" || roleKey === "contact_person"
+                ? "Contact Person"
+                : "TMS User";
 
   // final width used by nav (px)
   const NAV_WIDTH = 220;
@@ -227,10 +343,46 @@ export default function TmsLeftNav() {
 
   const logoTitle = { fontSize: 16, fontWeight: 700, color: "#0b2540" };
   const logoSub = { fontSize: 12, color: "#6c757d" };
-  const logoBadge = { marginTop: 6, background: "#eef6ff", color: "#0b2540", fontSize: 11, padding: "4px 6px", borderRadius: 6 };
+  const logoBadge = {
+    marginTop: 6,
+    background: "#eef6ff",
+    color: "#0b2540",
+    fontSize: 11,
+    padding: "4px 6px",
+    borderRadius: 6,
+  };
 
-  const groupHeaderStyle = { fontSize: 12, color: "#6b7280", fontWeight: 600, padding: "6px 4px" };
-  const submenuStyle = { display: "flex", flexDirection: "column", gap: 6, padding: "6px 2px" };
+  const groupHeaderStyle = {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: 600,
+    padding: "6px 4px",
+  };
+  const submenuStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    padding: "6px 2px",
+  };
+
+  // find requests path in role-specific menu (prefer explicit 'requests' key or path containing 'requests')
+  const requestsPath = useMemo(() => {
+    if (!Array.isArray(menu)) return "/tms/training-requests";
+    const foundByKey = menu.find((i) =>
+      String(i.key || "")
+        .toLowerCase()
+        .includes("request")
+    );
+    if (foundByKey && foundByKey.to) return foundByKey.to;
+    const foundByTo = menu.find((i) =>
+      String(i.to || "")
+        .toLowerCase()
+        .includes("requests")
+    );
+    if (foundByTo && foundByTo.to) return foundByTo.to;
+    // fallback generic
+    return "/tms/training-requests";
+  }, [menu]);
 
   return (
     <aside className="leftnav tms-leftnav" style={asideStyle}>
@@ -240,14 +392,26 @@ export default function TmsLeftNav() {
         <div style={logoBadge}>{roleLabel}</div>
       </div>
 
-      <nav className="ln-menu" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <nav
+        className="ln-menu"
+        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+      >
         {(roleKey === "bmmu" || roleKey === "dmmu" || roleKey === "smmu") && (
           <div className="ln-group">
             <div className="ln-group-header" style={groupHeaderStyle}>
               <span>Beneficiary Management</span>
             </div>
             <div className="ln-submenu show" style={submenuStyle}>
-              <NavLink to="/dashboard" className="ln-item" style={{ textDecoration: "none", color: "#0b2540", padding: "8px 10px", borderRadius: 6 }}>
+              <NavLink
+                to="/dashboard"
+                className="ln-item"
+                style={{
+                  textDecoration: "none",
+                  color: "#0b2540",
+                  padding: "8px 10px",
+                  borderRadius: 6,
+                }}
+              >
                 <span style={{ fontSize: 14 }}>Dashboard Home</span>
               </NavLink>
             </div>
@@ -268,14 +432,47 @@ export default function TmsLeftNav() {
             <span>Quick Actions</span>
           </div>
           <div className="ln-submenu show" style={submenuStyle}>
-            <NavLink to="/tms/training-plans" className="ln-item" style={{ textDecoration: "none", color: "#0b2540", padding: "8px 10px", borderRadius: 6 }}>
+            <NavLink
+              to="/tms/training-plans"
+              className="ln-item"
+              style={{
+                textDecoration: "none",
+                color: "#0b2540",
+                padding: "8px 10px",
+                borderRadius: 6,
+              }}
+            >
               <span style={{ fontSize: 14 }}>Training Plans</span>
             </NavLink>
-            <NavLink to="/tms/training-themes" className="ln-item" style={{ textDecoration: "none", color: "#0b2540", padding: "8px 10px", borderRadius: 6 }}>
+            <NavLink
+              to="/tms/training-themes"
+              className="ln-item"
+              style={{
+                textDecoration: "none",
+                color: "#0b2540",
+                padding: "8px 10px",
+                borderRadius: 6,
+              }}
+            >
               <span style={{ fontSize: 14 }}>Training Themes</span>
             </NavLink>
-            <NavLink to="/tms/training-requests" className="ln-item" style={{ textDecoration: "none", color: "#0b2540", padding: "8px 10px", borderRadius: 6 }}>
-              <span style={{ fontSize: 14 }}>All Requests</span>
+
+            {/* Role-aware Training Requests quick link: uses role menu if available, else generic */}
+            <NavLink
+              to={requestsPath}
+              className="ln-item"
+              style={{
+                textDecoration: "none",
+                color: "#0b2540",
+                padding: "8px 10px",
+                borderRadius: 6,
+              }}
+            >
+              <span style={{ fontSize: 14 }}>
+                {roleKey === "training_partner"
+                  ? "My Training Requests"
+                  : "Training Requests"}
+              </span>
             </NavLink>
           </div>
         </div>

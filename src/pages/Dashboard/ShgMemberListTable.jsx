@@ -22,7 +22,8 @@ function calculateAge(dob) {
  * Member list for a selected SHG.
  *
  * Props:
- *  - shg                 (object)  -> must contain shg_code or code
+ *  - shg                 (object)  -> may contain shg_code or code or id
+ *  - shgId               (string|number) -> optional fallback id/code when shg doesn't contain shg_code
  *  - onSelectMember(member) -> called when user clicks "View Detail" (legacy)
  *  - onToggleMember(member, checked) -> called for checkbox selection/unselection (new)
  *  - selectedMemberCodes  (Set|Array) -> optional controlled selection (member_code values)
@@ -34,12 +35,16 @@ function calculateAge(dob) {
  */
 export default function ShgMemberListTable({
   shg,
+  shgId, // new optional prop (surgical)
   onSelectMember,
   onToggleMember,
   selectedMemberCodes,
   selectedMemberCode, // legacy single highlight prop
 }) {
-  const shgCode = shg?.code || shg?.shg_code;
+  // compute a stable SHG key to call API with and for caching.
+  // Prefer shg.code -> shg.shg_code -> shgId prop -> shg.id
+  const shgKey = shg?.code || shg?.shg_code || shgId || shg?.id || null;
+
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState({ page: 1, page_size: 20, total: 0 });
   const [loading, setLoading] = useState(false);
@@ -57,7 +62,8 @@ export default function ShgMemberListTable({
   const controlledSelectedSet = useMemo(() => {
     if (!selectedMemberCodes) return null;
     if (selectedMemberCodes instanceof Set) return selectedMemberCodes;
-    if (Array.isArray(selectedMemberCodes)) return new Set(selectedMemberCodes.map(String));
+    if (Array.isArray(selectedMemberCodes))
+      return new Set(selectedMemberCodes.map(String));
     // fallback: single code string
     return new Set([String(selectedMemberCodes)]);
   }, [selectedMemberCodes]);
@@ -71,11 +77,11 @@ export default function ShgMemberListTable({
   }
 
   async function load(page = 1, { force = false } = {}) {
-    if (!shgCode) return;
+    if (!shgKey) return;
 
     const pageSize = meta.page_size || 20;
     const cacheKey = JSON.stringify({
-      shgCode,
+      shgKey,
       page,
       page_size: pageSize,
       search: search || "",
@@ -94,7 +100,8 @@ export default function ShgMemberListTable({
     setError("");
 
     try {
-      const res = await EPSAKHI_API.upsrlmShgMembers(shgCode, {
+      // upsrlmShgMembers expects an identifier (shg code or id depending on backend)
+      const res = await EPSAKHI_API.upsrlmShgMembers(shgKey, {
         page,
         page_size: pageSize,
         search: search || undefined,
@@ -120,26 +127,33 @@ export default function ShgMemberListTable({
       setMeta(newMeta);
       shgMembersCache.set(cacheKey, { rows: data, meta: newMeta });
     } catch (e) {
-      console.error("Failed to load SHG members", e?.response?.data || e.message || e);
-      setError(e?.response?.data?.detail || e.message || "Failed to load SHG members from UPSRLM.");
+      console.error(
+        "Failed to load SHG members",
+        e?.response?.data || e.message || e
+      );
+      setError(
+        e?.response?.data?.detail ||
+          e.message ||
+          "Failed to load SHG members from UPSRLM."
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  // reload whenever shg / filters / reloadToken change
+  // reload whenever shgKey / filters / reloadToken change
   useEffect(() => {
     setRows([]);
     setMeta({ page: 1, page_size: 20, total: 0 });
     // reset internal selection when shg changes
     setInternalSelected(new Set());
-    if (shgCode) {
+    if (shgKey) {
       load(1, { force: reloadToken > 0 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shgCode, search, ordering, onlyPld, reloadToken]);
+  }, [shgKey, search, ordering, onlyPld, reloadToken]);
 
-  if (!shgCode) {
+  if (!shgKey) {
     return (
       <div className="card" style={{ marginTop: 16 }}>
         <p className="muted">Select an SHG to view its members.</p>
@@ -185,7 +199,11 @@ export default function ShgMemberListTable({
           <h3>
             Members in SHG:{" "}
             <span style={{ color: "#111827" }}>
-              {shg.shg_name || shg.name || shg.shg_code || shg.code}
+              {shg?.shg_name ||
+                shg?.name ||
+                shg?.shg_code ||
+                shg?.code ||
+                String(shgKey)}
             </span>
           </h3>
         </div>
@@ -254,7 +272,7 @@ export default function ShgMemberListTable({
             <table className="table table-compact">
               <thead>
                 <tr>
-                  <th style={{ width: 40 }}>{" "}</th>
+                  <th style={{ width: 40 }}> </th>
                   <th>Member Name</th>
                   <th>Member Code</th>
                   <th>Age</th>
@@ -274,14 +292,17 @@ export default function ShgMemberListTable({
                 {rows.map((m) => {
                   const code = m.member_code || m.lokos_member_code || m.id;
                   const isSelected =
-                    (selectedMemberCode && code && selectedMemberCode === code) ||
+                    (selectedMemberCode &&
+                      code &&
+                      selectedMemberCode === code) ||
                     isMemberSelected(m);
 
                   const age = calculateAge(m.dob);
                   const phone =
                     (Array.isArray(m.member_phones) &&
                       m.member_phones.find((p) => p.is_default)?.phone_no) ||
-                    (Array.isArray(m.member_phones) && m.member_phones[0]?.phone_no) ||
+                    (Array.isArray(m.member_phones) &&
+                      m.member_phones[0]?.phone_no) ||
                     m.mobile ||
                     m.phone_no ||
                     "-";
