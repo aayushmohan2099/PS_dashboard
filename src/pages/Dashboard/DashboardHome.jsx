@@ -8,6 +8,10 @@ import api from "../../api/axios";
 import LoadingModal from "../../components/ui/LoadingModal";
 import ModulePlaceholder from "./ModulePlaceholder";
 
+import TpDashboard from "../TMS/TP/tp_dashboard";
+import MtDashboard from "../TMS/MT/mt_dashboard";
+import CpDashboard from "../TMS/TP_CP/cp_dashboard";
+
 import ShgListTable from "./ShgListTable";
 import ShgDetailCard from "./ShgDetailCard";
 import ShgMemberListTable from "./ShgMemberListTable";
@@ -26,6 +30,7 @@ const PARTNER_ROLES = new Set([
   "training_partner",
   "master_trainer",
   "crp_ep",
+  "tp_contact_person",
   "crp_ld",
 ]);
 const ADMIN_ROLES = new Set(["state_admin", "pmu_admin", "smmu"]);
@@ -99,7 +104,11 @@ function BlockShgExplorer({ blockId, blockName }) {
       {step === "shgDetail" && selectedShg && (
         <>
           <div style={{ marginBottom: 8 }}>
-            <button className="btn-sm btn-flat" onClick={backToShgs} style={{ marginRight: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={backToShgs}
+              style={{ marginRight: 8 }}
+            >
               ← Back to SHG List
             </button>
           </div>
@@ -116,7 +125,11 @@ function BlockShgExplorer({ blockId, blockName }) {
       {step === "members" && selectedShg && (
         <>
           <div style={{ marginBottom: 8 }}>
-            <button className="btn-sm btn-flat" onClick={backToShgs} style={{ marginRight: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={backToShgs}
+              style={{ marginRight: 8 }}
+            >
               ← Back to SHG List
             </button>
             <button className="btn-sm btn-flat" onClick={backToShgDetail}>
@@ -136,7 +149,11 @@ function BlockShgExplorer({ blockId, blockName }) {
       {step === "memberDetail" && selectedShg && selectedMember && (
         <>
           <div style={{ marginBottom: 8 }}>
-            <button className="btn-sm btn-flat" onClick={backToShgs} style={{ marginRight: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={backToShgs}
+              style={{ marginRight: 8 }}
+            >
               ← Back to SHG List
             </button>
             <button className="btn-sm btn-flat" onClick={backToMembers}>
@@ -277,7 +294,8 @@ function DistrictBlocksDashboard({ geo, roleLabel }) {
       const res = await api.get("/lookups/blocks/", { params });
       const payload = res.data || {};
       const rows = payload.results || payload.data || [];
-      const total = typeof payload.count === "number" ? payload.count : rows.length;
+      const total =
+        typeof payload.count === "number" ? payload.count : rows.length;
 
       setBlocks(rows);
       setBlockMeta({
@@ -332,22 +350,33 @@ function DistrictBlocksDashboard({ geo, roleLabel }) {
             <div className="card-header space-between">
               <div>
                 <h2 style={{ marginBottom: 4 }}>
-                  Blocks in District – <span className="badge">{districtName || districtId}</span>
+                  Blocks in District –{" "}
+                  <span className="badge">{districtName || districtId}</span>
                 </h2>
                 <p className="muted" style={{ margin: 0 }}>
-                  Use the filter to see <strong>Aspirational Blocks in this District</strong>.
+                  Use the filter to see{" "}
+                  <strong>Aspirational Blocks in this District</strong>.
                 </p>
               </div>
             </div>
 
             <div className="filters-row">
-              <label className="small-muted" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <input type="checkbox" checked={onlyAspirational} onChange={(e) => setOnlyAspirational(e.target.checked)} />
+              <label
+                className="small-muted"
+                style={{ display: "flex", alignItems: "center", gap: 4 }}
+              >
+                <input
+                  type="checkbox"
+                  checked={onlyAspirational}
+                  onChange={(e) => setOnlyAspirational(e.target.checked)}
+                />
                 Aspirational Blocks in this District
               </label>
             </div>
 
-            {blocksError && <div className="alert alert-danger">{blocksError}</div>}
+            {blocksError && (
+              <div className="alert alert-danger">{blocksError}</div>
+            )}
 
             {blocksLoading ? (
               <div className="table-spinner">
@@ -370,13 +399,21 @@ function DistrictBlocksDashboard({ geo, roleLabel }) {
                     <tbody>
                       {blocks.map((b) => {
                         const isAsp = !!b.is_aspirational;
-                        const isSelected = selectedBlock && selectedBlock.block_id === b.block_id;
+                        const isSelected =
+                          selectedBlock &&
+                          selectedBlock.block_id === b.block_id;
                         return (
-                          <tr key={b.block_id} className={isSelected ? "row-selected" : ""}>
+                          <tr
+                            key={b.block_id}
+                            className={isSelected ? "row-selected" : ""}
+                          >
                             <td>
                               {b.block_name_en}{" "}
                               {isAsp && (
-                                <span className="badge" style={{ marginLeft: 6 }}>
+                                <span
+                                  className="badge"
+                                  style={{ marginLeft: 6 }}
+                                >
                                   Aspirational
                                 </span>
                               )}
@@ -384,7 +421,10 @@ function DistrictBlocksDashboard({ geo, roleLabel }) {
                             <td>{b.block_id}</td>
                             <td>{isAsp ? "Yes" : "No"}</td>
                             <td>
-                              <button className="btn-sm btn-outline" onClick={() => setSelectedBlock(b)}>
+                              <button
+                                className="btn-sm btn-outline"
+                                onClick={() => setSelectedBlock(b)}
+                              >
                                 View SHGs
                               </button>
                             </td>
@@ -397,13 +437,21 @@ function DistrictBlocksDashboard({ geo, roleLabel }) {
 
                 {blockMeta.total > blockMeta.page_size && (
                   <div className="pagination">
-                    <button className="btn-sm btn-flat" disabled={blockMeta.page <= 1} onClick={() => loadBlocks(blockMeta.page - 1)}>
+                    <button
+                      className="btn-sm btn-flat"
+                      disabled={blockMeta.page <= 1}
+                      onClick={() => loadBlocks(blockMeta.page - 1)}
+                    >
                       Prev
                     </button>
                     <span>
                       Page {blockMeta.page} of {totalPages}
                     </span>
-                    <button className="btn-sm btn-flat" disabled={blockMeta.page >= totalPages} onClick={() => loadBlocks(blockMeta.page + 1)}>
+                    <button
+                      className="btn-sm btn-flat"
+                      disabled={blockMeta.page >= totalPages}
+                      onClick={() => loadBlocks(blockMeta.page + 1)}
+                    >
                       Next
                     </button>
                   </div>
@@ -412,7 +460,12 @@ function DistrictBlocksDashboard({ geo, roleLabel }) {
             )}
           </div>
 
-          {selectedBlock && <BlockShgExplorer blockId={selectedBlock.block_id} blockName={selectedBlock.block_name_en} />}
+          {selectedBlock && (
+            <BlockShgExplorer
+              blockId={selectedBlock.block_id}
+              blockName={selectedBlock.block_name_en}
+            />
+          )}
         </>
       )}
     </section>
@@ -442,7 +495,14 @@ function StepIndicator({ currentStep, onJump }) {
   ];
 
   return (
-    <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        alignItems: "center",
+        marginBottom: 12,
+      }}
+    >
       {steps.map((s) => {
         const active = s.n === currentStep;
         const completed = s.n < currentStep;
@@ -463,7 +523,11 @@ function StepIndicator({ currentStep, onJump }) {
                 width: 36,
                 height: 36,
                 borderRadius: "50%",
-                background: active ? "#111827" : completed ? "#10b981" : "#e5e7eb",
+                background: active
+                  ? "#111827"
+                  : completed
+                    ? "#10b981"
+                    : "#e5e7eb",
                 color: active ? "#fff" : completed ? "#fff" : "#111827",
                 display: "flex",
                 alignItems: "center",
@@ -474,7 +538,9 @@ function StepIndicator({ currentStep, onJump }) {
             >
               {s.n}
             </div>
-            <div style={{ fontSize: 12, textAlign: "center", width: 80 }}>{s.label}</div>
+            <div style={{ fontSize: 12, textAlign: "center", width: 80 }}>
+              {s.label}
+            </div>
           </div>
         );
       })}
@@ -485,14 +551,22 @@ function StepIndicator({ currentStep, onJump }) {
 function SmmuDashboard() {
   // Districts list
   const [districts, setDistricts] = useState([]);
-  const [districtMeta, setDistrictMeta] = useState({ page: 1, page_size: 50, total: 0 });
+  const [districtMeta, setDistrictMeta] = useState({
+    page: 1,
+    page_size: 50,
+    total: 0,
+  });
   const [districtLoading, setDistrictLoading] = useState(false);
   const [districtError, setDistrictError] = useState("");
 
   // Selected district -> blocks
   const [selectedDistrict, setSelectedDistrict] = useState(null);
   const [blocks, setBlocks] = useState([]);
-  const [blockMeta, setBlockMeta] = useState({ page: 1, page_size: 50, total: 0 });
+  const [blockMeta, setBlockMeta] = useState({
+    page: 1,
+    page_size: 50,
+    total: 0,
+  });
   const [blockLoading, setBlockLoading] = useState(false);
   const [blockError, setBlockError] = useState("");
   const [onlyAspirational, setOnlyAspirational] = useState(false);
@@ -516,7 +590,8 @@ function SmmuDashboard() {
       const res = await api.get("/lookups/districts/", { params });
       const payload = res.data || {};
       const rows = payload.results || payload.data || [];
-      const total = typeof payload.count === "number" ? payload.count : rows.length;
+      const total =
+        typeof payload.count === "number" ? payload.count : rows.length;
 
       setDistricts(rows);
       setDistrictMeta({ page, page_size: districtMeta.page_size || 50, total });
@@ -529,7 +604,11 @@ function SmmuDashboard() {
   }
 
   // Blocks for district
-  async function loadBlocksForDistrict(districtId, page = 1, aspirational = false) {
+  async function loadBlocksForDistrict(
+    districtId,
+    page = 1,
+    aspirational = false
+  ) {
     if (!districtId) return;
     setBlockLoading(true);
     setBlockError("");
@@ -543,7 +622,8 @@ function SmmuDashboard() {
       const res = await api.get("/lookups/blocks/", { params });
       const payload = res.data || {};
       const rows = payload.results || payload.data || [];
-      const total = typeof payload.count === "number" ? payload.count : rows.length;
+      const total =
+        typeof payload.count === "number" ? payload.count : rows.length;
 
       setBlocks(rows);
       setBlockMeta({ page, page_size: blockMeta.page_size || 50, total });
@@ -641,9 +721,16 @@ function SmmuDashboard() {
   }, [onlyAspirational]);
 
   const districtTotalPages =
-    districtMeta && districtMeta.page_size > 0 ? Math.max(1, Math.ceil((districtMeta.total || 0) / districtMeta.page_size)) : 1;
+    districtMeta && districtMeta.page_size > 0
+      ? Math.max(
+          1,
+          Math.ceil((districtMeta.total || 0) / districtMeta.page_size)
+        )
+      : 1;
   const blockTotalPages =
-    blockMeta && blockMeta.page_size > 0 ? Math.max(1, Math.ceil((blockMeta.total || 0) / blockMeta.page_size)) : 1;
+    blockMeta && blockMeta.page_size > 0
+      ? Math.max(1, Math.ceil((blockMeta.total || 0) / blockMeta.page_size))
+      : 1;
 
   // Minimal blank screen helper for "blank before detail" behavior
   function BlankBefore({ children }) {
@@ -655,7 +742,10 @@ function SmmuDashboard() {
       <div className="header-row">
         <div>
           <h1>SMMU – Beneficiary Management</h1>
-          <p className="muted">Start from any district in the state, drill down to blocks, then SHGs and member detail.</p>
+          <p className="muted">
+            Start from any district in the state, drill down to blocks, then
+            SHGs and member detail.
+          </p>
         </div>
         <div>
           <span className="badge">SMMU</span>
@@ -670,14 +760,20 @@ function SmmuDashboard() {
           <div className="card-header space-between">
             <div>
               <h2 style={{ marginBottom: 4 }}>Districts</h2>
-              <p className="muted" style={{ margin: 0 }}>Select a district to see its blocks and SHGs.</p>
+              <p className="muted" style={{ margin: 0 }}>
+                Select a district to see its blocks and SHGs.
+              </p>
             </div>
           </div>
 
-          {districtError && <div className="alert alert-danger">{districtError}</div>}
+          {districtError && (
+            <div className="alert alert-danger">{districtError}</div>
+          )}
 
           {districtLoading ? (
-            <div className="table-spinner"><span>Loading districts…</span></div>
+            <div className="table-spinner">
+              <span>Loading districts…</span>
+            </div>
           ) : districts.length === 0 ? (
             <p className="muted">No districts found.</p>
           ) : (
@@ -693,9 +789,14 @@ function SmmuDashboard() {
                   </thead>
                   <tbody>
                     {districts.map((d) => {
-                      const isSelected = selectedDistrict && selectedDistrict.district_id === d.district_id;
+                      const isSelected =
+                        selectedDistrict &&
+                        selectedDistrict.district_id === d.district_id;
                       return (
-                        <tr key={d.district_id} className={isSelected ? "row-selected" : ""}>
+                        <tr
+                          key={d.district_id}
+                          className={isSelected ? "row-selected" : ""}
+                        >
                           <td>{d.district_name_en}</td>
                           <td>{d.district_id}</td>
                           <td>
@@ -715,9 +816,23 @@ function SmmuDashboard() {
 
               {districtMeta.total > districtMeta.page_size && (
                 <div className="pagination">
-                  <button className="btn-sm btn-flat" disabled={districtMeta.page <= 1} onClick={() => loadDistricts(districtMeta.page - 1)}>Prev</button>
-                  <span>Page {districtMeta.page} of {districtTotalPages}</span>
-                  <button className="btn-sm btn-flat" disabled={districtMeta.page >= districtTotalPages} onClick={() => loadDistricts(districtMeta.page + 1)}>Next</button>
+                  <button
+                    className="btn-sm btn-flat"
+                    disabled={districtMeta.page <= 1}
+                    onClick={() => loadDistricts(districtMeta.page - 1)}
+                  >
+                    Prev
+                  </button>
+                  <span>
+                    Page {districtMeta.page} of {districtTotalPages}
+                  </span>
+                  <button
+                    className="btn-sm btn-flat"
+                    disabled={districtMeta.page >= districtTotalPages}
+                    onClick={() => loadDistricts(districtMeta.page + 1)}
+                  >
+                    Next
+                  </button>
                 </div>
               )}
             </>
@@ -729,29 +844,55 @@ function SmmuDashboard() {
       {step === 2 && selectedDistrict && (
         <div className="card" style={{ marginTop: 16 }}>
           <div style={{ marginBottom: 8 }}>
-            <button className="btn-sm btn-flat" onClick={() => { setSelectedDistrict(null); setStep(1); }} style={{ marginRight: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setSelectedDistrict(null);
+                setStep(1);
+              }}
+              style={{ marginRight: 8 }}
+            >
               ← Back to Districts
             </button>
           </div>
 
           <div className="card-header space-between">
             <div>
-              <h2 style={{ marginBottom: 4 }}>Blocks in District – <span className="badge">{selectedDistrict.district_name_en}</span></h2>
+              <h2 style={{ marginBottom: 4 }}>
+                Blocks in District –{" "}
+                <span className="badge">
+                  {selectedDistrict.district_name_en}
+                </span>
+              </h2>
               <p className="muted" style={{ margin: 0 }}>
-                Use the filter to see <strong>Aspirational Blocks in this District</strong>.
+                Use the filter to see{" "}
+                <strong>Aspirational Blocks in this District</strong>.
               </p>
             </div>
           </div>
 
           <div className="filters-row">
-            <label className="small-muted" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <input type="checkbox" checked={onlyAspirational} onChange={(e) => setOnlyAspirational(e.target.checked)} />
+            <label
+              className="small-muted"
+              style={{ display: "flex", alignItems: "center", gap: 4 }}
+            >
+              <input
+                type="checkbox"
+                checked={onlyAspirational}
+                onChange={(e) => setOnlyAspirational(e.target.checked)}
+              />
               Aspirational Blocks in this District
             </label>
           </div>
 
           {blockError && <div className="alert alert-danger">{blockError}</div>}
-          {blockLoading ? <div className="table-spinner"><span>Loading blocks…</span></div> : blocks.length === 0 ? <p className="muted">No blocks found for this district.</p> : (
+          {blockLoading ? (
+            <div className="table-spinner">
+              <span>Loading blocks…</span>
+            </div>
+          ) : blocks.length === 0 ? (
+            <p className="muted">No blocks found for this district.</p>
+          ) : (
             <>
               <div className="table-wrapper">
                 <table className="table">
@@ -766,14 +907,30 @@ function SmmuDashboard() {
                   <tbody>
                     {blocks.map((b) => {
                       const isAsp = !!b.is_aspirational;
-                      const isSelected = selectedBlock && selectedBlock.block_id === b.block_id;
+                      const isSelected =
+                        selectedBlock && selectedBlock.block_id === b.block_id;
                       return (
-                        <tr key={b.block_id} className={isSelected ? "row-selected" : ""}>
-                          <td>{b.block_name_en} {isAsp && <span className="badge" style={{ marginLeft: 6 }}>Aspirational</span>}</td>
+                        <tr
+                          key={b.block_id}
+                          className={isSelected ? "row-selected" : ""}
+                        >
+                          <td>
+                            {b.block_name_en}{" "}
+                            {isAsp && (
+                              <span className="badge" style={{ marginLeft: 6 }}>
+                                Aspirational
+                              </span>
+                            )}
+                          </td>
                           <td>{b.block_id}</td>
                           <td>{isAsp ? "Yes" : "No"}</td>
                           <td>
-                            <button className="btn-sm btn-outline" onClick={() => onSelectBlock(b)}>View SHGs</button>
+                            <button
+                              className="btn-sm btn-outline"
+                              onClick={() => onSelectBlock(b)}
+                            >
+                              View SHGs
+                            </button>
                           </td>
                         </tr>
                       );
@@ -784,9 +941,35 @@ function SmmuDashboard() {
 
               {blockMeta.total > blockMeta.page_size && (
                 <div className="pagination">
-                  <button className="btn-sm btn-flat" disabled={blockMeta.page <= 1} onClick={() => loadBlocksForDistrict(selectedDistrict.district_id, blockMeta.page - 1, onlyAspirational)}>Prev</button>
-                  <span>Page {blockMeta.page} of {blockTotalPages}</span>
-                  <button className="btn-sm btn-flat" disabled={blockMeta.page >= blockTotalPages} onClick={() => loadBlocksForDistrict(selectedDistrict.district_id, blockMeta.page + 1, onlyAspirational)}>Next</button>
+                  <button
+                    className="btn-sm btn-flat"
+                    disabled={blockMeta.page <= 1}
+                    onClick={() =>
+                      loadBlocksForDistrict(
+                        selectedDistrict.district_id,
+                        blockMeta.page - 1,
+                        onlyAspirational
+                      )
+                    }
+                  >
+                    Prev
+                  </button>
+                  <span>
+                    Page {blockMeta.page} of {blockTotalPages}
+                  </span>
+                  <button
+                    className="btn-sm btn-flat"
+                    disabled={blockMeta.page >= blockTotalPages}
+                    onClick={() =>
+                      loadBlocksForDistrict(
+                        selectedDistrict.district_id,
+                        blockMeta.page + 1,
+                        onlyAspirational
+                      )
+                    }
+                  >
+                    Next
+                  </button>
                 </div>
               )}
             </>
@@ -798,10 +981,25 @@ function SmmuDashboard() {
       {step === 3 && selectedBlock && (
         <div style={{ marginTop: 16 }}>
           <div style={{ marginBottom: 8 }}>
-            <button className="btn-sm btn-flat" onClick={() => { setSelectedBlock(null); setStep(2); }} style={{ marginRight: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setSelectedBlock(null);
+                setStep(2);
+              }}
+              style={{ marginRight: 8 }}
+            >
               ← Back to Blocks
             </button>
-            <button className="btn-sm btn-flat" onClick={() => { setSelectedDistrict(null); setSelectedBlock(null); setStep(1); }} style={{ marginRight: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setSelectedDistrict(null);
+                setSelectedBlock(null);
+                setStep(1);
+              }}
+              style={{ marginRight: 8 }}
+            >
               ← Back to Districts
             </button>
           </div>
@@ -809,7 +1007,9 @@ function SmmuDashboard() {
           <ShgListTable
             blockId={selectedBlock.block_id}
             onSelectShg={(shg) => onSelectShgStep(shg)}
-            selectedShgCode={selectedShgForStep?.shg_code || selectedShgForStep?.code}
+            selectedShgCode={
+              selectedShgForStep?.shg_code || selectedShgForStep?.code
+            }
           />
         </div>
       )}
@@ -818,10 +1018,24 @@ function SmmuDashboard() {
       {step === 4 && selectedShgForStep && (
         <div style={{ marginTop: 16 }}>
           <div style={{ marginBottom: 8 }}>
-            <button className="btn-sm btn-flat" onClick={() => { setStep(3); setSelectedShgForStep(null); }} style={{ marginRight: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setStep(3);
+                setSelectedShgForStep(null);
+              }}
+              style={{ marginRight: 8 }}
+            >
               ← Back to SHG List
             </button>
-            <button className="btn-sm btn-flat" onClick={() => { setStep(2); setSelectedBlock(null); }} style={{ marginRight: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setStep(2);
+                setSelectedBlock(null);
+              }}
+              style={{ marginRight: 8 }}
+            >
               ← Back to Blocks
             </button>
           </div>
@@ -857,7 +1071,9 @@ function SmmuDashboard() {
                 {selectedMemberForStep && (
                   <div style={{ marginTop: 12 }}>
                     <MemberDetailPanel
-                      shgCode={selectedShgForStep.shg_code || selectedShgForStep.code}
+                      shgCode={
+                        selectedShgForStep.shg_code || selectedShgForStep.code
+                      }
                       memberCode={selectedMemberForStep.member_code}
                     />
                   </div>
@@ -872,10 +1088,24 @@ function SmmuDashboard() {
       {step === 5 && selectedShgForStep && selectedMemberForStep && (
         <div style={{ marginTop: 16 }}>
           <div style={{ marginBottom: 8 }}>
-            <button className="btn-sm btn-flat" onClick={() => { setStep(3); setSelectedMemberForStep(null); }} style={{ marginRight: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setStep(3);
+                setSelectedMemberForStep(null);
+              }}
+              style={{ marginRight: 8 }}
+            >
               ← Back to SHG List
             </button>
-            <button className="btn-sm btn-flat" onClick={() => { setStep(4); setSelectedMemberForStep(null); }} style={{ marginRight: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setStep(4);
+                setSelectedMemberForStep(null);
+              }}
+              style={{ marginRight: 8 }}
+            >
               ← Back to SHG Detail
             </button>
           </div>
@@ -895,7 +1125,12 @@ function SmmuDashboard() {
 // -----------------------------------------------------------------
 
 export default function DashboardHome() {
-  const { user, loading: authLoading, refreshAccess, logout } = useContext(AuthContext);
+  const {
+    user,
+    loading: authLoading,
+    refreshAccess,
+    logout,
+  } = useContext(AuthContext);
   const [geo, setGeo] = useState(null);
   const [roleNameNormalized, setRoleNameNormalized] = useState("");
   const [loading, setLoading] = useState(true);
@@ -998,7 +1233,9 @@ export default function DashboardHome() {
       } catch (err) {
         console.error("Error loading user geoscope", err);
         if (!cancelled) {
-          setGeoError("Could not resolve your geographical scope. Please contact administrator.");
+          setGeoError(
+            "Could not resolve your geographical scope. Please contact administrator."
+          );
           // fallback: canonicalise from user object
           setRoleNameNormalized(getCanonicalRole(user || {}));
           setLoading(false);
@@ -1022,7 +1259,11 @@ export default function DashboardHome() {
         <main className="dashboard-main center">
           <div className="card">
             <p>Your session has ended. Please login again.</p>
-            <button className="btn" style={{ marginTop: 8 }} onClick={() => navigate("/login")}>
+            <button
+              className="btn"
+              style={{ marginTop: 8 }}
+              onClick={() => navigate("/login")}
+            >
               Go to Login
             </button>
           </div>
@@ -1038,7 +1279,11 @@ export default function DashboardHome() {
   let mainContent = null;
 
   if (geoError) {
-    mainContent = <div className="alert alert-danger" style={{ marginTop: 16 }}>{geoError}</div>;
+    mainContent = (
+      <div className="alert alert-danger" style={{ marginTop: 16 }}>
+        {geoError}
+      </div>
+    );
   } else if (isRegionRole && roleNameNormalized === "bmmu") {
     mainContent = <BmmuDashboard geo={geo} />;
   } else if (isRegionRole && roleNameNormalized === "dmmu") {
@@ -1047,18 +1292,26 @@ export default function DashboardHome() {
     mainContent = <DistrictBlocksDashboard geo={geo} roleLabel="DCNRLM" />;
   } else if (roleNameNormalized === "smmu") {
     mainContent = <SmmuDashboard />;
-  } else if (isPartnerRole) {
-    // Master Trainer / Training Partner / CRP etc -> TMS only
+  } else if (isPartnerRole && roleNameNormalized === "training_partner") {
+    mainContent = <TpDashboard />;
+  } else if (isPartnerRole && roleNameNormalized === "master_trainer") {
+    mainContent = <MtDashboard />;
+  } else if (isPartnerRole && roleNameNormalized === "tp_contact_person") {
+    mainContent = <CpDashboard />;
+  } else if (isAdminRole) {
     mainContent = (
       <ModulePlaceholder
-        title="TMS & Training Management"
-        description="Use the TMS menu to manage training requests, batches and attendance."
+        title="Admin Dashboard"
+        description="Admin overview dashboards will be configured here."
       />
     );
-  } else if (isAdminRole) {
-    mainContent = <ModulePlaceholder title="Admin Dashboard" description="Admin overview dashboards will be configured here." />;
   } else {
-    mainContent = <ModulePlaceholder title="Dashboard" description="Your role specific dashboard will appear here." />;
+    mainContent = (
+      <ModulePlaceholder
+        title="Dashboard"
+        description="Your role specific dashboard will appear here."
+      />
+    );
   }
 
   // For Training / MT / CRP roles → use TMS LeftNav by default
@@ -1071,7 +1324,9 @@ export default function DashboardHome() {
         <TopNav
           left={
             <div className="topnav-left">
-              <div className="app-title">{useTmsNavForUser ? "Pragati Setu — TMS" : "Pragati Setu"}</div>
+              <div className="app-title">
+                {useTmsNavForUser ? "Pragati Setu — TMS" : "Pragati Setu"}
+              </div>
             </div>
           }
           // IMPORTANT: do NOT pass `right` so TopNav shows default user/logout controls

@@ -17,9 +17,7 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 const api = axios.create({
   baseURL,
   withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: {},
 });
 
 // ------------------------
@@ -54,9 +52,7 @@ api.interceptors.request.use(
 
       const apiHdrs = (getApiHeaders && getApiHeaders()) || {};
       const apiId =
-        apiHdrs.apiId ||
-        apiHdrs["X-API-ID"] ||
-        "TH_EPS.BDOuser_test.co.in";
+        apiHdrs.apiId || apiHdrs["X-API-ID"] || "TH_EPS.BDOuser_test.co.in";
       const apiKey =
         apiHdrs.apiKey ||
         apiHdrs["X-API-KEY"] ||
@@ -251,8 +247,12 @@ export const LOOKUP_API = {
   states: makeCrud("/lookups/states/"),
   districts: makeCrud("/lookups/districts/"),
   blocks: makeCrud("/lookups/blocks/"),
+  block_detail: makeCrud("/lookups/blocks/detail/"),
   panchayats: makeCrud("/lookups/panchayats/"),
+  panchayat_detail: makeCrud("/lookups/panchayats/detail/"),
   villages: makeCrud("/lookups/villages/"),
+  village_detail: makeCrud("/lookups/villages/detail/"),
+  users: makeCrud("/lookups/users/"),
 
   // SHG / VO / CLF master lists (DB backed)
   clfList: makeCrud("/lookups/clf-list/"),
@@ -538,8 +538,10 @@ export const TMS_API = {
   trTrainers: makeCrud("/tms/training-request-trainers/"),
 
   // For BMMU TMS Dashboard
-  trainingRequestBeneficiaries: makeCrud("/tms/training-request-beneficiaries/"),
-  trainingRequestTrainers: makeCrud("/tms/training-request-trainers/"),  
+  trainingRequestBeneficiaries: makeCrud(
+    "/tms/training-request-beneficiaries/"
+  ),
+  trainingRequestTrainers: makeCrud("/tms/training-request-trainers/"),
 
   // Batch workflow
   batches: makeCrud("/tms/batches/"),
@@ -578,9 +580,7 @@ export const TMS_API = {
       api.get(`/tms/bmmu/batches/${encodeURIComponent(batchId)}/`, { params }),
     batchAttendanceByDate: (batchId, params) =>
       api.get(
-        `/tms/bmmu/batches/${encodeURIComponent(
-          batchId
-        )}/attendance-by-date/`,
+        `/tms/bmmu/batches/${encodeURIComponent(batchId)}/attendance-by-date/`,
         { params }
       ),
   },
@@ -609,9 +609,7 @@ export const TMS_API = {
       }),
     batchAttendanceByDate: (batchId, params) =>
       api.get(
-        `/tms/dmmu/batches/${encodeURIComponent(
-          batchId
-        )}/attendance-by-date/`,
+        `/tms/dmmu/batches/${encodeURIComponent(batchId)}/attendance-by-date/`,
         { params }
       ),
   },

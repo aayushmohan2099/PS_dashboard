@@ -3,7 +3,7 @@ import React from "react";
 import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
 
-export default function TrainingBatchListPlaceholder() {
+export default function TrainingBatchList() {
   return (
     <div className="app-shell">
       <LeftNav />

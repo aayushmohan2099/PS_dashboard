@@ -1,31 +1,85 @@
 // src/pages/TMS/TRs/training_req_list.jsx
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
 import { AuthContext } from "../../../contexts/AuthContext";
-import { TMS_API } from "../../../api/axios";
+import { TMS_API, LOOKUP_API } from "../../../api/axios";
 import { getCanonicalRole } from "../../../utils/roleUtils";
 
 const CACHE_KEY = "tms_training_requests_cache_v1";
+const USER_MAP_KEY = "tms_user_map_v1";
+const PARTNER_MAP_KEY = "tms_partner_map_v1";
+const PLAN_MAP_KEY = "tms_plan_map_v1";
+const TP_SELF_PARTNER_KEY = "tms_self_partner_id_v1";
 
-function saveCache(payload) {
+/* ---------------- cache helpers ---------------- */
+
+function saveCache(payload, meta = {}) {
   try {
     localStorage.setItem(
       CACHE_KEY,
-      JSON.stringify({ ts: Date.now(), payload })
+      JSON.stringify({ ts: Date.now(), payload, meta })
     );
-  } catch (e) {}
+  } catch {}
 }
+
 function loadCache() {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw).payload;
-  } catch (e) {
+    return raw ? JSON.parse(raw) : null;
+  } catch {
     return null;
   }
 }
+
+function loadMap(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveMap(key, map) {
+  try {
+    localStorage.setItem(key, JSON.stringify(map || {}));
+  } catch {}
+}
+
+/* ---------------- partner resolver (SAFE & CACHED) ---------------- */
+
+async function resolveTrainingPartnerIdForUser(userId) {
+  if (!userId) return null;
+
+  try {
+    const cached = localStorage.getItem(TP_SELF_PARTNER_KEY);
+    if (cached) return Number(cached);
+  } catch {}
+
+  try {
+    const resp = await TMS_API.trainingPartners.list({
+      search: userId,
+      fields: "id",
+    });
+
+    const results = resp?.data?.results || [];
+    const partnerId = results[0]?.id || null;
+
+    if (partnerId) {
+      try {
+        localStorage.setItem(TP_SELF_PARTNER_KEY, String(partnerId));
+      } catch {}
+    }
+
+    return partnerId;
+  } catch (e) {
+    console.warn("Partner resolution failed (will retry on refresh)");
+    return null;
+  }
+}
+
+/* ========================================================= */
 
 export default function TrainingRequestList() {
   const { user } = useContext(AuthContext) || {};
@@ -33,102 +87,143 @@ export default function TrainingRequestList() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [requests, setRequests] = useState(loadCache() || []);
+  const [requests, setRequests] = useState(() => loadCache()?.payload || []);
+  const [refreshToken, setRefreshToken] = useState(0);
+
   const [filters, setFilters] = useState({
     status: "",
     level: "",
     training_type: "",
-    plan: "",
   });
-  const [refreshToken, setRefreshToken] = useState(0);
 
-  // fetch function
+  const [userMap, setUserMap] = useState(() => loadMap(USER_MAP_KEY));
+  const [partnerMap, setPartnerMap] = useState(() => loadMap(PARTNER_MAP_KEY));
+  const [planMap, setPlanMap] = useState(() => loadMap(PLAN_MAP_KEY));
+
+  const didRunRef = useRef(false);
+
+  /* ---------------- geoscope ---------------- */
+
+  async function ensureUserGeoscope() {
+    try {
+      const cached = JSON.parse(
+        localStorage.getItem("ps_user_geoscope") || "null"
+      );
+      if (cached) return cached;
+    } catch {}
+
+    try {
+      const resp = await LOOKUP_API.userGeoscopeByUserId(user?.id);
+      if (resp?.data) {
+        localStorage.setItem("ps_user_geoscope", JSON.stringify(resp.data));
+        return resp.data;
+      }
+    } catch {}
+    return null;
+  }
+
+  /* ---------------- lookup maps ---------------- */
+
+  async function fetchAndStoreLookupMaps(items = []) {
+    try {
+      const userIds = new Set();
+      const partnerIds = new Set();
+      const planIds = new Set();
+
+      items.forEach((r) => {
+        if (r.created_by) userIds.add(r.created_by);
+        if (r.partner) partnerIds.add(r.partner);
+        if (r.training_plan) planIds.add(r.training_plan);
+      });
+
+      const missingUsers = [...userIds].filter((i) => !userMap[i]);
+      const missingPartners = [...partnerIds].filter((i) => !partnerMap[i]);
+      const missingPlans = [...planIds].filter((i) => !planMap[i]);
+
+      const [users, partners, plans] = await Promise.all([
+        Promise.all(
+          missingUsers.map(async (id) => {
+            const r = await LOOKUP_API.users.list({
+              search: id,
+              fields: "username",
+            });
+            return { id, v: r?.data?.results?.[0]?.username };
+          })
+        ),
+        Promise.all(
+          missingPartners.map(async (id) => {
+            const r = await TMS_API.trainingPartners.list({
+              id,
+              fields: "name",
+            });
+            return { id, v: r?.data?.results?.[0]?.name };
+          })
+        ),
+        Promise.all(
+          missingPlans.map(async (id) => {
+            const r = await TMS_API.trainingPlans.list({
+              id,
+              fields: "training_name",
+            });
+            return {
+              id,
+              v: r?.data?.results?.[0]?.training_name,
+            };
+          })
+        ),
+      ]);
+
+      const um = { ...userMap };
+      users.forEach((x) => (um[x.id] = x.v));
+
+      const pm = { ...partnerMap };
+      partners.forEach((x) => (pm[x.id] = x.v));
+
+      const plm = { ...planMap };
+      plans.forEach((x) => (plm[x.id] = x.v));
+
+      setUserMap(um);
+      setPartnerMap(pm);
+      setPlanMap(plm);
+
+      saveMap(USER_MAP_KEY, um);
+      saveMap(PARTNER_MAP_KEY, pm);
+      saveMap(PLAN_MAP_KEY, plm);
+    } catch {}
+  }
+
+  /* ---------------- main fetch ---------------- */
+
   async function fetchRequests(force = false) {
+    if (!user?.id) return;
+
     setLoading(true);
     try {
-      if (!force) {
-        const cached = loadCache();
-        if (cached && Array.isArray(cached) && cached.length > 0) {
-          setRequests(cached);
+      const params = { page_size: 500 };
+      const geoscope = await ensureUserGeoscope();
+
+      if (role === "bmmu" && geoscope?.blocks?.[0])
+        params.block = geoscope.blocks[0];
+
+      if (role === "dmmu" && geoscope?.districts?.[0])
+        params.district = geoscope.districts[0];
+
+      if (role === "training_partner") {
+        const partnerId = await resolveTrainingPartnerIdForUser(user.id);
+        if (!partnerId) {
+          setRequests([]);
           setLoading(false);
           return;
         }
+        params.partner = partnerId;
       }
 
-      // Build API params depending on role
-      const params = { limit: 500 }; // bulk fetch
-      // bmmu -> filter by block
-      if (role === "bmmu") {
-        const geo = JSON.parse(
-          localStorage.getItem("ps_user_geoscope") || "null"
-        );
-        const blockId =
-          user?.block_id ??
-          user?.blockId ??
-          geo?.blocks?.[0] ??
-          geo?.block_id ??
-          null;
-        if (blockId) params.block = blockId;
-      }
-      // dmmu -> filter by district
-      if (role === "dmmu") {
-        const geo = JSON.parse(
-          localStorage.getItem("ps_user_geoscope") || "null"
-        );
-        const districtId =
-          user?.district_id ??
-          user?.districtId ??
-          geo?.districts?.[0] ??
-          geo?.district_id ??
-          null;
-        if (districtId) params.district = districtId;
-      }
-      // training_partner -> created_by = user.id
-      if (role === "training_partner") {
-        params.created_by = user?.id ?? user?.user_id ?? null;
-      }
-      // For smmu we will fetch all and filter client-side by plans belonging to their theme(s)
-      if (role === "smmu") {
-        // We'll fetch training themes for expert=user, plans next, then filter requests response below
-      }
-
-      // actually call list (unfiltered for smmu; server-filter for bmmu/dmmu/tp)
       const resp = await TMS_API.trainingRequests.list(params);
-      const payload = resp?.data ?? resp ?? {};
-      let items = payload.results || payload.data || payload || [];
+      const items = resp?.data?.results || [];
 
-      // smmu: restrict to training plans of themes where expert=user
-      if (role === "smmu") {
-        try {
-          // get themes where expert = user.id
-          const tResp = await TMS_API.trainingThemes.list({
-            expert: user?.id,
-            limit: 500,
-          });
-          const themes = tResp?.data?.results || tResp?.data || tResp || [];
-          const themeIds = (themes || []).map((t) => t.id).filter(Boolean);
-          // fetch plans for these themes
-          const plansResp = await TMS_API.trainingPlans.list({ limit: 500 });
-          const allPlans =
-            plansResp?.data?.results || plansResp?.data || plansResp || [];
-          const planIds = (allPlans || [])
-            .filter((p) => themeIds.includes(p.theme))
-            .map((p) => p.id);
-          if (planIds.length > 0) {
-            items = (items || []).filter((r) =>
-              planIds.includes(r.training_plan)
-            );
-          } else {
-            items = [];
-          }
-        } catch (e) {
-          console.warn("smmu plan filtering failed", e);
-          items = [];
-        }
-      }
-
-      setRequests(items || []);
-      saveCache(items || []);
+      setRequests(items);
+      saveCache(items, { userId: user.id, role });
+      await fetchAndStoreLookupMaps(items);
     } catch (e) {
       console.error("fetch training requests failed", e);
       setRequests([]);
@@ -138,36 +233,31 @@ export default function TrainingRequestList() {
   }
 
   useEffect(() => {
+    if (didRunRef.current) return;
+    didRunRef.current = true;
     fetchRequests(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshToken]);
 
-  // Filtered view
+  /* ---------------- filtered view ---------------- */
+
   const filtered = useMemo(() => {
-    return (requests || []).filter((r) => {
-      if (
-        filters.status &&
-        String(r.status || "").toLowerCase() !==
-          String(filters.status).toLowerCase()
-      )
-        return false;
-      if (
-        filters.level &&
-        String(r.level || "").toLowerCase() !==
-          String(filters.level).toLowerCase()
-      )
-        return false;
-      if (
-        filters.training_type &&
-        String(r.training_type || "").toLowerCase() !==
-          String(filters.training_type).toLowerCase()
-      )
-        return false;
-      if (filters.plan && String(r.training_plan) !== String(filters.plan))
+    return requests.filter((r) => {
+      if (filters.status && r.status !== filters.status) return false;
+      if (filters.level && r.level !== filters.level) return false;
+      if (filters.training_type && r.training_type !== filters.training_type)
         return false;
       return true;
     });
   }, [requests, filters]);
+
+  /* ---------------- render helpers ---------------- */
+
+  const renderUsername = (id) => userMap[id] || id || "-";
+  const renderPartnerName = (id) => partnerMap[id] || id || "-";
+  const renderTrainingName = (id) => planMap[id] || id || "-";
+
+  /* ---------------- UI ---------------- */
 
   return (
     <div className="app-shell">
@@ -183,17 +273,17 @@ export default function TrainingRequestList() {
             <div
               style={{
                 display: "flex",
-                gap: 12,
-                marginBottom: 12,
                 alignItems: "center",
+                marginBottom: 12,
               }}
             >
               <h2 style={{ margin: 0 }}>Training Requests</h2>
-              <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+              <div style={{ marginLeft: "auto" }}>
                 <button
                   className="btn"
                   onClick={() => {
                     localStorage.removeItem(CACHE_KEY);
+                    localStorage.removeItem(TP_SELF_PARTNER_KEY);
                     setRefreshToken((t) => t + 1);
                   }}
                 >
@@ -203,75 +293,6 @@ export default function TrainingRequestList() {
             </div>
 
             <div style={{ background: "#fff", padding: 12, borderRadius: 8 }}>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginBottom: 12,
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div>
-                  <label style={{ fontWeight: 700 }}>Status</label>
-                  <select
-                    value={filters.status}
-                    onChange={(e) =>
-                      setFilters((f) => ({ ...f, status: e.target.value }))
-                    }
-                    className="input"
-                  >
-                    <option value="">All</option>
-                    <option value="BATCHING">BATCHING</option>
-                    <option value="PENDING">PENDING</option>
-                    <option value="ONGOING">ONGOING</option>
-                    <option value="REVIEW">REVIEW</option>
-                    <option value="COMPLETED">COMPLETED</option>
-                    <option value="REJECTED">REJECTED</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontWeight: 700 }}>Level</label>
-                  <select
-                    value={filters.level}
-                    onChange={(e) =>
-                      setFilters((f) => ({ ...f, level: e.target.value }))
-                    }
-                    className="input"
-                  >
-                    <option value="">All</option>
-                    <option value="BLOCK">BLOCK</option>
-                    <option value="DISTRICT">DISTRICT</option>
-                    <option value="STATE">STATE</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontWeight: 700 }}>Participant Type</label>
-                  <select
-                    value={filters.training_type}
-                    onChange={(e) =>
-                      setFilters((f) => ({
-                        ...f,
-                        training_type: e.target.value,
-                      }))
-                    }
-                    className="input"
-                  >
-                    <option value="">All</option>
-                    <option value="BENEFICIARY">BENEFICIARY</option>
-                    <option value="TRAINER">TRAINER</option>
-                  </select>
-                </div>
-
-                <div
-                  style={{ marginLeft: "auto", fontSize: 13, color: "#6c757d" }}
-                >
-                  {loading ? "Fetching requests…" : `${filtered.length} shown`}
-                </div>
-              </div>
-
               <div style={{ maxHeight: 520, overflow: "auto" }}>
                 <table className="table table-compact">
                   <thead>
@@ -283,40 +304,32 @@ export default function TrainingRequestList() {
                       <th>Status</th>
                       <th>Partner</th>
                       <th>Created By</th>
-                      <th>Actions</th>
+                      <th />
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.length === 0 && !loading ? (
+                    {loading ? (
                       <tr>
-                        <td colSpan={8} className="muted">
-                          No training requests found.
-                        </td>
+                        <td colSpan={8}>Loading…</td>
                       </tr>
-                    ) : loading ? (
+                    ) : filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={8}>
-                          <div className="table-spinner">
-                            Fetching requests…
-                          </div>
-                        </td>
+                        <td colSpan={8}>No training requests</td>
                       </tr>
                     ) : (
                       filtered.map((r) => (
                         <tr key={r.id}>
                           <td>{r.id}</td>
-                          <td>{r.training_plan || "-"}</td>
-                          <td>{r.training_type || "-"}</td>
-                          <td>{r.level || "-"}</td>
-                          <td>{r.status || "-"}</td>
-                          <td>{r.partner || "-"}</td>
-                          <td>{r.created_by || "-"}</td>
+                          <td>{renderTrainingName(r.training_plan)}</td>
+                          <td>{r.training_type}</td>
+                          <td>{r.level}</td>
+                          <td>{r.status}</td>
+                          <td>{renderPartnerName(r.partner)}</td>
+                          <td>{renderUsername(r.created_by)}</td>
                           <td>
                             <button
                               className="btn-sm btn-flat"
-                              onClick={() =>
-                                navigate(`/tms/training-requests/${r.id}`)
-                              }
+                              onClick={() => navigate(`/tms/tr-detail/${r.id}`)}
                             >
                               View
                             </button>

@@ -11,10 +11,19 @@ import BmmuTmsDashboard from "./pages/TMS/BMMU/bmmu_tms_dashboard";
 import DmmuTmsDashboard from "./pages/TMS/DMMU/dmmu_tms_dashboard";
 import SmmuTmsDashboard from "./pages/TMS/SMMU/smmu_tms_dashboard";
 import SmmuCreatePartnerTargets from "./pages/TMS/SMMU/smmu_create_tp_targets";
+import TpDashboard from "./pages/TMS/TP/tp_dashboard";
+import MtDashboard from "./pages/TMS/MT/mt_dashboard";
+import CpDashboard from "./pages/TMS/TP_CP/cp_dashboard";
+
+// Training Partner screens
+import TpCentreList from "./pages/TMS/TP/tp_centre_list";
+import TpCentreRegistration from "./pages/TMS/TP/tp_centre_registration";
 
 // New TMS workflow screens
 import CreateTrainingRequest from "./pages/TMS/tms_create_tr";
 import TrainingRequestList from "./pages/TMS/TRs/training_req_list";
+import TrainingRequestDetail from "./pages/TMS/TRs/training_req_detail";
+import TrainingBatchList from "./pages/TMS/TRs/training_batch_list";
 import BmmuCreateTrainingPlan from "./pages/TMS/BMMU/bmmu_create_training_plan";
 
 // tiny placeholder landing for /tms
@@ -25,7 +34,8 @@ function TmsLanding() {
         <div className="card">
           <h2>TMS — Landing</h2>
           <p className="muted">
-            Training Management module landing — choose a TMS link from the left nav.
+            Training Management module landing — choose a TMS link from the left
+            nav.
           </p>
         </div>
       </main>
@@ -52,23 +62,52 @@ export default function App() {
         <Route path="/tms/bmmu/dashboard" element={<BmmuTmsDashboard />} />
         <Route path="/tms/dmmu/dashboard" element={<DmmuTmsDashboard />} />
         <Route path="/tms/smmu/dashboard" element={<SmmuTmsDashboard />} />
+        <Route path="/tms/tp/dashboard" element={<TpDashboard />}></Route>
+        <Route path="/tms/mt/dashboard" element={<MtDashboard />}></Route>
+        <Route path="/tms/cp/dashboard" element={<CpDashboard />}></Route>
 
         {/* SMMU Partner Target Creation */}
-        <Route path="/tms/smmu/partner-targets" element={<SmmuCreatePartnerTargets />} />
+        <Route
+          path="/tms/smmu/partner-targets"
+          element={<SmmuCreatePartnerTargets />}
+        />
 
         {/* NEW: Create Training Request */}
-        <Route path="/tms/create-training-request" element={<CreateTrainingRequest />} />
+        <Route
+          path="/tms/create-training-request"
+          element={<CreateTrainingRequest />}
+        />
 
         {/* NEW: View Training Requests List */}
-        <Route path="/tms/training-requests" element={<TrainingRequestList />} />
+        <Route
+          path="/tms/training-requests"
+          element={<TrainingRequestList />}
+        />
+        <Route path="/tms/tr-detail/:id" element={<TrainingRequestDetail />} />
+        <Route
+          path="/tms/training-batch-list"
+          element={<TrainingBatchList />}
+        />
 
         {/* NEW: BMMU propose training plan */}
-        <Route path="/tms/bmmu/create-training-plan" element={<BmmuCreateTrainingPlan />} />
+        <Route
+          path="/tms/bmmu/create-training-plan"
+          element={<BmmuCreateTrainingPlan />}
+        />
 
         {/* Catch-all for unknown TMS paths */}
         <Route path="/tms/*" element={<TmsLanding />} />
       </Route>
 
+      {/* Training Partner paths */}
+      <Route path="/tms/tp/centre-list" element={<TpCentreList />} />
+
+      <Route path="/tms/tp/centre/new" element={<TpCentreRegistration />} />
+
+      <Route
+        path="/tms/tp/centre/:centreId"
+        element={<TpCentreRegistration />}
+      />
       {/* 404 */}
       <Route path="*" element={<div>404</div>} />
     </Routes>

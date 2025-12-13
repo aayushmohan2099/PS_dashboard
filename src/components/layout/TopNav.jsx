@@ -1,9 +1,10 @@
-// src/components/layout/TopNav.jsx
 import React, { useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 
 export default function TopNav({ left = null, right = null }) {
   const { user, logout } = useContext(AuthContext) || {};
+  const navigate = useNavigate();
 
   // try to read cached geoscope for contextual title / scope
   let geo = null;
@@ -32,9 +33,14 @@ export default function TopNav({ left = null, right = null }) {
     }
   }
 
-  const handleLogout = () => {
-    if (logout) {
-      logout();
+  const handleLogout = async () => {
+    try {
+      if (logout) {
+        await logout();
+      }
+    } finally {
+      // ALWAYS redirect to Home after logout
+      navigate("/", { replace: true });
     }
   };
 

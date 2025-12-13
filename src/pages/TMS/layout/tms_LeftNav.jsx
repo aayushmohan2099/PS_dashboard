@@ -121,7 +121,7 @@ const MENU = {
     },
     {
       label: "Training Requests",
-      to: "/tms/bmmu/requests",
+      to: "/tms/training-requests",
       key: "bmmu-requests",
     },
     {
@@ -145,7 +145,7 @@ const MENU = {
     },
     {
       label: "Create / Review TRs",
-      to: "/tms/dmmu/requests",
+      to: "/tms/training-requests",
       key: "dmmu-requests",
     },
     {
@@ -204,12 +204,12 @@ const MENU = {
     },
     {
       label: "My Training Requests",
-      to: "/tms/tp/requests",
+      to: "/tms/training-requests",
       key: "tp-requests",
     },
     {
       label: "Create / Manage Centres",
-      to: "/tms/tp/centres",
+      to: "/tms/tp/centre-list/",
       key: "tp-centres",
     },
     {
