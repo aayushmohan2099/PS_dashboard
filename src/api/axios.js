@@ -510,7 +510,7 @@ export const TMS_API = {
   trainingTypologies: makeCrud("/tms/training-typologies/"),
   trainingTypes: makeCrud("/tms/training-types/"),
   trainingTopics: makeCrud("/tms/training-topics/"),
-
+  tpcpCentreDetails: makeCrud("/tms/tpcp_to_centre/details/"),
   trainingPlans: makeCrud("/tms/training-plans/"),
 
   // Master trainer + certificates

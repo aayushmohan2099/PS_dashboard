@@ -214,8 +214,13 @@ const MENU = {
     },
     {
       label: "Contact Persons (CP)",
-      to: "/tms/tp/contact-persons",
+      to: "/tms/tp/cp-list",
       key: "tp-cps",
+    },
+    {
+      label: "Assign Training Centre to Contact Person",
+      to: "/tms/tp/cp/assign",
+      key: "tp-cp-centre",
     },
     {
       label: "Create Batch",

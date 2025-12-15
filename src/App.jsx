@@ -18,6 +18,9 @@ import CpDashboard from "./pages/TMS/TP_CP/cp_dashboard";
 // Training Partner screens
 import TpCentreList from "./pages/TMS/TP/tp_centre_list";
 import TpCentreRegistration from "./pages/TMS/TP/tp_centre_registration";
+import TpListCP from "./pages/TMS/TP/tp_list_cp";
+import TpCreateCP from "./pages/TMS/TP/tp_create_cp";
+import TpCpAssignment from "./pages/TMS/TP/tp_cp_assignment";
 
 // New TMS workflow screens
 import CreateTrainingRequest from "./pages/TMS/tms_create_tr";
@@ -108,6 +111,13 @@ export default function App() {
         path="/tms/tp/centre/:centreId"
         element={<TpCentreRegistration />}
       />
+
+      <Route path="/tms/tp/cp-list" element={<TpListCP />} />
+
+      <Route path="/tms/tp/cp/create" element={<TpCreateCP />} />
+      <Route path="/tms/tp/cp/edit/:cpId" element={<TpCreateCP />} />
+      <Route path="/tms/tp/cp/assign" element={<TpCpAssignment />} />
+
       {/* 404 */}
       <Route path="*" element={<div>404</div>} />
     </Routes>

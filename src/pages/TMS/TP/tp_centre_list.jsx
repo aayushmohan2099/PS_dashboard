@@ -15,10 +15,7 @@ const TP_SELF_PARTNER_KEY = "tms_self_partner_id_v1";
 function normalizeMediaUrl(url) {
   if (!url) return "";
   if (url.startsWith("http://66.116.207.88/")) {
-    return url.replace(
-      "http://66.116.207.88/",
-      "http://66.116.207.88:8088/"
-    );
+    return url.replace("http://66.116.207.88/", "http://66.116.207.88:8088/");
   }
   return url;
 }
@@ -189,14 +186,25 @@ function CentreViewModal({ open, data, onClose }) {
             <h3>Basic Information</h3>
             <table>
               <tbody>
-                <tr><td>Serial Number</td><td>{serial_number}</td></tr>
-                <tr><td>Centre Type</td><td>{centre_type}</td></tr>
-                <tr><td>Address</td><td>{venue_address}</td></tr>
+                <tr>
+                  <td>Serial Number</td>
+                  <td>{serial_number}</td>
+                </tr>
+                <tr>
+                  <td>Centre Type</td>
+                  <td>{centre_type}</td>
+                </tr>
+                <tr>
+                  <td>Address</td>
+                  <td>{venue_address}</td>
+                </tr>
                 <tr>
                   <td>Location</td>
                   <td>
-                    {district?.district_name_en} / {block?.block_name_en}<br />
-                    {panchayat?.panchayat_name_en} / {village?.village_name_english}
+                    {district?.district_name_en} / {block?.block_name_en}
+                    <br />
+                    {panchayat?.panchayat_name_en} /{" "}
+                    {village?.village_name_english}
                   </td>
                 </tr>
               </tbody>
@@ -205,22 +213,52 @@ function CentreViewModal({ open, data, onClose }) {
             <h3>Facilities</h3>
             <table>
               <tbody>
-                <tr><td>Security</td><td>{security_arrangements}</td></tr>
-                <tr><td>Toilets</td><td>{toilets_bathrooms}</td></tr>
-                <tr><td>Power & Water</td><td>{power_water_facility}</td></tr>
-                <tr><td>Medical Kit</td><td>{medical_kit ? "Yes" : "No"}</td></tr>
-                <tr><td>Open Space</td><td>{open_space ? "Yes" : "No"}</td></tr>
-                <tr><td>Field Visit</td><td>{field_visit_facility ? "Yes" : "No"}</td></tr>
-                <tr><td>Transport</td><td>{transport_facility ? "Yes" : "No"}</td></tr>
-                <tr><td>Dining</td><td>{dining_facility ? "Yes" : "No"}</td></tr>
-                <tr><td>Other</td><td>{other_details || "-"}</td></tr>
+                <tr>
+                  <td>Security</td>
+                  <td>{security_arrangements}</td>
+                </tr>
+                <tr>
+                  <td>Toilets</td>
+                  <td>{toilets_bathrooms}</td>
+                </tr>
+                <tr>
+                  <td>Power & Water</td>
+                  <td>{power_water_facility}</td>
+                </tr>
+                <tr>
+                  <td>Medical Kit</td>
+                  <td>{medical_kit ? "Yes" : "No"}</td>
+                </tr>
+                <tr>
+                  <td>Open Space</td>
+                  <td>{open_space ? "Yes" : "No"}</td>
+                </tr>
+                <tr>
+                  <td>Field Visit</td>
+                  <td>{field_visit_facility ? "Yes" : "No"}</td>
+                </tr>
+                <tr>
+                  <td>Transport</td>
+                  <td>{transport_facility ? "Yes" : "No"}</td>
+                </tr>
+                <tr>
+                  <td>Dining</td>
+                  <td>{dining_facility ? "Yes" : "No"}</td>
+                </tr>
+                <tr>
+                  <td>Other</td>
+                  <td>{other_details || "-"}</td>
+                </tr>
               </tbody>
             </table>
 
             <h3>Training Halls</h3>
             <table>
               <thead>
-                <tr><th>Name</th><th>Capacity</th></tr>
+                <tr>
+                  <th>Name</th>
+                  <th>Capacity</th>
+                </tr>
               </thead>
               <tbody>
                 {rooms.map((r) => (
@@ -245,7 +283,9 @@ function CentreViewModal({ open, data, onClose }) {
                       onClick={() => setZoomImg(src)}
                     />
                     <div style={{ fontSize: 12 }}>{m.category}</div>
-                    <a href={src} download>Download</a>
+                    <a href={src} download>
+                      Download
+                    </a>
                   </div>
                 );
               })}
@@ -319,7 +359,11 @@ export default function TpCentreList() {
     <div className="app-shell">
       <LeftNav />
       <div className="main-area">
-        <TopNav left={<div className="app-title">Pragati Setu — Training Centres</div>} />
+        <TopNav
+          left={
+            <div className="app-title">Pragati Setu — Training Centres</div>
+          }
+        />
 
         <main style={{ padding: 18 }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
@@ -364,22 +408,27 @@ export default function TpCentreList() {
             <table className="table table-compact">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th>Serial Number</th>
                   <th>Centre Name</th>
                   <th>Type</th>
-                  <th>Halls</th>
+                  <th>Training Halls</th>
+                  <th>Action</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5}>Loading…</td></tr>
+                  <tr>
+                    <td colSpan={5}>Loading…</td>
+                  </tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={5}>No centres found</td></tr>
+                  <tr>
+                    <td colSpan={5}>No centres found</td>
+                  </tr>
                 ) : (
                   filtered.map((c) => (
                     <tr key={c.id}>
-                      <td>{c.id}</td>
+                      <td>{c.serial_number}</td>
                       <td>{c.venue_name}</td>
                       <td>{c.centre_type}</td>
                       <td>{c.training_hall_count}</td>
