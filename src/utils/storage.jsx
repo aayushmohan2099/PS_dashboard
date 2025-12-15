@@ -11,10 +11,43 @@ export function setAuth({ access, refresh, user }) {
   } catch (e) { console.error('storage setAuth failed', e); }
 }
 
-export function getAccessToken() { try { return localStorage.getItem(ACCESS_KEY); } catch (e) { console.error(e); return null; } }
-export function getRefreshToken() { try { return localStorage.getItem(REFRESH_KEY); } catch (e) { console.error(e); return null; } }
-export function getUser() { try { const s = localStorage.getItem(USER_KEY); return s ? JSON.parse(s) : null; } catch (e) { console.error(e); return null; } }
-export function clearAuth() { try { localStorage.removeItem(ACCESS_KEY); localStorage.removeItem(REFRESH_KEY); localStorage.removeItem(USER_KEY); } catch (e) { console.error(e); } }
+export function getAccessToken() { 
+  try { 
+    return localStorage.getItem(ACCESS_KEY); 
+  } catch (e) { 
+    console.error(e); 
+    return null; 
+  } 
+}
+
+export function getRefreshToken() { 
+  try { 
+    return localStorage.getItem(REFRESH_KEY); 
+  } catch (e) { 
+    console.error(e); 
+    return null; 
+  } 
+}
+
+export function getUser() { 
+  try { 
+    const s = localStorage.getItem(USER_KEY); 
+    return s ? JSON.parse(s) : null; 
+  } catch (e) { 
+    console.error(e); 
+    return null; 
+  } 
+}
+
+export function clearAuth() { 
+  try {
+    localStorage.removeItem(ACCESS_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(USER_KEY);
+  } catch (e) { 
+    console.error(e); 
+  } 
+}
 
 export function getApiHeaders() {
   try {

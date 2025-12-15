@@ -22,11 +22,15 @@ import TpListCP from "./pages/TMS/TP/tp_list_cp";
 import TpCreateCP from "./pages/TMS/TP/tp_create_cp";
 import TpCpAssignment from "./pages/TMS/TP/tp_cp_assignment";
 
+import TpCreateBatch from "./pages/TMS/TP/tp_create_batch";
+
 // New TMS workflow screens
 import CreateTrainingRequest from "./pages/TMS/tms_create_tr";
 import TrainingRequestList from "./pages/TMS/TRs/training_req_list";
 import TrainingRequestDetail from "./pages/TMS/TRs/training_req_detail";
 import TrainingBatchList from "./pages/TMS/TRs/training_batch_list";
+import TrainingBatchDetail from "./pages/TMS/TRs/training_batch_detail";
+
 import BmmuCreateTrainingPlan from "./pages/TMS/BMMU/bmmu_create_training_plan";
 
 // tiny placeholder landing for /tms
@@ -87,10 +91,6 @@ export default function App() {
           element={<TrainingRequestList />}
         />
         <Route path="/tms/tr-detail/:id" element={<TrainingRequestDetail />} />
-        <Route
-          path="/tms/training-batch-list"
-          element={<TrainingBatchList />}
-        />
 
         {/* NEW: BMMU propose training plan */}
         <Route
@@ -111,6 +111,11 @@ export default function App() {
         path="/tms/tp/centre/:centreId"
         element={<TpCentreRegistration />}
       />
+      
+      <Route path="/tms/tp/batches/create/:id" element={<TpCreateBatch />} />      
+
+      <Route path="/tms/batches-list/:id" element={<TrainingBatchList />} />    
+      <Route path="/tms/batch-detail/:id" element={<TrainingBatchDetail />} />
 
       <Route path="/tms/tp/cp-list" element={<TpListCP />} />
 

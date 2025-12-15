@@ -90,6 +90,9 @@ export default function TrainingRequestDetail() {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext) || {};
   const role = getCanonicalRole(user || {});
+  const isTP = role === "training_partner" || role === "4"
+  const isDmmu = role === "2"
+  const isSmmu = role === "3"    
 
   // overall loading for "load ALL apis"
   const [loadingAll, setLoadingAll] = useState(false);
@@ -705,7 +708,8 @@ export default function TrainingRequestDetail() {
 
                   {/* Conditional actions based on status */}
                   <div style={{ marginTop: 12 }}>
-                    {(tr.status || "").toUpperCase() === "PENDING" && (
+                    {/* PENDING → SMMU REVIEW */}
+                    {isSmmu && (tr.status || "").toUpperCase() === "PENDING" && (
                       <div style={{ marginBottom: 8 }}>
                         <strong>Note:</strong> Request is PENDING. Appropriate
                         authority action required.
@@ -720,23 +724,97 @@ export default function TrainingRequestDetail() {
                       </div>
                     )}
 
-                    {[
-                      "BATCHING",
-                      "ONGOING",
-                      "COMPLETED",
-                      "REVIEW",
-                      "REJECTED",
-                    ].includes((tr.status || "").toUpperCase()) && (
+                    {/* PENDING → DMMU REVIEW */}
+                    {isDmmu && (tr.status || "").toUpperCase() === "PENDING" && (
+                      <div style={{ marginBottom: 8 }}>
+                        <strong>Note:</strong> Request is PENDING. Appropriate
+                        authority action required.
+                        <div style={{ marginTop: 8 }}>
+                          <button
+                            className="btn"
+                            onClick={() => navigate("/tms/smmu/tr-review")}
+                          >
+                            Go to SMMU Review
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* REVIEW → SMMU CLOSURE */}
+                    {isSmmu && (tr.status || "").toUpperCase() === "REVIEW" && (
+                      <div style={{ marginBottom: 8 }}>
+                        <strong>Note:</strong> Request is PENDING. Appropriate
+                        authority action required.
+                        <div style={{ marginTop: 8 }}>
+                          <button
+                            className="btn"
+                            onClick={() => navigate("/tms/smmu/tr-review")}
+                          >
+                            Go to DMMU Review
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* REVIEW → DMMU CLOSURE */}
+                    {isDmmu && (tr.status || "").toUpperCase() === "REVIEW" && (
+                      <div style={{ marginBottom: 8 }}>
+                        <strong>Note:</strong> Request is PENDING. Appropriate
+                        authority action required.
+                        <div style={{ marginTop: 8 }}>
+                          <button
+                            className="btn"
+                            onClick={() => navigate("/tms/dmmu/tr-review")}
+                          >
+                            Go to SMMU Review
+                          </button>
+                        </div>
+                      </div>
+                    )}                    
+
+                    {/* TP REVERTED TR */}
+                    {isTP && (tr.status || "").toUpperCase() === "REJECTED" && (
+                      <div style={{ marginBottom: 8 }}>
+                        <strong>Note:</strong> Request is REJECTED !. Appropriate
+                        authority action required.
+                        <div style={{ marginTop: 8 }}>
+                          <button
+                            className="btn"
+                            onClick={() => navigate("/tms/smmu/tr-review")}
+                          >
+                            Go to Batches Review
+                          </button>
+                        </div>
+                      </div>
+                    )}                    
+
+                    {/* TRAINING PARTNER + BATCHING → CREATE BATCHES */}
+                    {isTP && (tr.status || "").toUpperCase() === "BATCHING" ? (
                       <div>
                         <button
-                          className="btn"
-                          onClick={() =>
-                            navigate("/tms/training-batches?training=" + id)
-                          }
+                          className="btn btn-primary"
+                          onClick={() => navigate(`/tms/tp/batches/create/${id}`)}
                         >
-                          View Batches in this Training Request
+                          Create Batches
                         </button>
                       </div>
+                    ) : (
+                      /* ALL OTHER CASES → VIEW BATCHES */
+                      [
+                        "ONGOING",
+                        "PENDING", 
+                        "COMPLETED",
+                        "REJECTED",
+                      ].includes((tr.status || "").toUpperCase()) && (
+                        <div>
+                          <button
+                            className="btn"
+                            onClick={() => navigate(`/tms/batches-list/${id}`)}
+                          >
+                            View Batches in this Training Request
+                          </button>
+                        </div>
+                      )
                     )}
                   </div>
                 </>

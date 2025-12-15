@@ -70,11 +70,44 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * logout - client-side wipe only (server-side logout / cookie delete may be implemented separately)
+   * logout - COMPLETE localStorage cleanup + server logout
    */
-  const logout = () => {
-    clearAuth();
-    try { localStorage.removeItem('ps_user_geoscope'); } catch(e) {}
+  const logout = async () => {
+    try {
+      // Clear ALL app caches and TMS-specific storage
+      const tmsKeys = [
+        'tms_training_requests_cache_v1',
+        'tms_user_map_v1',
+        'tms_partner_map_v1',
+        'tms_plan_map_v1',
+        'tms_self_partner_id_v1',
+        'tms_training_batches_cache_v1',
+        'tms_batch_user_map_v1',
+        'tms_centre_map_v1'
+      ];
+      
+      // Clear per-request batch caches (pattern: tms_training_batches_cache_v1_{requestId})
+      const allKeys = Object.keys(localStorage);
+      const batchCacheKeys = allKeys.filter(key => key.startsWith('tms_training_batches_cache_v1_'));
+      
+      [...tmsKeys, ...batchCacheKeys].forEach(key => {
+        try { localStorage.removeItem(key); } catch(e) {}
+      });
+
+      // Clear geoscope and other app caches
+      localStorage.removeItem('ps_user_geoscope');
+      
+      // Clear auth storage
+      clearAuth();
+      
+    } catch (e) {
+      console.error('Logout cleanup error:', e);
+    }
+    
+    // Server logout (fire and forget)
+    api.post("/auth/logout/").catch(console.error);
+    
+    // Reset state
     setUser(null);
     setIsAuthenticated(false);
   };
