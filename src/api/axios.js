@@ -545,6 +545,7 @@ export const TMS_API = {
 
   // Batch workflow
   batches: makeCrud("/tms/batches/"),
+  batchschedule: makeCrud("/tms/batch-schedules/"),
   batchMasterTrainers: makeCrud("/tms/batch-master-trainers/"),
   batchBeneficiaries: makeCrud("/tms/batch-beneficiaries/"),
   batchTrainers: makeCrud("/tms/batch-trainers/"),

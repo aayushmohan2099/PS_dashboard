@@ -14,6 +14,9 @@ import SmmuCreatePartnerTargets from "./pages/TMS/SMMU/smmu_create_tp_targets";
 import TpDashboard from "./pages/TMS/TP/tp_dashboard";
 import MtDashboard from "./pages/TMS/MT/mt_dashboard";
 import CpDashboard from "./pages/TMS/TP_CP/cp_dashboard";
+import CpBatchDetail from "./pages/TMS/TP_CP/cp_batch_detail";
+import CpAdPerBatchEkyc from "./pages/TMS/TP_CP/attendance/cpad_per_batch_ekyc";
+import CpAdPerBatch from "./pages/TMS/TP_CP/attendance/cpad_per_batch";
 
 // Training Partner screens
 import TpCentreList from "./pages/TMS/TP/tp_centre_list";
@@ -23,6 +26,7 @@ import TpCreateCP from "./pages/TMS/TP/tp_create_cp";
 import TpCpAssignment from "./pages/TMS/TP/tp_cp_assignment";
 
 import TpCreateBatch from "./pages/TMS/TP/tp_create_batch";
+
 
 // New TMS workflow screens
 import CreateTrainingRequest from "./pages/TMS/tms_create_tr";
@@ -34,8 +38,6 @@ import TrainingBatchDetail from "./pages/TMS/TRs/training_batch_detail";
 import BmmuCreateTrainingPlan from "./pages/TMS/BMMU/bmmu_create_training_plan";
 
 import DmmuTrReview from "./pages/TMS/DMMU/dmmu_tr_review";
-
-import 
 
 // tiny placeholder landing for /tms
 function TmsLanding() {
@@ -129,7 +131,11 @@ export default function App() {
       <Route path="/tms/tp/cp/edit/:cpId" element={<TpCreateCP />} />
       <Route path="/tms/tp/cp/assign" element={<TpCpAssignment />} />
 
-      <Route path="/tms/cp/batch-detail/:id" element={ />} />
+      <Route path="/tms/cp/batch-detail/:id" element={<CpBatchDetail />} />
+
+      <Route path="/tms/cp/batch-attendance-ekyc/:id" element={<CpAdPerBatchEkyc />} />
+
+      <Route path="/tms/cp/batch-attendance/:id" element={<CpAdPerBatch />} />      
 
       {/* 404 */}
       <Route path="*" element={<div>404</div>} />
