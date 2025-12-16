@@ -33,6 +33,10 @@ import TrainingBatchDetail from "./pages/TMS/TRs/training_batch_detail";
 
 import BmmuCreateTrainingPlan from "./pages/TMS/BMMU/bmmu_create_training_plan";
 
+import DmmuTrReview from "./pages/TMS/DMMU/dmmu_tr_review";
+
+import 
+
 // tiny placeholder landing for /tms
 function TmsLanding() {
   return (
@@ -98,6 +102,8 @@ export default function App() {
           element={<BmmuCreateTrainingPlan />}
         />
 
+        <Route path="/tms/dmmu/tr-review/:id" element={<DmmuTrReview />} />
+
         {/* Catch-all for unknown TMS paths */}
         <Route path="/tms/*" element={<TmsLanding />} />
       </Route>
@@ -111,10 +117,10 @@ export default function App() {
         path="/tms/tp/centre/:centreId"
         element={<TpCentreRegistration />}
       />
-      
-      <Route path="/tms/tp/batches/create/:id" element={<TpCreateBatch />} />      
 
-      <Route path="/tms/batches-list/:id" element={<TrainingBatchList />} />    
+      <Route path="/tms/tp/batches/create/:id" element={<TpCreateBatch />} />
+
+      <Route path="/tms/batches-list/:id" element={<TrainingBatchList />} />
       <Route path="/tms/batch-detail/:id" element={<TrainingBatchDetail />} />
 
       <Route path="/tms/tp/cp-list" element={<TpListCP />} />
@@ -122,6 +128,8 @@ export default function App() {
       <Route path="/tms/tp/cp/create" element={<TpCreateCP />} />
       <Route path="/tms/tp/cp/edit/:cpId" element={<TpCreateCP />} />
       <Route path="/tms/tp/cp/assign" element={<TpCpAssignment />} />
+
+      <Route path="/tms/cp/batch-detail/:id" element={ />} />
 
       {/* 404 */}
       <Route path="*" element={<div>404</div>} />
