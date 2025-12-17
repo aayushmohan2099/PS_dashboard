@@ -1,5 +1,5 @@
 // src/pages/TMS/TRs/training_batch_detail.jsx
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
@@ -61,12 +61,31 @@ export default function TrainingBatchDetail() {
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(null);
-  const [selectedAttendanceRecords, setSelectedAttendanceRecords] = useState([]);
+  const [selectedAttendanceRecords, setSelectedAttendanceRecords] = useState(
+    []
+  );
   const [loadingSelectedAttendance, setLoadingSelectedAttendance] =
     useState(false);
 
   const [refreshToken, setRefreshToken] = useState(0);
   const inFlightRef = useRef(false);
+
+  // NEW: closure + media state
+  const [closureRequest, setClosureRequest] = useState(null);
+  const [batchMedia, setBatchMedia] = useState([]);
+  const [loadingClosureInfo, setLoadingClosureInfo] = useState(false);
+  const [selectedMediaDate, setSelectedMediaDate] = useState(null);
+  const [mediaPreviewSrc, setMediaPreviewSrc] = useState(null);
+
+  const mediaByDate = useMemo(() => {
+    const grouped = {};
+    (batchMedia || []).forEach((m) => {
+      const dt = m.date || "";
+      if (!grouped[dt]) grouped[dt] = [];
+      grouped[dt].push(m);
+    });
+    return grouped;
+  }, [batchMedia]);
 
   /* ----------------- main fetch orchestration ----------------- */
   async function fetchAll(force = false) {
@@ -96,6 +115,7 @@ export default function TrainingBatchDetail() {
           setMasterTrainers(cached.payload.masterTrainers || []);
           setCentreDetail(cached.payload.centreDetail || null);
           setAttendanceList(cached.payload.attendanceList || []);
+          // closure + media not cached yet; they are relatively light
           setLoadingAll(false);
           inFlightRef.current = false;
           return;
@@ -131,9 +151,7 @@ export default function TrainingBatchDetail() {
       if (batchResponse?.centre?.id) {
         const centreId = batchResponse.centre.id;
         console.log(
-          "🏢 Fetching /tms/training-partner-centres/" +
-            centreId +
-            "/detail/"
+          "🏢 Fetching /tms/training-partner-centres/" + centreId + "/detail/"
         );
         const centreResp = await api.get(
           `/tms/training-partner-centres/${centreId}/detail/`
@@ -146,17 +164,13 @@ export default function TrainingBatchDetail() {
       // 4. Fetch attendance list for this batch
       try {
         setLoadingAttendance(true);
-        console.log(
-          "📅 Fetching /tms/batch-attendance/?batch=" + batchId
-        );
+        console.log("📅 Fetching /tms/batch-attendance/?batch=" + batchId);
         const attResp = await api.get(
           `/tms/batch-attendance/?batch=${batchId}`
         );
         const attData = attResp?.data ?? attResp ?? {};
         attendances = attData.results || attData || [];
-        attendances.sort((a, b) =>
-          (a.date || "").localeCompare(b.date || "")
-        );
+        attendances.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
         setAttendanceList(attendances);
         console.log("✅ Attendance list loaded:", attendances);
       } catch (e) {
@@ -185,8 +199,38 @@ export default function TrainingBatchDetail() {
     }
   }
 
+  // NEW: fetch closure + media
+  async function fetchClosureInfo() {
+    if (!batchId) return;
+    try {
+      setLoadingClosureInfo(true);
+      // closure
+      const crResp = await api.get(
+        `/tms/batch-closure-requests/?batch=${batchId}`
+      );
+      const crData = crResp?.data ?? crResp ?? {};
+      const crList = crData.results || crData || [];
+      setClosureRequest(crList[0] || null);
+
+      // media
+      const mediaResp = await api.get(
+        `/tms/batch-media/?batch=${batchId}&page_size=500`
+      );
+      const mData = mediaResp?.data ?? mediaResp ?? {};
+      const mList = mData.results || mData || [];
+      setBatchMedia(mList);
+    } catch (e) {
+      console.error("❌ fetchClosureInfo failed:", e);
+      setClosureRequest(null);
+      setBatchMedia([]);
+    } finally {
+      setLoadingClosureInfo(false);
+    }
+  }
+
   useEffect(() => {
     fetchAll(refreshToken > 0);
+    fetchClosureInfo();
   }, [batchId, refreshToken]);
 
   function handleRefresh() {
@@ -196,6 +240,8 @@ export default function TrainingBatchDetail() {
     } catch (e) {}
     setSelectedAttendanceDate(null);
     setSelectedAttendanceRecords([]);
+    setSelectedMediaDate(null);
+    setMediaPreviewSrc(null);
     setRefreshToken((t) => t + 1);
   }
 
@@ -208,6 +254,7 @@ export default function TrainingBatchDetail() {
     setLoadingSelectedAttendance(true);
     setSelectedAttendanceDate(dateStr);
     setSelectedAttendanceRecords([]);
+    setSelectedMediaDate(dateStr); // NEW: also select media for this date
 
     try {
       // 1) Find the BatchAttendance row for this date
@@ -272,12 +319,9 @@ export default function TrainingBatchDetail() {
               }}
             >
               <h2 style={{ margin: 0 }}>
-                Batch #{batchId}{" "}
-                {batchData?.code ? `(${batchData.code})` : ""}
+                Batch #{batchId} {batchData?.code ? `(${batchData.code})` : ""}
               </h2>
-              <div
-                style={{ marginLeft: "auto", display: "flex", gap: 8 }}
-              >
+              <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
                 <button className="btn" onClick={handleRefresh}>
                   Refresh
                 </button>
@@ -289,6 +333,37 @@ export default function TrainingBatchDetail() {
                 </button>
               </div>
             </div>
+
+            {/* NEW: Closure banner */}
+            {loadingClosureInfo ? (
+              <div
+                style={{
+                  marginBottom: 12,
+                  padding: 10,
+                  borderRadius: 6,
+                  background: "#f9fafb",
+                  border: "1px dashed #e5e7eb",
+                  fontSize: 13,
+                }}
+              >
+                Checking batch closure status…
+              </div>
+            ) : closureRequest ? (
+              <div
+                style={{
+                  marginBottom: 12,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: "#ecfdf5",
+                  border: "1px solid #bbf7d0",
+                  color: "#166534",
+                  fontSize: 14,
+                }}
+              >
+                <strong>This batch is now closed.</strong> A closure request has
+                been submitted for this batch and is under review / processing.
+              </div>
+            ) : null}
 
             <div style={{ background: "#fff", padding: 20, borderRadius: 8 }}>
               {!batchData ? (
@@ -345,8 +420,8 @@ export default function TrainingBatchDetail() {
                       </div>
                       <div>
                         <strong>Training Name:</strong>{" "}
-                        {trainingRequestDetail?.training_plan
-                          ?.training_name || "-"}
+                        {trainingRequestDetail?.training_plan?.training_name ||
+                          "-"}
                       </div>
                       <div>
                         <strong>Type of Training:</strong>{" "}
@@ -424,13 +499,12 @@ export default function TrainingBatchDetail() {
                         {fmtDate(batchData.start_date)}
                       </div>
                       <div>
-                        <strong>End Date:</strong>{" "}
-                        {fmtDate(batchData.end_date)}
+                        <strong>End Date:</strong> {fmtDate(batchData.end_date)}
                       </div>
                     </div>
                   </div>
 
-                  {/* 3. ATTENDANCE DETAILS */}
+                  {/* 3. ATTENDANCE + MEDIA DETAILS */}
                   <div style={{ marginBottom: 24 }}>
                     <h3
                       style={{
@@ -441,9 +515,7 @@ export default function TrainingBatchDetail() {
                       📅 Attendance (All Dates)
                     </h3>
                     {loadingAttendance ? (
-                      <div className="table-spinner">
-                        Loading attendance…
-                      </div>
+                      <div className="table-spinner">Loading attendance…</div>
                     ) : attendanceList.length === 0 ? (
                       <div className="muted">
                         No attendance records found for this batch.
@@ -465,7 +537,11 @@ export default function TrainingBatchDetail() {
                                   <td>
                                     <button
                                       type="button"
-                                      className="btn-sm btn-flat"
+                                      className={
+                                        selectedAttendanceDate === att.date
+                                          ? "btn-sm btn-flat active"
+                                          : "btn-sm btn-flat"
+                                      }
                                       onClick={() =>
                                         fetchAttendanceParticipantsForDate(
                                           att.date
@@ -526,8 +602,7 @@ export default function TrainingBatchDetail() {
                               </div>
                             ) : selectedAttendanceRecords.length === 0 ? (
                               <div className="muted">
-                                No participant attendance records for this
-                                date.
+                                No participant attendance records for this date.
                               </div>
                             ) : (
                               <div
@@ -577,6 +652,100 @@ export default function TrainingBatchDetail() {
                                 </table>
                               </div>
                             )}
+
+                            {/* NEW: Media thumbnails for this date */}
+                            {selectedMediaDate &&
+                              mediaByDate[selectedMediaDate] &&
+                              mediaByDate[selectedMediaDate].length > 0 && (
+                                <div
+                                  style={{
+                                    marginTop: 16,
+                                    paddingTop: 8,
+                                    borderTop: "1px dashed #e5e7eb",
+                                  }}
+                                >
+                                  <h4>Media on {fmtDate(selectedMediaDate)}</h4>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      gap: 12,
+                                    }}
+                                  >
+                                    {mediaByDate[selectedMediaDate].map((m) => {
+                                      const src = normalizeMediaUrl(m.file);
+                                      const isImage =
+                                        src &&
+                                        !src.toLowerCase().endsWith(".pdf");
+                                      return (
+                                        <div
+                                          key={m.id}
+                                          style={{
+                                            width: 150,
+                                            borderRadius: 6,
+                                            border: "1px solid #e5e7eb",
+                                            padding: 8,
+                                            background: "#fff",
+                                            fontSize: 12,
+                                          }}
+                                        >
+                                          {isImage ? (
+                                            <img
+                                              src={src}
+                                              alt={m.category}
+                                              style={{
+                                                width: "100%",
+                                                height: 90,
+                                                objectFit: "cover",
+                                                borderRadius: 4,
+                                                cursor: "pointer",
+                                              }}
+                                              onClick={() =>
+                                                setMediaPreviewSrc(src)
+                                              }
+                                            />
+                                          ) : (
+                                            <div
+                                              style={{
+                                                height: 90,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                background: "#f9fafb",
+                                                borderRadius: 4,
+                                                cursor: "pointer",
+                                              }}
+                                              onClick={() =>
+                                                window.open(src, "_blank")
+                                              }
+                                            >
+                                              View PDF
+                                            </div>
+                                          )}
+                                          <div
+                                            style={{
+                                              marginTop: 4,
+                                              fontWeight: 600,
+                                            }}
+                                          >
+                                            {m.category}
+                                          </div>
+                                          {m.notes && (
+                                            <div
+                                              style={{
+                                                marginTop: 2,
+                                                color: "#4b5563",
+                                              }}
+                                            >
+                                              {m.notes}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
                           </div>
                         )}
                       </>
@@ -612,9 +781,7 @@ export default function TrainingBatchDetail() {
                           >
                             {centreDetail.venue_name}
                           </div>
-                          <div
-                            style={{ color: "#666", marginBottom: 12 }}
-                          >
+                          <div style={{ color: "#666", marginBottom: 12 }}>
                             {centreDetail.venue_address}
                           </div>
                           <div>
@@ -732,9 +899,7 @@ export default function TrainingBatchDetail() {
                           </div>
                           <div>
                             <strong>Dining:</strong>{" "}
-                            {centreDetail.dining_facility
-                              ? "✅ Yes"
-                              : "❌ No"}
+                            {centreDetail.dining_facility ? "✅ Yes" : "❌ No"}
                           </div>
                           <div style={{ marginTop: 8 }}>
                             <strong>Other:</strong>{" "}
@@ -921,6 +1086,33 @@ export default function TrainingBatchDetail() {
             </div>
           </div>
         </main>
+
+        {/* NEW: lightbox for media preview */}
+        {mediaPreviewSrc && (
+          <div
+            onClick={() => setMediaPreviewSrc(null)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.8)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 2000,
+              cursor: "zoom-out",
+            }}
+          >
+            <img
+              src={mediaPreviewSrc}
+              alt="Preview"
+              style={{
+                maxWidth: "90%",
+                maxHeight: "90%",
+                borderRadius: 6,
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

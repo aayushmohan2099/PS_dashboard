@@ -429,9 +429,22 @@ export default function CpDashboard() {
   const cpName =
     cpRecord?.name || user?.first_name || user?.username || "Contact Person";
 
-  const ongoingBatches = useMemo(
-    () => batches.filter((b) => (b.status || "").toUpperCase() === "ONGOING"),
+  // ONLY SCHEDULED and ONGOING batches for dashboard table
+  const visibleBatches = useMemo(
+    () =>
+      batches.filter((b) => {
+        const status = (b.status || "").toUpperCase();
+        return status === "SCHEDULED" || status === "ONGOING";
+      }),
     [batches]
+  );
+
+  const ongoingBatches = useMemo(
+    () =>
+      visibleBatches.filter(
+        (b) => (b.status || "").toUpperCase() === "ONGOING"
+      ),
+    [visibleBatches]
   );
 
   return (
@@ -546,8 +559,10 @@ export default function CpDashboard() {
                 <div className="table-spinner">
                   Loading batches for your centre…
                 </div>
-              ) : batches.length === 0 ? (
-                <div className="muted">No batches found for this centre.</div>
+              ) : visibleBatches.length === 0 ? (
+                <div className="muted">
+                  No scheduled or ongoing batches found for this centre.
+                </div>
               ) : (
                 <div style={{ maxHeight: 420, overflow: "auto" }}>
                   <table className="table table-compact">
@@ -564,7 +579,7 @@ export default function CpDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {batches.map((b, idx) => (
+                      {visibleBatches.map((b, idx) => (
                         <tr key={b.id}>
                           <td>{idx + 1}</td>
                           <td>{b.code}</td>

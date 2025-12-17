@@ -1,18 +1,12 @@
 // src/pages/TMS/TP_CP/cpad_per_batch.jsx
-import React, {
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import TmsLeftNav from "../../layout/tms_LeftNav";
 import TopNav from "../../../../components/layout/TopNav";
 import { AuthContext } from "../../../../contexts/AuthContext";
 import api, { TMS_API } from "../../../../api/axios";
 
-const BATCH_DETAIL_CACHE_PREFIX = "tms_cp_batch_detail_v1::";
+const BATCHDETAIL_CACHE_PREFIX = "tms_cp_batch_detail_v1::";
 const SCHEDULE_CACHE_PREFIX = "tms_cp_batch_schedule_v1::";
 const EKYC_CACHE_PREFIX = "tms_cp_batch_ekyc_v1::";
 const ATT_TODAY_CACHE_PREFIX = "tms_cp_batch_att_today_v1::";
@@ -80,7 +74,7 @@ export default function CpAdPerBatch() {
   const navigate = useNavigate();
 
   const [batch, setBatch] = useState(
-    () => loadJson(BATCH_DETAIL_CACHE_PREFIX + batchId)?.payload || null
+    () => loadJson(BATCHDETAIL_CACHE_PREFIX + batchId)?.payload || null
   );
   const [schedule, setSchedule] = useState(
     () => loadJson(SCHEDULE_CACHE_PREFIX + batchId)?.payload || null
@@ -125,7 +119,7 @@ export default function CpAdPerBatch() {
     setLoadingBatch(true);
     try {
       if (!force) {
-        const cached = loadJson(BATCH_DETAIL_CACHE_PREFIX + batchId);
+        const cached = loadJson(BATCHDETAIL_CACHE_PREFIX + batchId);
         if (cached?.payload) {
           setBatch(cached.payload);
           return;
@@ -134,7 +128,7 @@ export default function CpAdPerBatch() {
       const resp = await api.get(`/tms/batches/${batchId}/detail/`);
       const data = resp?.data || null;
       setBatch(data);
-      saveJson(BATCH_DETAIL_CACHE_PREFIX + batchId, data);
+      saveJson(BATCHDETAIL_CACHE_PREFIX + batchId, data);
     } catch (e) {
       console.error("attendance fetch batch failed", e);
       setBatch(null);
@@ -155,9 +149,9 @@ export default function CpAdPerBatch() {
           return;
         }
       }
-      const resp = await TMS_API.batchSchedules?.list
-        ? await TMS_API.batchSchedules.list({ batch: batchId, page_size: 1 })
-        : await api.get(`/tms/batch-schedules/?batch=${batchId}`);
+      const resp = await (TMS_API.batchSchedules?.list
+        ? TMS_API.batchSchedules.list({ batch: batchId, page_size: 1 })
+        : api.get(`/tms/batch-schedules/?batch=${batchId}`));
       const data = resp?.data ?? resp ?? {};
       const rec = data.results ? data.results[0] : data[0];
       if (rec) {
@@ -370,9 +364,33 @@ export default function CpAdPerBatch() {
     setMissingDates(toMark);
   }, [batch, attendanceList, today]);
 
+  /* ---------------- helper: mark batch COMPLETED if end_date is today ---------------- */
+
+  async function markBatchCompletedIfNeeded() {
+    try {
+      if (!batch || !batchId) return;
+      if (!batch.end_date || batch.end_date !== today) return;
+      if ((batch.status || "").toUpperCase() !== "ONGOING") return;
+
+      const resp = await api.patch(`/tms/batches/${batchId}/`, {
+        status: "COMPLETED",
+      });
+      const updated = resp?.data || null;
+      if (updated) {
+        setBatch(updated);
+        saveJson(BATCHDETAIL_CACHE_PREFIX + batchId, updated);
+      }
+    } catch (e) {
+      console.error("Failed to mark batch as COMPLETED", e);
+    }
+  }
+
   /* ---------------- helpers: get or create BatchAttendance & missing participants ---------------- */
 
-  async function getOrCreateBatchAttendanceForDate(dateStr, { allowCreate = true } = {}) {
+  async function getOrCreateBatchAttendanceForDate(
+    dateStr,
+    { allowCreate = true } = {}
+  ) {
     // 1) Try GET
     try {
       const resp = await api.get(
@@ -484,6 +502,7 @@ export default function CpAdPerBatch() {
       }
       await fetchAttendanceList();
       setMissingDates([]);
+      await markBatchCompletedIfNeeded();
       alert("All pending past days marked absent successfully.");
     } catch (e) {
       console.error("bulk auto mark absent failed", e);
@@ -506,7 +525,14 @@ export default function CpAdPerBatch() {
     if (!start) return false;
     const now = new Date();
     return now >= start;
-  }, [batch, schedule, allEkycVerified, attendanceToday, today, missingDates.length]);
+  }, [
+    batch,
+    schedule,
+    allEkycVerified,
+    attendanceToday,
+    today,
+    missingDates.length,
+  ]);
 
   // keep polling time until start time passes (for today's session)
   useEffect(() => {
@@ -542,7 +568,14 @@ export default function CpAdPerBatch() {
         timeCheckIntervalRef.current = null;
       }
     };
-  }, [schedule, batch, allEkycVerified, attendanceToday?.id, today, missingDates.length]);
+  }, [
+    schedule,
+    batch,
+    allEkycVerified,
+    attendanceToday?.id,
+    today,
+    missingDates.length,
+  ]);
 
   /* ---------------- submit today's attendance ---------------- */
 
@@ -617,8 +650,9 @@ export default function CpAdPerBatch() {
         });
       }
 
+      await fetchAttendanceList();
+      await markBatchCompletedIfNeeded();
       alert("Today's attendance recorded successfully.");
-      fetchAttendanceList();
     } catch (e) {
       console.error("attendance submit failed", e);
       alert("Failed to record attendance. Please try again.");
@@ -659,15 +693,11 @@ export default function CpAdPerBatch() {
                   onClick={() => {
                     try {
                       localStorage.removeItem(
-                        BATCH_DETAIL_CACHE_PREFIX + batchId
+                        BATCHDETAIL_CACHE_PREFIX + batchId
                       );
-                      localStorage.removeItem(
-                        SCHEDULE_CACHE_PREFIX + batchId
-                      );
+                      localStorage.removeItem(SCHEDULE_CACHE_PREFIX + batchId);
                       localStorage.removeItem(EKYC_CACHE_PREFIX + batchId);
-                      localStorage.removeItem(
-                        ATT_TODAY_CACHE_PREFIX + batchId
-                      );
+                      localStorage.removeItem(ATT_TODAY_CACHE_PREFIX + batchId);
                     } catch {}
                     setAttendanceToday(null);
                     setAttendanceList([]);
@@ -681,7 +711,10 @@ export default function CpAdPerBatch() {
                 >
                   Refresh
                 </button>
-                <button className="btn btn-outline" onClick={() => navigate(-1)}>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => navigate(-1)}
+                >
                   Back
                 </button>
               </div>
@@ -713,9 +746,7 @@ export default function CpAdPerBatch() {
                   </div>
 
                   {loadingSchedule ? (
-                    <div className="table-spinner">
-                      Loading batch schedule…
-                    </div>
+                    <div className="table-spinner">Loading batch schedule…</div>
                   ) : !schedule ? (
                     <div
                       style={{
@@ -755,9 +786,7 @@ export default function CpAdPerBatch() {
                   )}
 
                   {loadingEkyc ? (
-                    <div className="table-spinner">
-                      Checking EKYC status…
-                    </div>
+                    <div className="table-spinner">Checking EKYC status…</div>
                   ) : !allEkycVerified ? (
                     <div
                       style={{
@@ -804,9 +833,9 @@ export default function CpAdPerBatch() {
                         <strong>{missingDates.length}</strong> past day
                         {missingDates.length > 1 ? "s" : ""} (from{" "}
                         {fmtDate(missingDates[0])} to{" "}
-                        {fmtDate(missingDates[missingDates.length - 1])}).
-                        The window has expired, so all participants must be
-                        marked absent for those days.
+                        {fmtDate(missingDates[missingDates.length - 1])}). The
+                        window has expired, so all participants must be marked
+                        absent for those days.
                         <div style={{ marginTop: 8 }}>
                           <button
                             className="btn btn-danger"
@@ -822,162 +851,163 @@ export default function CpAdPerBatch() {
                     )}
 
                   {/* TODAY section */}
-                  {attendanceAllowed && schedule && missingDates.length === 0 && (
-                    <>
-                      {loadingAttendanceToday ? (
-                        <div className="table-spinner">
-                          Checking today's attendance…
-                        </div>
-                      ) : attendanceToday && attendanceToday.id ? (
-                        <div
-                          style={{
-                            padding: 10,
-                            borderRadius: 6,
-                            background: "#dcfce7",
-                            color: "#166534",
-                            fontSize: 13,
-                            marginBottom: 14,
-                          }}
-                        >
-                          Attendance for today ({today}) has already been
-                          recorded.
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            padding: 12,
-                            borderRadius: 6,
-                            background: "#f9fafb",
-                            marginBottom: 18,
-                          }}
-                        >
-                          <h4 style={{ marginTop: 0 }}>
-                            Record Attendance for Today ({today})
-                          </h4>
-                          {!canShowAttendanceForm ? (
-                            <div
-                              style={{
-                                padding: 10,
-                                borderRadius: 6,
-                                background: "#e5f3ff",
-                                color: "#1f2937",
-                                fontSize: 13,
-                              }}
-                            >
-                              Attendance recording will be enabled when today's
-                              start time is reached and EKYC is complete.
-                            </div>
-                          ) : (
-                            <form onSubmit={handleSubmitAttendance}>
-                              <div style={{ marginBottom: 12 }}>
-                                <label
-                                  style={{
-                                    fontWeight: 600,
-                                    marginBottom: 4,
-                                    display: "block",
-                                  }}
-                                >
-                                  Upload Punch Machine CSV (optional)
-                                </label>
-                                <input
-                                  type="file"
-                                  accept=".csv"
-                                  onChange={(e) => {
-                                    const file =
-                                      e.target.files?.[0] || null;
-                                    setCsvFile(file);
-                                  }}
-                                />
-                                <div
-                                  style={{
-                                    fontSize: 12,
-                                    color: "#6b7280",
-                                    marginTop: 4,
-                                  }}
-                                >
-                                  Optional - upload one CSV file for today's
-                                  punch records.
-                                </div>
-                              </div>
-
-                              <h4>Participants</h4>
-                              {participants.length === 0 ? (
-                                <div className="muted">
-                                  No participants configured for this batch.
-                                </div>
-                              ) : (
-                                <div
-                                  style={{
-                                    maxHeight: 400,
-                                    overflow: "auto",
-                                  }}
-                                >
-                                  <table className="table table-compact">
-                                    <thead>
-                                      <tr>
-                                        <th>Name</th>
-                                        <th>Role</th>
-                                        <th>Present</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {participants.map((p) => (
-                                        <tr key={p.key}>
-                                          <td>{p.name}</td>
-                                          <td>
-                                            {p.participant_role === "trainer"
-                                              ? "Master Trainer"
-                                              : "Trainee"}
-                                          </td>
-                                          <td>
-                                            <input
-                                              type="checkbox"
-                                              checked={
-                                                !!participantPresence[p.key]
-                                              }
-                                              onChange={(e) =>
-                                                setParticipantPresence(
-                                                  (prev) => ({
-                                                    ...prev,
-                                                    [p.key]:
-                                                      e.target.checked,
-                                                  })
-                                                )
-                                              }
-                                            />
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              )}
-
+                  {attendanceAllowed &&
+                    schedule &&
+                    missingDates.length === 0 && (
+                      <>
+                        {loadingAttendanceToday ? (
+                          <div className="table-spinner">
+                            Checking today's attendance…
+                          </div>
+                        ) : attendanceToday && attendanceToday.id ? (
+                          <div
+                            style={{
+                              padding: 10,
+                              borderRadius: 6,
+                              background: "#dcfce7",
+                              color: "#166534",
+                              fontSize: 13,
+                              marginBottom: 14,
+                            }}
+                          >
+                            Attendance for today ({today}) has already been
+                            recorded.
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              padding: 12,
+                              borderRadius: 6,
+                              background: "#f9fafb",
+                              marginBottom: 18,
+                            }}
+                          >
+                            <h4 style={{ marginTop: 0 }}>
+                              Record Attendance for Today ({today})
+                            </h4>
+                            {!canShowAttendanceForm ? (
                               <div
                                 style={{
-                                  marginTop: 12,
-                                  display: "flex",
-                                  justifyContent: "flex-end",
+                                  padding: 10,
+                                  borderRadius: 6,
+                                  background: "#e5f3ff",
+                                  color: "#1f2937",
+                                  fontSize: 13,
                                 }}
                               >
-                                <button
-                                  type="submit"
-                                  className="btn btn-success"
-                                  disabled={
-                                    savingAttendance || !participants.length
-                                  }
-                                >
-                                  {savingAttendance
-                                    ? "Submitting…"
-                                    : "Submit Attendance"}
-                                </button>
+                                Attendance recording will be enabled when
+                                today's start time is reached and EKYC is
+                                complete.
                               </div>
-                            </form>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
+                            ) : (
+                              <form onSubmit={handleSubmitAttendance}>
+                                <div style={{ marginBottom: 12 }}>
+                                  <label
+                                    style={{
+                                      fontWeight: 600,
+                                      marginBottom: 4,
+                                      display: "block",
+                                    }}
+                                  >
+                                    Upload Punch Machine CSV (optional)
+                                  </label>
+                                  <input
+                                    type="file"
+                                    accept=".csv"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0] || null;
+                                      setCsvFile(file);
+                                    }}
+                                  />
+                                  <div
+                                    style={{
+                                      fontSize: 12,
+                                      color: "#6b7280",
+                                      marginTop: 4,
+                                    }}
+                                  >
+                                    Optional - upload one CSV file for today's
+                                    punch records.
+                                  </div>
+                                </div>
+
+                                <h4>Participants</h4>
+                                {participants.length === 0 ? (
+                                  <div className="muted">
+                                    No participants configured for this batch.
+                                  </div>
+                                ) : (
+                                  <div
+                                    style={{
+                                      maxHeight: 400,
+                                      overflow: "auto",
+                                    }}
+                                  >
+                                    <table className="table table-compact">
+                                      <thead>
+                                        <tr>
+                                          <th>Name</th>
+                                          <th>Role</th>
+                                          <th>Present</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {participants.map((p) => (
+                                          <tr key={p.key}>
+                                            <td>{p.name}</td>
+                                            <td>
+                                              {p.participant_role === "trainer"
+                                                ? "Master Trainer"
+                                                : "Trainee"}
+                                            </td>
+                                            <td>
+                                              <input
+                                                type="checkbox"
+                                                checked={
+                                                  !!participantPresence[p.key]
+                                                }
+                                                onChange={(e) =>
+                                                  setParticipantPresence(
+                                                    (prev) => ({
+                                                      ...prev,
+                                                      [p.key]: e.target.checked,
+                                                    })
+                                                  )
+                                                }
+                                              />
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+
+                                <div
+                                  style={{
+                                    marginTop: 12,
+                                    display: "flex",
+                                    justifyContent: "flex-end",
+                                  }}
+                                >
+                                  <button
+                                    type="submit"
+                                    className="btn btn-success"
+                                    disabled={
+                                      savingAttendance || !participants.length
+                                    }
+                                  >
+                                    {savingAttendance
+                                      ? "Submitting…"
+                                      : "Submit Attendance"}
+                                  </button>
+                                </div>
+                              </form>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
 
                   {/* HISTORICAL section */}
                   <div
@@ -1040,11 +1070,14 @@ export default function CpAdPerBatch() {
                             Loading participant records…
                           </div>
                         ) : selectedDateRecords.length === 0 ? (
-                          <div className="muted">
-                            No records for this date.
-                          </div>
+                          <div className="muted">No records for this date.</div>
                         ) : (
-                          <div style={{ maxHeight: 400, overflow: "auto" }}>
+                          <div
+                            style={{
+                              maxHeight: 400,
+                              overflow: "auto",
+                            }}
+                          >
                             <table className="table table-compact">
                               <thead>
                                 <tr>

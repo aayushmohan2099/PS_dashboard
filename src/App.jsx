@@ -14,9 +14,11 @@ import SmmuCreatePartnerTargets from "./pages/TMS/SMMU/smmu_create_tp_targets";
 import TpDashboard from "./pages/TMS/TP/tp_dashboard";
 import MtDashboard from "./pages/TMS/MT/mt_dashboard";
 import CpDashboard from "./pages/TMS/TP_CP/cp_dashboard";
+import CpBatchList from "./pages/TMS/TP_CP/cp_batch_list";
 import CpBatchDetail from "./pages/TMS/TP_CP/cp_batch_detail";
 import CpAdPerBatchEkyc from "./pages/TMS/TP_CP/attendance/cpad_per_batch_ekyc";
 import CpAdPerBatch from "./pages/TMS/TP_CP/attendance/cpad_per_batch";
+import CpBatchClosure from "./pages/TMS/TP_CP/cp_batch_closure";
 
 // Training Partner screens
 import TpCentreList from "./pages/TMS/TP/tp_centre_list";
@@ -26,7 +28,6 @@ import TpCreateCP from "./pages/TMS/TP/tp_create_cp";
 import TpCpAssignment from "./pages/TMS/TP/tp_cp_assignment";
 
 import TpCreateBatch from "./pages/TMS/TP/tp_create_batch";
-
 
 // New TMS workflow screens
 import CreateTrainingRequest from "./pages/TMS/tms_create_tr";
@@ -133,9 +134,16 @@ export default function App() {
 
       <Route path="/tms/cp/batch-detail/:id" element={<CpBatchDetail />} />
 
-      <Route path="/tms/cp/batch-attendance-ekyc/:id" element={<CpAdPerBatchEkyc />} />
+      <Route
+        path="/tms/cp/batch-attendance-ekyc/:id"
+        element={<CpAdPerBatchEkyc />}
+      />
 
-      <Route path="/tms/cp/batch-attendance/:id" element={<CpAdPerBatch />} />      
+      <Route path="/tms/cp/batch-attendance/:id" element={<CpAdPerBatch />} />
+
+      <Route path="/tms/cp/batch-list" element={<CpBatchList />} />
+
+      <Route path="/tms/cp/batch-closure/:id" element={<CpBatchClosure />} />
 
       {/* 404 */}
       <Route path="*" element={<div>404</div>} />

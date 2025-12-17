@@ -246,15 +246,28 @@ const MENU = {
     },
   ],
 
-  contact_person: [
-    { label: "CP Dashboard", to: "/tms/cp/dashboard", key: "cp-dashboard" },
-    { label: "My Assigned Centres", to: "/tms/cp/centres", key: "cp-centres" },
+  // NEW menu for numeric role_id 11 / tp_contact_person
+  tp_contact_person: [
     {
-      label: "Batch Attendance",
-      to: "/tms/cp/attendance",
-      key: "cp-attendance",
+      label: "TMS Dashboard",
+      to: "/dashboard",
+      key: "cp-dashboard",
     },
-    { label: "Participant EKYC", to: "/tms/cp/ekyc", key: "cp-ekyc" },
+    {
+      label: "My Profile",
+      to: "/tms/cp/profile",
+      key: "cp-profile",
+    },
+    {
+      label: "View Batches",
+      to: "/tms/cp/batch-list",
+      key: "cp-batches",
+    },
+    {
+      label: "Centre Details",
+      to: "/tms/cp/centre",
+      key: "cp-centre",
+    },
   ],
 };
 
