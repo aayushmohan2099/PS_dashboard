@@ -775,19 +775,46 @@ export default function TrainingRequestDetail() {
                         </button>
                       </div>
                     ) : (
-                      /* ALL OTHER CASES → VIEW BATCHES */
-                      ["ONGOING", "PENDING", "COMPLETED", "REJECTED"].includes(
-                        (tr.status || "").toUpperCase()
-                      ) && (
-                        <div>
-                          <button
-                            className="btn"
-                            onClick={() => navigate(`/tms/batches-list/${id}`)}
-                          >
-                            View Batches in this Training Request
-                          </button>
-                        </div>
-                      )
+                      /* ALL OTHER CASES → status-based TP action */
+                      <>
+                        {/* TP + REVIEW → CLOSE TRAINING REQUEST */}
+                        {isTP &&
+                          (tr.status || "").toUpperCase() === "REVIEW" && (
+                            <div>
+                              <button
+                                className="btn"
+                                onClick={() =>
+                                  navigate(`/tms/tp/tr-closure/${id}`)
+                                }
+                              >
+                                Close Training Request
+                              </button>
+                            </div>
+                          )}
+
+                        {/* Other statuses → VIEW BATCHES */}
+                        {(!isTP ||
+                          !["REVIEW"].includes(
+                            (tr.status || "").toUpperCase()
+                          )) &&
+                          [
+                            "ONGOING",
+                            "PENDING",
+                            "COMPLETED",
+                            "REJECTED",
+                          ].includes((tr.status || "").toUpperCase()) && (
+                            <div>
+                              <button
+                                className="btn"
+                                onClick={() =>
+                                  navigate(`/tms/batches-list/${id}`)
+                                }
+                              >
+                                View Batches in this Training Request
+                              </button>
+                            </div>
+                          )}
+                      </>
                     )}
                   </div>
                 </>

@@ -26,7 +26,7 @@ import TpCentreRegistration from "./pages/TMS/TP/tp_centre_registration";
 import TpListCP from "./pages/TMS/TP/tp_list_cp";
 import TpCreateCP from "./pages/TMS/TP/tp_create_cp";
 import TpCpAssignment from "./pages/TMS/TP/tp_cp_assignment";
-
+import TpTrainingRequestClosure from "./pages/TMS/TP/tp_tr_closure";
 import TpCreateBatch from "./pages/TMS/TP/tp_create_batch";
 
 // New TMS workflow screens
@@ -39,6 +39,7 @@ import TrainingBatchDetail from "./pages/TMS/TRs/training_batch_detail";
 import BmmuCreateTrainingPlan from "./pages/TMS/BMMU/bmmu_create_training_plan";
 
 import DmmuTrReview from "./pages/TMS/DMMU/dmmu_tr_review";
+import DmmuRequestClosure from "./pages/TMS/DMMU/dmmu_request_closure";
 
 // tiny placeholder landing for /tms
 function TmsLanding() {
@@ -106,6 +107,10 @@ export default function App() {
         />
 
         <Route path="/tms/dmmu/tr-review/:id" element={<DmmuTrReview />} />
+        <Route
+          path="/tms/dmmu/tr-closure/:id"
+          element={<DmmuRequestClosure />}
+        />
 
         {/* Catch-all for unknown TMS paths */}
         <Route path="/tms/*" element={<TmsLanding />} />
@@ -119,6 +124,11 @@ export default function App() {
       <Route
         path="/tms/tp/centre/:centreId"
         element={<TpCentreRegistration />}
+      />
+
+      <Route
+        path="/tms/tp/tr-closure/:id"
+        element={<TpTrainingRequestClosure />}
       />
 
       <Route path="/tms/tp/batches/create/:id" element={<TpCreateBatch />} />
