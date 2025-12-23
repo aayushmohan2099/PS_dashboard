@@ -1,677 +1,1338 @@
 // src/pages/Dashboard/DashboardHome.jsx
-import React, { useContext, useEffect, useRef, useState } from 'react';
-import LeftNav from '../../components/layout/LeftNav';
-import TopNav from '../../components/layout/TopNav';
-import { AuthContext } from '../../contexts/AuthContext';
-import api from '../../api/axios';
-import LoadingModal from '../../components/ui/LoadingModal';
-import ModulePlaceholder from './ModulePlaceholder';
-import { useNavigate } from 'react-router-dom';
+import React, { useContext, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import LeftNav from "../../components/layout/LeftNav";
+import TopNav from "../../components/layout/TopNav";
+import { AuthContext } from "../../contexts/AuthContext";
+import api from "../../api/axios";
+import LoadingModal from "../../components/ui/LoadingModal";
+import ModulePlaceholder from "./ModulePlaceholder";
 
-/**
- * Role-aware dashboard:
- * - regionRoles: show SHGs table (fetches user-geoscope -> block/district -> shg-list)
- *    -> click a SHG to view its members (calls /lookups/beneficiary-list/<shg_code>/?page=&page_size=)
- * - Supports:
- *    - caching of pages in sessionStorage for quick back/forward navigation
- *    - spinner inside table area while members or SHG pages load
- *    - Cancel request button for member fetch (uses AbortController)
- *    - per-request page_size control (page_size selector for members)
- *    - clicks on member navigate to BeneficiaryDetail page (/dashboard/beneficiary/<member_code>)
- *
- * Fix: user-geoscope now uses longer per-request timeout + retries to avoid "timeout of 15000ms exceeded".
- */
+import TpDashboard from "../TMS/TP/tp_dashboard";
+import MtDashboard from "../TMS/MT/mt_dashboard";
+import CpDashboard from "../TMS/TP_CP/cp_dashboard";
 
-export default function DashboardHome() {
-  const { user, logout } = useContext(AuthContext);
-  const navigate = useNavigate();
+import ShgListTable from "./ShgListTable";
+import ShgDetailCard from "./ShgDetailCard";
+import ShgMemberListTable from "./ShgMemberListTable";
+import MemberDetailPanel from "./MemberDetailPanel";
 
-  // general UI state
-  const [globalLoading, setGlobalLoading] = useState(false); // for big actions
-  const [resolvingRole, setResolvingRole] = useState(false);
+// If you have TMS LeftNav and want TMS roles to default to it:
+import TmsLeftNav from "../TMS/layout/tms_LeftNav";
 
-  // role normalized
-  const [roleNameNormalized, setRoleNameNormalized] = useState(null);
+// NEW: canonical role helper
+import { getCanonicalRole } from "../../utils/roleUtils";
 
-  // SHG list state
-  const [shgs, setShgs] = useState([]);
-  const [shgHeaders, setShgHeaders] = useState([]);
-  const [shgPage, setShgPage] = useState(1);
-  const [shgPageSize] = useState(10); // keep default 10 for shg listing
-  const [shgTotalCount, setShgTotalCount] = useState(null);
-  const [shgLoading, setShgLoading] = useState(false);
+// ---- helpers -----------------------------------------------------
 
-  // members state
+const REGION_ROLES = new Set(["bmmu", "dmmu", "dcnrlm"]);
+const PARTNER_ROLES = new Set([
+  "training_partner",
+  "master_trainer",
+  "crp_ep",
+  "tp_contact_person",
+  "crp_ld",
+]);
+const ADMIN_ROLES = new Set(["state_admin", "pmu_admin", "smmu"]);
+
+// key used to store geoscope in localStorage (LeftNav / TopNav already expect this)
+const GEOSCOPE_KEY = "ps_user_geoscope";
+
+// -----------------------------------------------------------------
+// Reusable Block → SHG → Member explorer (step-based for Block flows)
+// -----------------------------------------------------------------
+
+function BlockShgExplorer({ blockId, blockName }) {
   const [selectedShg, setSelectedShg] = useState(null);
-  const [members, setMembers] = useState([]);
-  const [memberHeaders, setMemberHeaders] = useState([]);
-  const [membersPage, setMembersPage] = useState(1);
-  const [membersPageSize, setMembersPageSize] = useState(10);
-  const [membersTotalCount, setMembersTotalCount] = useState(null);
-  const [membersLoading, setMembersLoading] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
 
-  // heading
-  const [headingName, setHeadingName] = useState('Dashboard');
+  // 'shgs' | 'shgDetail' | 'members' | 'memberDetail'
+  const [step, setStep] = useState("shgs");
 
-  // role groups
-  const regionRoles = new Set(['bmmu','dmmu','dcnrlm','smmu']);
-  const partnerRoles = new Set(['training_partner','master_trainer','crp_ep','crp_ld']);
-  const adminRoles = new Set(['state_admin','pmu_admin']);
-
-  // AbortController ref for cancelling members request
-  const membersControllerRef = useRef(null);
-
-  // cache keys helpers
-  const SHG_CACHE_KEY = (uid) => `ps_cache_shgs_user_${uid}`;
-  const MEMBER_CACHE_KEY = (uid, shgCode) => `ps_cache_members_user_${uid}_shg_${encodeURIComponent(shgCode)}`;
-
-  function readCache(key) {
-    try {
-      const raw = sessionStorage.getItem(key);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (e) {
-      console.warn('cache read failed', e);
-      return null;
-    }
-  }
-  function writeCache(key, obj) {
-    try {
-      sessionStorage.setItem(key, JSON.stringify(obj));
-    } catch (e) {
-      console.warn('cache write failed', e);
-    }
-  }
-
-  // helper: extract role candidate from user object
-  function extractRoleCandidate(u) {
-    if (!u) return null;
-    if (u.role_name && typeof u.role_name === 'string') return u.role_name.toLowerCase();
-    if (u.role && typeof u.role === 'object' && (u.role.name || u.role.role_name)) {
-      return (u.role.name || u.role.role_name).toLowerCase();
-    }
-    if (u.role && typeof u.role === 'string') return u.role.toLowerCase();
-    if (u.role && (typeof u.role === 'number' || (/^\d+$/.test(String(u.role))))) {
-      return String(u.role);
-    }
-    return null;
-  }
-
-  // ---------- RESOLVE ROLE (user-geoscope with longer timeout + retries) ----------
+  // reset when block changes
   useEffect(() => {
-    async function resolveRoleViaGeo() {
-      setResolvingRole(true);
-      try {
-        const candidate = extractRoleCandidate(user);
-        // if local candidate exists and is friendly, use it
-        if (candidate && !/^\d+$/.test(candidate)) {
-          setRoleNameNormalized(String(candidate).toLowerCase());
-          setResolvingRole(false);
-          return;
-        }
+    setSelectedShg(null);
+    setSelectedMember(null);
+    setStep("shgs");
+  }, [blockId]);
 
-        const uid = user?.id;
-        if (!uid) {
-          setRoleNameNormalized(candidate ? String(candidate) : null);
-          setResolvingRole(false);
-          return;
-        }
-
-        // We'll try a few attempts with per-request timeout = 30s
-        const ATTEMPTS = 3;
-        const PER_REQ_TIMEOUT = 30000; // 30s
-        let lastErr = null;
-        for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-          try {
-            const res = await api.get(`/lookups/user-geoscope/${uid}/`, { timeout: PER_REQ_TIMEOUT });
-            const geo = res?.data || {};
-            if (geo && geo.role && typeof geo.role === 'string') {
-              setRoleNameNormalized(String(geo.role).toLowerCase());
-            } else {
-              const cand = candidate || (user?.username || '').toLowerCase();
-              setRoleNameNormalized(cand || null);
-            }
-            lastErr = null;
-            break; // success
-          } catch (err) {
-            lastErr = err;
-            // If aborted or user logged out, break early
-            if (err?.name === 'CanceledError' || err?.message === 'canceled') break;
-            // small backoff before retry, don't block too long
-            const backoff = 200 * attempt;
-            await new Promise(r => setTimeout(r, backoff));
-            // try again
-          }
-        }
-
-        if (lastErr) {
-          // exhausted attempts - fallback to candidate and log extra info
-          console.error('user-geoscope role resolve failed after retries', lastErr?.response?.data || lastErr.message || lastErr);
-          setRoleNameNormalized(candidate ? String(candidate) : (user?.role_name ? String(user.role_name).toLowerCase() : null));
-        }
-      } catch (err) {
-        console.error('resolveRoleViaGeo unexpected', err);
-        setRoleNameNormalized(null);
-      } finally {
-        setResolvingRole(false);
-      }
-    }
-
-    resolveRoleViaGeo();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // When role is region, load SHGs; otherwise clear region state
-  useEffect(() => {
-    if (!user) return;
-    if (regionRoles.has(roleNameNormalized)) {
-      setSelectedShg(null);
-      setMembers([]);
-      setMemberHeaders([]);
-      setMembersPage(1);
-
-      // try quick cache load for shgs
-      const cached = readCache(SHG_CACHE_KEY(user.id));
-      if (cached && cached.lastPage) {
-        const pageKey = `${cached.lastPage}|${shgPageSize}`;
-        const p = (cached.pages && cached.pages[pageKey]) ? cached.pages[pageKey] : null;
-        if (p) {
-          setShgs(p.items || []);
-          setShgHeaders(cached.headers || []);
-          setShgTotalCount(p.total ?? null);
-          setShgPage(cached.lastPage || 1);
-        }
-      }
-
-      fetchShgsForUser(user.id, 1);
-    } else {
-      setShgs([]);
-      setShgHeaders([]);
-      setShgTotalCount(null);
-      setSelectedShg(null);
-      setMembers([]);
-      setMemberHeaders([]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roleNameNormalized, user]);
-
-  /* ---------- helpers to pick friendly names ---------- */
-  function extractFriendlyNameFromBlockResponse(blockData) {
-    if (!blockData || typeof blockData !== 'object') return null;
-    const candidates = [
-      blockData.block_name_en,
-      blockData.block_name,
-      blockData.block_name_local,
-      blockData.name,
-      blockData.block_name_short,
-    ];
-    for (const c of candidates) {
-      if (c && typeof c === 'string' && c.trim().length > 0) return c.trim();
-    }
-    if (blockData.data && typeof blockData.data === 'object') {
-      return extractFriendlyNameFromBlockResponse(blockData.data);
-    }
-    return null;
-  }
-  function extractFriendlyNameFromDistrictResponse(districtData) {
-    if (!districtData || typeof districtData !== 'object') return null;
-    const candidates = [
-      districtData.district_name_en,
-      districtData.district_name,
-      districtData.district_name_local,
-      districtData.name,
-      districtData.district_short_name_en
-    ];
-    for (const c of candidates) {
-      if (c && typeof c === 'string' && c.trim().length > 0) return c.trim();
-    }
-    if (districtData.data && typeof districtData.data === 'object') {
-      return extractFriendlyNameFromDistrictResponse(districtData.data);
-    }
-    return null;
-  }
-
-  /* ---------- FETCH SHGs for user (keeps same behaviour) ---------- */
-  async function fetchShgsForUser(userId, pageNum = 1) {
-    setShgLoading(true);
-    setShgs([]);
-    setShgHeaders([]);
-    setShgPage(pageNum);
-    setShgTotalCount(null);
-    setHeadingName('SHGs');
-
-    const cacheKey = SHG_CACHE_KEY(userId);
-    const pageCacheKey = `${pageNum}|${shgPageSize}`;
-
-    // load cache quickly if present
-    try {
-      const cached = readCache(cacheKey);
-      if (cached && cached.pages && cached.pages[pageCacheKey]) {
-        const p = cached.pages[pageCacheKey];
-        setShgs(p.items || []);
-        setShgHeaders(cached.headers || []);
-        setShgTotalCount(p.total ?? null);
-      }
-    } catch (e) {
-      // ignore
-    }
-
-    try {
-      const geoRes = await api.get(`/lookups/user-geoscope/${userId}/`, { timeout: 30000 });
-      const geo = geoRes?.data || {};
-
-      let listRes = null;
-      if (Array.isArray(geo.blocks) && geo.blocks.length > 0) {
-        const usedId = geo.blocks[0];
-        try {
-          const blk = await api.get(`/lookups/blocks/detail/${usedId}/`, { timeout: 30000 });
-          const b = blk?.data || {};
-          const blockName = extractFriendlyNameFromBlockResponse(b) || `Block ${usedId}`;
-          setHeadingName(`SHGs in ${blockName}`);
-        } catch (err) {
-          console.warn(`Failed to fetch block detail for ${usedId}`, err?.response?.data || err.message || err);
-          setHeadingName(`SHGs in Block ${usedId}`);
-        }
-        listRes = await api.get(`/lookups/shg-list/${usedId}/`, { params: { page: pageNum, page_size: shgPageSize }, timeout: 30000 });
-      } else if (Array.isArray(geo.districts) && geo.districts.length > 0) {
-        const usedId = geo.districts[0];
-        try {
-          const dt = await api.get(`/lookups/districts/${usedId}/`, { timeout: 30000 });
-          const d = dt?.data || {};
-          const districtName = extractFriendlyNameFromDistrictResponse(d) || `District ${usedId}`;
-          setHeadingName(`SHGs in ${districtName}`);
-        } catch (err) {
-          console.warn(`Failed to fetch district detail for ${usedId}`, err?.response?.data || err.message || err);
-          setHeadingName(`SHGs in District ${usedId}`);
-        }
-        listRes = await api.get(`/lookups/shg-list/by-district/${usedId}/`, { params: { page: pageNum, page_size: shgPageSize }, timeout: 30000 });
-      } else {
-        listRes = await api.get(`/lookups/shgs/`, { params: { page: pageNum, page_size: shgPageSize }, timeout: 30000 });
-        setHeadingName('SHGs (All)');
-      }
-
-      const data = listRes?.data;
-      let items = [];
-      if (Array.isArray(data)) {
-        items = data;
-        setShgTotalCount(items.length);
-      } else if (data && Array.isArray(data.results)) {
-        items = data.results;
-        setShgTotalCount(data.count ?? null);
-      } else if (data && Array.isArray(data.data)) {
-        items = data.data;
-        setShgTotalCount(data.count ?? null);
-      } else {
-        items = Array.isArray(data) ? data : (data && typeof data === 'object' ? (data.items || []) : []);
-        setShgTotalCount(Array.isArray(items) ? items.length : null);
-      }
-
-      setShgs(items || []);
-
-      // headers
-      const hdrSet = new Set();
-      (items || []).forEach(it => { if (it && typeof it === 'object') Object.keys(it).forEach(k => hdrSet.add(k)); });
-      const preferred = ['shg_code','shg_name','clf_code','village','panchayat','block','district'];
-      const hdrList = Array.from(hdrSet);
-      hdrList.sort((a,b) => {
-        const ai = preferred.indexOf(a);
-        const bi = preferred.indexOf(b);
-        if (ai !== -1 || bi !== -1) {
-          if (ai === -1) return 1;
-          if (bi === -1) return -1;
-          return ai - bi;
-        }
-        return a.localeCompare(b);
-      });
-      setShgHeaders(hdrList);
-
-      // cache
-      try {
-        const cached = readCache(cacheKey) || { pages: {}, headers: hdrList, lastPage: pageNum };
-        cached.pages = cached.pages || {};
-        cached.pages[pageCacheKey] = { items, total: Array.isArray(items) ? items.length : (listRes?.data?.count ?? null) };
-        cached.headers = hdrList;
-        cached.lastPage = pageNum;
-        writeCache(cacheKey, cached);
-      } catch (e) { /* ignore */ }
-    } catch (e) {
-      console.error('fetchShgsForUser error', e?.response?.data || e.message || e);
-      try { alert('Failed to load SHGs: ' + (e.response?.data?.detail || e.message)); } catch (_) {}
-    } finally {
-      setShgLoading(false);
-    }
-  }
-
-  /* ---------- FETCH members for SHG (with cancel + cache) ---------- */
-  async function fetchMembersForShg(shgIdentifier, pageNum = 1) {
-    if (!shgIdentifier) return;
-
-    const shgCode = (typeof shgIdentifier === 'string') ? shgIdentifier :
-      (shgIdentifier.shg_code || shgIdentifier.shgCode || shgIdentifier.code || shgIdentifier.id || null);
-    const displayName = (typeof shgIdentifier === 'object') ? (shgIdentifier.shg_name || shgIdentifier.name || shgCode) : shgCode;
-
-    if (!shgCode) { alert('SHG code not found'); return; }
-
-    setSelectedShg(shgIdentifier);
-    setHeadingName(`${displayName} — Members`);
-    setMembersPage(pageNum);
-
-    const cacheKey = MEMBER_CACHE_KEY(user?.id, shgCode);
-    const pageCacheKey = `${pageNum}|${membersPageSize}`;
-
-    // cancel previous
-    if (membersControllerRef.current) {
-      try { membersControllerRef.current.abort(); } catch (e) {}
-      membersControllerRef.current = null;
-    }
-
-    // try cache
-    try {
-      const cached = readCache(cacheKey);
-      if (cached && cached.pages && cached.pages[pageCacheKey]) {
-        const p = cached.pages[pageCacheKey];
-        setMembers(p.items || []);
-        setMemberHeaders(cached.headers || []);
-        setMembersTotalCount(p.total ?? null);
-      } else {
-        setMembers([]);
-        setMemberHeaders([]);
-        setMembersTotalCount(null);
-      }
-    } catch (e) {
-      setMembers([]);
-      setMemberHeaders([]);
-      setMembersTotalCount(null);
-    }
-
-    const controller = new AbortController();
-    membersControllerRef.current = controller;
-    setMembersLoading(true);
-
-    try {
-      const res = await api.get(`/lookups/beneficiary-list/${encodeURIComponent(shgCode)}/`, {
-        params: { page: pageNum, page_size: membersPageSize },
-        signal: controller.signal,
-        timeout: 30000
-      });
-
-      const data = res?.data;
-      let items = [];
-      if (Array.isArray(data)) {
-        items = data;
-        setMembersTotalCount(items.length);
-      } else if (data && Array.isArray(data.results)) {
-        items = data.results;
-        setMembersTotalCount(data.count ?? null);
-      } else if (data && Array.isArray(data.data)) {
-        items = data.data;
-        setMembersTotalCount(data.count ?? null);
-      } else {
-        items = Array.isArray(data) ? data : (data && typeof data === 'object' ? (data.items || []) : []);
-        setMembersTotalCount(Array.isArray(items) ? items.length : null);
-      }
-
-      setMembers(items || []);
-
-      const hdrSet = new Set();
-      (items || []).forEach(it => { if (it && typeof it === 'object') Object.keys(it).forEach(k => hdrSet.add(k)); });
-      const preferred = ['member_code','member_name','shg_code','village','panchayat','block','district','state'];
-      const hdrList = Array.from(hdrSet);
-      hdrList.sort((a,b) => {
-        const ai = preferred.indexOf(a);
-        const bi = preferred.indexOf(b);
-        if (ai !== -1 || bi !== -1) {
-          if (ai === -1) return 1;
-          if (bi === -1) return -1;
-          return ai - bi;
-        }
-        return a.localeCompare(b);
-      });
-      setMemberHeaders(hdrList);
-
-      // cache
-      try {
-        const cached = readCache(cacheKey) || { pages: {}, headers: hdrList, lastPage: pageNum };
-        cached.pages = cached.pages || {};
-        cached.pages[pageCacheKey] = { items, total: Array.isArray(items) ? items.length : (res?.data?.count ?? null) };
-        cached.headers = hdrList;
-        cached.lastPage = pageNum;
-        writeCache(cacheKey, cached);
-      } catch (e) { /* ignore */ }
-    } catch (err) {
-      if (err && err.name === 'CanceledError') {
-        console.info('Members fetch canceled by user');
-      } else {
-        console.warn('Failed to fetch members', err?.response?.data || err.message || err);
-        try { alert('Failed to load members: ' + (err.response?.data?.detail || err.message || String(err))); } catch (_) {}
-        setMembers([]);
-        setMemberHeaders([]);
-        setMembersTotalCount(null);
-      }
-    } finally {
-      membersControllerRef.current = null;
-      setMembersLoading(false);
-    }
-  }
-
-  function cancelMembersFetch() {
-    if (membersControllerRef.current) {
-      try { membersControllerRef.current.abort(); } catch (e) {}
-      membersControllerRef.current = null;
-      setMembersLoading(false);
-    }
-  }
-
-  const handleShgPageChange = (newPage) => {
-    setShgPage(newPage);
-    if (user && user.id) fetchShgsForUser(user.id, newPage);
-  };
-  const handleMembersPageChange = (newPage) => {
-    setMembersPage(newPage);
-    if (selectedShg) fetchMembersForShg(selectedShg, newPage);
+  const handleSelectShg = (shg) => {
+    setSelectedShg(shg);
+    setSelectedMember(null);
+    // show only SHG detail first
+    setStep("shgDetail");
   };
 
-  const onShgRowClick = (row) => {
-    const code = row.shg_code || row.shgCode || row.code || row.id || null;
-    const displayName = row.shg_name || row.name || code || 'SHG';
-    if (!code) { alert('SHG code missing'); return; }
-    fetchMembersForShg({ ...row, shg_code: code, shg_name: displayName }, 1);
+  const handleFetchMembers = () => {
+    if (!selectedShg) return;
+    setSelectedMember(null);
+    setStep("members");
   };
 
-  const onMemberRowClick = (row) => {
-    const memberCode = row.member_code || row.memberCode || row.code || row.memberId || null;
-    if (!memberCode) { alert('Member code missing'); return; }
-    navigate(`/dashboard/beneficiary/${encodeURIComponent(memberCode)}`);
+  const handleSelectMember = (m) => {
+    setSelectedMember(m || null);
+    setStep("memberDetail");
   };
 
   const backToShgs = () => {
     setSelectedShg(null);
-    setMembers([]);
-    setMemberHeaders([]);
-    setMembersPage(1);
-    if (headingName && headingName.includes('— Members')) {
-      setHeadingName(headingName.split('— Members')[0].trim());
-    } else {
-      setHeadingName('SHGs');
-    }
+    setSelectedMember(null);
+    setStep("shgs");
   };
 
-  const tableSpinner = (label = 'Loading...') => (
-    <div className="table-spinner" style={{ padding: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-      <div className="ps-spinner" style={{ width: 40, height: 40, borderWidth: 6 }} aria-hidden />
-      <div style={{ marginTop: 10, color: '#6b7280' }}>{label}</div>
+  const backToShgDetail = () => {
+    setSelectedMember(null);
+    setStep("shgDetail");
+  };
+
+  const backToMembers = () => {
+    setStep("members");
+  };
+
+  return (
+    <>
+      {/* Step 1: SHG list */}
+      {step === "shgs" && (
+        <ShgListTable
+          blockId={blockId}
+          onSelectShg={handleSelectShg}
+          selectedShgCode={selectedShg?.shg_code || selectedShg?.code}
+        />
+      )}
+
+      {/* Step 2: SHG detail (alone, with back + Fetch Members) */}
+      {step === "shgDetail" && selectedShg && (
+        <>
+          <div style={{ marginBottom: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={backToShgs}
+              style={{ marginRight: 8 }}
+            >
+              ← Back to SHG List
+            </button>
+          </div>
+          <ShgDetailCard shg={selectedShg} />
+          <div style={{ marginTop: 12 }}>
+            <button className="btn" onClick={handleFetchMembers}>
+              Fetch Members
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Step 3: Members list */}
+      {step === "members" && selectedShg && (
+        <>
+          <div style={{ marginBottom: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={backToShgs}
+              style={{ marginRight: 8 }}
+            >
+              ← Back to SHG List
+            </button>
+            <button className="btn-sm btn-flat" onClick={backToShgDetail}>
+              ← Back to SHG Detail
+            </button>
+          </div>
+
+          <ShgMemberListTable
+            shg={selectedShg}
+            onSelectMember={handleSelectMember}
+            selectedMemberCode={selectedMember?.member_code}
+          />
+        </>
+      )}
+
+      {/* Step 4: Member detail */}
+      {step === "memberDetail" && selectedShg && selectedMember && (
+        <>
+          <div style={{ marginBottom: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={backToShgs}
+              style={{ marginRight: 8 }}
+            >
+              ← Back to SHG List
+            </button>
+            <button className="btn-sm btn-flat" onClick={backToMembers}>
+              ← Back to Members
+            </button>
+          </div>
+          <MemberDetailPanel
+            shgCode={selectedShg.shg_code || selectedShg.code}
+            memberCode={selectedMember.member_code}
+          />
+        </>
+      )}
+    </>
+  );
+}
+
+// -----------------------------------------------------------------
+// Role-specific dashboards (BMMU/DMMU unchanged except plumbing)
+// -----------------------------------------------------------------
+
+// BMMU: directly show SHGs of the block from geoscope
+function BmmuDashboard({ geo }) {
+  const blockId =
+    geo?.blocks && Array.isArray(geo.blocks) && geo.blocks.length > 0
+      ? geo.blocks[0]
+      : null;
+  const [blockName, setBlockName] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadBlockName() {
+      if (!blockId) return;
+      try {
+        const res = await api.get(`/lookups/blocks/detail/${blockId}/`);
+        if (!cancelled) {
+          const data = res.data || {};
+          setBlockName(data.block_name_en || `Block ${blockId}`);
+        }
+      } catch {
+        if (!cancelled) {
+          setBlockName(`Block ${blockId}`);
+        }
+      }
+    }
+    loadBlockName();
+    return () => {
+      cancelled = true;
+    };
+  }, [blockId]);
+
+  return (
+    <section>
+      <div className="header-row">
+        <div>
+          <h1>Block Mission Management Unit (BMMU)</h1>
+          <p className="muted">
+            Start from SHG list in your block. Click an SHG to view its detail,
+            then fetch & view members and finally member details.
+          </p>
+        </div>
+        <div>
+          <span className="badge">BMMU</span>
+        </div>
+      </div>
+
+      {!blockId ? (
+        <div className="alert alert-warning" style={{ marginTop: 16 }}>
+          No block is mapped to your BMMU user. Please contact State team to
+          configure your geoscope.
+        </div>
+      ) : (
+        <>
+          <div className="card" style={{ marginTop: 8, marginBottom: 8 }}>
+            <div>
+              <strong>Block:</strong>{" "}
+              <span style={{ color: "#111827" }}>{blockName || blockId}</span>
+            </div>
+          </div>
+          <BlockShgExplorer blockId={blockId} blockName={blockName} />
+        </>
+      )}
+    </section>
+  );
+}
+
+// DMMU / DCNRLM: blocks in district → block → SHGs
+function DistrictBlocksDashboard({ geo, roleLabel }) {
+  const districtId =
+    geo?.districts && Array.isArray(geo.districts) && geo.districts.length > 0
+      ? geo.districts[0]
+      : null;
+
+  const [districtName, setDistrictName] = useState("");
+  const [blocks, setBlocks] = useState([]);
+  const [blockMeta, setBlockMeta] = useState({
+    page: 1,
+    page_size: 50,
+    total: 0,
+  });
+  const [blocksLoading, setBlocksLoading] = useState(false);
+  const [blocksError, setBlocksError] = useState("");
+  const [selectedBlock, setSelectedBlock] = useState(null);
+  const [onlyAspirational, setOnlyAspirational] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDistrictName() {
+      if (!districtId) return;
+      try {
+        const res = await api.get(`/lookups/districts/detail/${districtId}/`);
+        if (!cancelled) {
+          const data = res.data || {};
+          setDistrictName(data.district_name_en || `District ${districtId}`);
+        }
+      } catch {
+        if (!cancelled) setDistrictName(`District ${districtId}`);
+      }
+    }
+
+    loadDistrictName();
+    return () => {
+      cancelled = true;
+    };
+  }, [districtId]);
+
+  async function loadBlocks(page = 1) {
+    if (!districtId) return;
+    setBlocksLoading(true);
+    setBlocksError("");
+    try {
+      const params = {
+        district_id: districtId,
+        page,
+        page_size: blockMeta.page_size || 50,
+        is_aspirational: onlyAspirational ? 1 : undefined,
+      };
+      const res = await api.get("/lookups/blocks/", { params });
+      const payload = res.data || {};
+      const rows = payload.results || payload.data || [];
+      const total =
+        typeof payload.count === "number" ? payload.count : rows.length;
+
+      setBlocks(rows);
+      setBlockMeta({
+        page,
+        page_size: blockMeta.page_size || 50,
+        total,
+      });
+      setSelectedBlock(null);
+    } catch (err) {
+      console.error("Error fetching blocks for district", err);
+      setBlocksError("Could not load blocks for your district.");
+    } finally {
+      setBlocksLoading(false);
+    }
+  }
+
+  // initial + filter change
+  useEffect(() => {
+    if (!districtId) return;
+    loadBlocks(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [districtId, onlyAspirational]);
+
+  const totalPages =
+    blockMeta && blockMeta.page_size > 0
+      ? Math.max(1, Math.ceil((blockMeta.total || 0) / blockMeta.page_size))
+      : 1;
+
+  return (
+    <section>
+      <div className="header-row">
+        <div>
+          <h1>{roleLabel} – Beneficiary Management</h1>
+          <p className="muted">
+            Start with blocks in your district. Click a block to drill down to
+            SHGs and then members.
+          </p>
+        </div>
+        <div>
+          <span className="badge">{roleLabel}</span>
+        </div>
+      </div>
+
+      {!districtId ? (
+        <div className="alert alert-warning" style={{ marginTop: 16 }}>
+          No district is mapped to your user. Please contact State team to
+          configure your geoscope.
+        </div>
+      ) : (
+        <>
+          <div className="card" style={{ marginTop: 16 }}>
+            <div className="card-header space-between">
+              <div>
+                <h2 style={{ marginBottom: 4 }}>
+                  Blocks in District –{" "}
+                  <span className="badge">{districtName || districtId}</span>
+                </h2>
+                <p className="muted" style={{ margin: 0 }}>
+                  Use the filter to see{" "}
+                  <strong>Aspirational Blocks in this District</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="filters-row">
+              <label
+                className="small-muted"
+                style={{ display: "flex", alignItems: "center", gap: 4 }}
+              >
+                <input
+                  type="checkbox"
+                  checked={onlyAspirational}
+                  onChange={(e) => setOnlyAspirational(e.target.checked)}
+                />
+                Aspirational Blocks in this District
+              </label>
+            </div>
+
+            {blocksError && (
+              <div className="alert alert-danger">{blocksError}</div>
+            )}
+
+            {blocksLoading ? (
+              <div className="table-spinner">
+                <span>Loading blocks…</span>
+              </div>
+            ) : blocks.length === 0 ? (
+              <p className="muted">No blocks were found for this district.</p>
+            ) : (
+              <>
+                <div className="table-wrapper">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Block Name</th>
+                        <th>Block ID</th>
+                        <th>Aspirational</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {blocks.map((b) => {
+                        const isAsp = !!b.is_aspirational;
+                        const isSelected =
+                          selectedBlock &&
+                          selectedBlock.block_id === b.block_id;
+                        return (
+                          <tr
+                            key={b.block_id}
+                            className={isSelected ? "row-selected" : ""}
+                          >
+                            <td>
+                              {b.block_name_en}{" "}
+                              {isAsp && (
+                                <span
+                                  className="badge"
+                                  style={{ marginLeft: 6 }}
+                                >
+                                  Aspirational
+                                </span>
+                              )}
+                            </td>
+                            <td>{b.block_id}</td>
+                            <td>{isAsp ? "Yes" : "No"}</td>
+                            <td>
+                              <button
+                                className="btn-sm btn-outline"
+                                onClick={() => setSelectedBlock(b)}
+                              >
+                                View SHGs
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {blockMeta.total > blockMeta.page_size && (
+                  <div className="pagination">
+                    <button
+                      className="btn-sm btn-flat"
+                      disabled={blockMeta.page <= 1}
+                      onClick={() => loadBlocks(blockMeta.page - 1)}
+                    >
+                      Prev
+                    </button>
+                    <span>
+                      Page {blockMeta.page} of {totalPages}
+                    </span>
+                    <button
+                      className="btn-sm btn-flat"
+                      disabled={blockMeta.page >= totalPages}
+                      onClick={() => loadBlocks(blockMeta.page + 1)}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {selectedBlock && (
+            <BlockShgExplorer
+              blockId={selectedBlock.block_id}
+              blockName={selectedBlock.block_name_en}
+            />
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function DmmuDashboard({ geo }) {
+  return <DistrictBlocksDashboard geo={geo} roleLabel="DMMU" />;
+}
+
+function DcnrlmDashboard({ geo }) {
+  return <DistrictBlocksDashboard geo={geo} roleLabel="DCNRLM" />;
+}
+
+// -----------------------------------------------------------------
+// SMMU: Step-based flow (Districts -> Blocks -> SHGs -> SHG Detail -> Member Detail)
+// -----------------------------------------------------------------
+
+function StepIndicator({ currentStep, onJump }) {
+  // steps: 1..5 labels
+  const steps = [
+    { n: 1, label: "Districts" },
+    { n: 2, label: "Blocks" },
+    { n: 3, label: "SHGs" },
+    { n: 4, label: "SHG Details" },
+    { n: 5, label: "Member Details" },
+  ];
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        alignItems: "center",
+        marginBottom: 12,
+      }}
+    >
+      {steps.map((s) => {
+        const active = s.n === currentStep;
+        const completed = s.n < currentStep;
+        return (
+          <div
+            key={s.n}
+            onClick={() => onJump && onJump(s.n)}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              cursor: "pointer",
+              opacity: active ? 1 : completed ? 0.9 : 0.7,
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: active
+                  ? "#111827"
+                  : completed
+                    ? "#10b981"
+                    : "#e5e7eb",
+                color: active ? "#fff" : completed ? "#fff" : "#111827",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 700,
+                marginBottom: 6,
+              }}
+            >
+              {s.n}
+            </div>
+            <div style={{ fontSize: 12, textAlign: "center", width: 80 }}>
+              {s.label}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
+}
+
+function SmmuDashboard() {
+  // Districts list
+  const [districts, setDistricts] = useState([]);
+  const [districtMeta, setDistrictMeta] = useState({
+    page: 1,
+    page_size: 50,
+    total: 0,
+  });
+  const [districtLoading, setDistrictLoading] = useState(false);
+  const [districtError, setDistrictError] = useState("");
+
+  // Selected district -> blocks
+  const [selectedDistrict, setSelectedDistrict] = useState(null);
+  const [blocks, setBlocks] = useState([]);
+  const [blockMeta, setBlockMeta] = useState({
+    page: 1,
+    page_size: 50,
+    total: 0,
+  });
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [blockError, setBlockError] = useState("");
+  const [onlyAspirational, setOnlyAspirational] = useState(false);
+  const [selectedBlock, setSelectedBlock] = useState(null);
+
+  // SHG & member selection (delegated to step states)
+  // step: 1..5
+  const [step, setStep] = useState(1);
+  const [selectedShgForStep, setSelectedShgForStep] = useState(null);
+  const [selectedMemberForStep, setSelectedMemberForStep] = useState(null);
+
+  // NEW: show members under SHG detail (Step 4)
+  const [membersVisible, setMembersVisible] = useState(false);
+
+  // Districts
+  async function loadDistricts(page = 1) {
+    setDistrictLoading(true);
+    setDistrictError("");
+    try {
+      const params = { page, page_size: districtMeta.page_size || 50 };
+      const res = await api.get("/lookups/districts/", { params });
+      const payload = res.data || {};
+      const rows = payload.results || payload.data || [];
+      const total =
+        typeof payload.count === "number" ? payload.count : rows.length;
+
+      setDistricts(rows);
+      setDistrictMeta({ page, page_size: districtMeta.page_size || 50, total });
+    } catch (e) {
+      console.error("Failed to load districts", e);
+      setDistrictError("Failed to load districts list.");
+    } finally {
+      setDistrictLoading(false);
+    }
+  }
+
+  // Blocks for district
+  async function loadBlocksForDistrict(
+    districtId,
+    page = 1,
+    aspirational = false
+  ) {
+    if (!districtId) return;
+    setBlockLoading(true);
+    setBlockError("");
+    try {
+      const params = {
+        district_id: districtId,
+        page,
+        page_size: blockMeta.page_size || 50,
+        is_aspirational: aspirational ? 1 : undefined,
+      };
+      const res = await api.get("/lookups/blocks/", { params });
+      const payload = res.data || {};
+      const rows = payload.results || payload.data || [];
+      const total =
+        typeof payload.count === "number" ? payload.count : rows.length;
+
+      setBlocks(rows);
+      setBlockMeta({ page, page_size: blockMeta.page_size || 50, total });
+      setSelectedBlock(null);
+    } catch (e) {
+      console.error("Failed to load blocks for district", e);
+      setBlockError("Failed to load blocks for selected district.");
+    } finally {
+      setBlockLoading(false);
+    }
+  }
+
+  // Jump between steps from the indicator
+  function jumpToStep(n) {
+    if (n === 1) {
+      setStep(1);
+      setSelectedDistrict(null);
+      setSelectedBlock(null);
+      setSelectedShgForStep(null);
+      setSelectedMemberForStep(null);
+      setMembersVisible(false);
+      return;
+    }
+    if (n === 2 && selectedDistrict) {
+      setStep(2);
+      return;
+    }
+    if (n === 3 && selectedBlock) {
+      setStep(3);
+      return;
+    }
+    if (n === 4 && selectedShgForStep) {
+      setStep(4);
+      return;
+    }
+    if (n === 5 && selectedMemberForStep) {
+      setStep(5);
+      return;
+    }
+    // ignore invalid jumps
+  }
+
+  // Selectors triggered by user flow
+  function onSelectDistrict(d) {
+    setSelectedDistrict(d);
+    setSelectedBlock(null);
+    setBlocks([]);
+    setSelectedShgForStep(null);
+    setSelectedMemberForStep(null);
+    setMembersVisible(false);
+    setStep(2); // move to blocks
+    loadBlocksForDistrict(d.district_id, 1, false);
+  }
+
+  function onSelectBlock(b) {
+    setSelectedBlock(b);
+    setSelectedShgForStep(null);
+    setSelectedMemberForStep(null);
+    setMembersVisible(false);
+    setStep(3); // move to SHG list
+  }
+
+  function onSelectShgStep(shg) {
+    setSelectedShgForStep(shg);
+    setSelectedMemberForStep(null);
+    setMembersVisible(false);
+    setStep(4); // show SHG detail first
+  }
+
+  function onFetchMembersForShg() {
+    if (!selectedShgForStep) return;
+    // Show members below SHG detail (blank-before-list behavior is kept because membersVisible starts false)
+    setMembersVisible(true);
+    // keep step on 4 (we're still on SHG Detail page; members will appear below)
+    setStep(4);
+  }
+
+  function onSelectMemberStep(member) {
+    setSelectedMemberForStep(member);
+    // show member detail below members list
+    setStep(5);
+  }
+
+  // initial load
+  useEffect(() => {
+    loadDistricts(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // block reload on aspirational change for the selected district
+  useEffect(() => {
+    if (!selectedDistrict) return;
+    loadBlocksForDistrict(selectedDistrict.district_id, 1, onlyAspirational);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlyAspirational]);
+
+  const districtTotalPages =
+    districtMeta && districtMeta.page_size > 0
+      ? Math.max(
+          1,
+          Math.ceil((districtMeta.total || 0) / districtMeta.page_size)
+        )
+      : 1;
+  const blockTotalPages =
+    blockMeta && blockMeta.page_size > 0
+      ? Math.max(1, Math.ceil((blockMeta.total || 0) / blockMeta.page_size))
+      : 1;
+
+  // Minimal blank screen helper for "blank before detail" behavior
+  function BlankBefore({ children }) {
+    return <div style={{ minHeight: 140 }}>{children}</div>;
+  }
+
+  return (
+    <section>
+      <div className="header-row">
+        <div>
+          <h1>SMMU – Beneficiary Management</h1>
+          <p className="muted">
+            Start from any district in the state, drill down to blocks, then
+            SHGs and member detail.
+          </p>
+        </div>
+        <div>
+          <span className="badge">SMMU</span>
+        </div>
+      </div>
+
+      <StepIndicator currentStep={step} onJump={jumpToStep} />
+
+      {/* Step 1: Districts */}
+      {step === 1 && (
+        <div className="card" style={{ marginTop: 8 }}>
+          <div className="card-header space-between">
+            <div>
+              <h2 style={{ marginBottom: 4 }}>Districts</h2>
+              <p className="muted" style={{ margin: 0 }}>
+                Select a district to see its blocks and SHGs.
+              </p>
+            </div>
+          </div>
+
+          {districtError && (
+            <div className="alert alert-danger">{districtError}</div>
+          )}
+
+          {districtLoading ? (
+            <div className="table-spinner">
+              <span>Loading districts…</span>
+            </div>
+          ) : districts.length === 0 ? (
+            <p className="muted">No districts found.</p>
+          ) : (
+            <>
+              <div className="table-wrapper">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>District Name</th>
+                      <th>District ID</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {districts.map((d) => {
+                      const isSelected =
+                        selectedDistrict &&
+                        selectedDistrict.district_id === d.district_id;
+                      return (
+                        <tr
+                          key={d.district_id}
+                          className={isSelected ? "row-selected" : ""}
+                        >
+                          <td>{d.district_name_en}</td>
+                          <td>{d.district_id}</td>
+                          <td>
+                            <button
+                              className="btn-sm btn-outline"
+                              onClick={() => onSelectDistrict(d)}
+                            >
+                              View Blocks
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {districtMeta.total > districtMeta.page_size && (
+                <div className="pagination">
+                  <button
+                    className="btn-sm btn-flat"
+                    disabled={districtMeta.page <= 1}
+                    onClick={() => loadDistricts(districtMeta.page - 1)}
+                  >
+                    Prev
+                  </button>
+                  <span>
+                    Page {districtMeta.page} of {districtTotalPages}
+                  </span>
+                  <button
+                    className="btn-sm btn-flat"
+                    disabled={districtMeta.page >= districtTotalPages}
+                    onClick={() => loadDistricts(districtMeta.page + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Step 2: Blocks for selected district */}
+      {step === 2 && selectedDistrict && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div style={{ marginBottom: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setSelectedDistrict(null);
+                setStep(1);
+              }}
+              style={{ marginRight: 8 }}
+            >
+              ← Back to Districts
+            </button>
+          </div>
+
+          <div className="card-header space-between">
+            <div>
+              <h2 style={{ marginBottom: 4 }}>
+                Blocks in District –{" "}
+                <span className="badge">
+                  {selectedDistrict.district_name_en}
+                </span>
+              </h2>
+              <p className="muted" style={{ margin: 0 }}>
+                Use the filter to see{" "}
+                <strong>Aspirational Blocks in this District</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="filters-row">
+            <label
+              className="small-muted"
+              style={{ display: "flex", alignItems: "center", gap: 4 }}
+            >
+              <input
+                type="checkbox"
+                checked={onlyAspirational}
+                onChange={(e) => setOnlyAspirational(e.target.checked)}
+              />
+              Aspirational Blocks in this District
+            </label>
+          </div>
+
+          {blockError && <div className="alert alert-danger">{blockError}</div>}
+          {blockLoading ? (
+            <div className="table-spinner">
+              <span>Loading blocks…</span>
+            </div>
+          ) : blocks.length === 0 ? (
+            <p className="muted">No blocks found for this district.</p>
+          ) : (
+            <>
+              <div className="table-wrapper">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Block Name</th>
+                      <th>Block ID</th>
+                      <th>Aspirational</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {blocks.map((b) => {
+                      const isAsp = !!b.is_aspirational;
+                      const isSelected =
+                        selectedBlock && selectedBlock.block_id === b.block_id;
+                      return (
+                        <tr
+                          key={b.block_id}
+                          className={isSelected ? "row-selected" : ""}
+                        >
+                          <td>
+                            {b.block_name_en}{" "}
+                            {isAsp && (
+                              <span className="badge" style={{ marginLeft: 6 }}>
+                                Aspirational
+                              </span>
+                            )}
+                          </td>
+                          <td>{b.block_id}</td>
+                          <td>{isAsp ? "Yes" : "No"}</td>
+                          <td>
+                            <button
+                              className="btn-sm btn-outline"
+                              onClick={() => onSelectBlock(b)}
+                            >
+                              View SHGs
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {blockMeta.total > blockMeta.page_size && (
+                <div className="pagination">
+                  <button
+                    className="btn-sm btn-flat"
+                    disabled={blockMeta.page <= 1}
+                    onClick={() =>
+                      loadBlocksForDistrict(
+                        selectedDistrict.district_id,
+                        blockMeta.page - 1,
+                        onlyAspirational
+                      )
+                    }
+                  >
+                    Prev
+                  </button>
+                  <span>
+                    Page {blockMeta.page} of {blockTotalPages}
+                  </span>
+                  <button
+                    className="btn-sm btn-flat"
+                    disabled={blockMeta.page >= blockTotalPages}
+                    onClick={() =>
+                      loadBlocksForDistrict(
+                        selectedDistrict.district_id,
+                        blockMeta.page + 1,
+                        onlyAspirational
+                      )
+                    }
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Step 3: SHG list for selected block */}
+      {step === 3 && selectedBlock && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ marginBottom: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setSelectedBlock(null);
+                setStep(2);
+              }}
+              style={{ marginRight: 8 }}
+            >
+              ← Back to Blocks
+            </button>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setSelectedDistrict(null);
+                setSelectedBlock(null);
+                setStep(1);
+              }}
+              style={{ marginRight: 8 }}
+            >
+              ← Back to Districts
+            </button>
+          </div>
+
+          <ShgListTable
+            blockId={selectedBlock.block_id}
+            onSelectShg={(shg) => onSelectShgStep(shg)}
+            selectedShgCode={
+              selectedShgForStep?.shg_code || selectedShgForStep?.code
+            }
+          />
+        </div>
+      )}
+
+      {/* Step 4: SHG detail; can reveal members below when membersVisible is true */}
+      {step === 4 && selectedShgForStep && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ marginBottom: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setStep(3);
+                setSelectedShgForStep(null);
+              }}
+              style={{ marginRight: 8 }}
+            >
+              ← Back to SHG List
+            </button>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setStep(2);
+                setSelectedBlock(null);
+              }}
+              style={{ marginRight: 8 }}
+            >
+              ← Back to Blocks
+            </button>
+          </div>
+
+          {/* SHG detail always shown on step 4 */}
+          <ShgDetailCard shg={selectedShgForStep} />
+
+          {/* Fetch members button */}
+          <div style={{ marginTop: 12 }}>
+            <button
+              className="btn"
+              onClick={() => {
+                onFetchMembersForShg(); // now sets membersVisible = true *without* navigating to step 3
+              }}
+            >
+              Fetch Members
+            </button>
+          </div>
+
+          {/* Blank-before-list: we keep a minimal gap; when membersVisible is true we render the member list below */}
+          <div style={{ marginTop: 16 }}>
+            {!membersVisible ? (
+              <BlankBefore />
+            ) : (
+              <>
+                <ShgMemberListTable
+                  shg={selectedShgForStep}
+                  onSelectMember={(m) => onSelectMemberStep(m)}
+                  selectedMemberCode={selectedMemberForStep?.member_code}
+                />
+
+                {/* When a member is selected, show detail below the list */}
+                {selectedMemberForStep && (
+                  <div style={{ marginTop: 12 }}>
+                    <MemberDetailPanel
+                      shgCode={
+                        selectedShgForStep.shg_code || selectedShgForStep.code
+                      }
+                      memberCode={selectedMemberForStep.member_code}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Step 5: Member detail (this still allows direct jump to standalone member detail view if needed) */}
+      {step === 5 && selectedShgForStep && selectedMemberForStep && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ marginBottom: 8 }}>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setStep(3);
+                setSelectedMemberForStep(null);
+              }}
+              style={{ marginRight: 8 }}
+            >
+              ← Back to SHG List
+            </button>
+            <button
+              className="btn-sm btn-flat"
+              onClick={() => {
+                setStep(4);
+                setSelectedMemberForStep(null);
+              }}
+              style={{ marginRight: 8 }}
+            >
+              ← Back to SHG Detail
+            </button>
+          </div>
+
+          <MemberDetailPanel
+            shgCode={selectedShgForStep.shg_code || selectedShgForStep.code}
+            memberCode={selectedMemberForStep.member_code}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+// -----------------------------------------------------------------
+// Base DashboardHome
+// -----------------------------------------------------------------
+
+export default function DashboardHome() {
+  const {
+    user,
+    loading: authLoading,
+    refreshAccess,
+    logout,
+  } = useContext(AuthContext);
+  const [geo, setGeo] = useState(null);
+  const [roleNameNormalized, setRoleNameNormalized] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [geoError, setGeoError] = useState("");
+  const navigate = useNavigate();
+
+  // for idle timeout / activity tracking
+  const lastActivityRef = useRef(Date.now());
+
+  // Track user activity (mousemove, keypress, click)
+  useEffect(() => {
+    function bumpActivity() {
+      lastActivityRef.current = Date.now();
+    }
+    window.addEventListener("click", bumpActivity);
+    window.addEventListener("keydown", bumpActivity);
+    window.addEventListener("mousemove", bumpActivity);
+
+    return () => {
+      window.removeEventListener("click", bumpActivity);
+      window.removeEventListener("keydown", bumpActivity);
+      window.removeEventListener("mousemove", bumpActivity);
+    };
+  }, []);
+
+  // Periodically refresh token if active; auto logout on long idle
+  useEffect(() => {
+    if (!user) return;
+
+    const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+    const IDLE_MAX_MS = 30 * 60 * 1000; // 30 minutes
+
+    const timer = setInterval(async () => {
+      const now = Date.now();
+      const idleFor = now - lastActivityRef.current;
+
+      if (idleFor > IDLE_MAX_MS) {
+        // auto logout on idle
+        if (logout) logout();
+        clearInterval(timer);
+        return;
+      }
+
+      // user is active enough; refresh token quietly
+      try {
+        if (refreshAccess) {
+          await refreshAccess();
+        }
+      } catch (e) {
+        console.error("Background token refresh failed", e);
+        if (logout) logout();
+      }
+    }, REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, [user, refreshAccess, logout]);
+
+  // fetch geoscope for logged-in user
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGeo() {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setGeoError("");
+
+      try {
+        // 1. try localStorage first
+        const cachedRaw = window.localStorage.getItem(GEOSCOPE_KEY);
+        if (cachedRaw) {
+          try {
+            const parsed = JSON.parse(cachedRaw);
+            if (parsed && parsed.user_id === user.id) {
+              if (!cancelled) {
+                setGeo(parsed);
+                // Use canonical helper
+                setRoleNameNormalized(getCanonicalRole(parsed || user));
+                setLoading(false);
+              }
+              return;
+            }
+          } catch {
+            // ignore corrupt cache
+          }
+        }
+
+        // 2. fetch fresh from backend
+        const res = await api.get(`/lookups/user-geoscope/${user.id}/`);
+        const payload = res.data || {};
+        if (!cancelled) {
+          setGeo(payload);
+          window.localStorage.setItem(GEOSCOPE_KEY, JSON.stringify(payload));
+          // Use canonical helper
+          setRoleNameNormalized(getCanonicalRole(payload || user));
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Error loading user geoscope", err);
+        if (!cancelled) {
+          setGeoError(
+            "Could not resolve your geographical scope. Please contact administrator."
+          );
+          // fallback: canonicalise from user object
+          setRoleNameNormalized(getCanonicalRole(user || {}));
+          setLoading(false);
+        }
+      }
+    }
+
+    loadGeo();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  if (authLoading || loading) {
+    return <LoadingModal open={true} title="Loading dashboard…" message="" />;
+  }
+
+  if (!user) {
+    return (
+      <div className="app-shell">
+        <main className="dashboard-main center">
+          <div className="card">
+            <p>Your session has ended. Please login again.</p>
+            <button
+              className="btn"
+              style={{ marginTop: 8 }}
+              onClick={() => navigate("/login")}
+            >
+              Go to Login
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const isRegionRole = REGION_ROLES.has(roleNameNormalized);
+  const isPartnerRole = PARTNER_ROLES.has(roleNameNormalized);
+  const isAdminRole = ADMIN_ROLES.has(roleNameNormalized);
+
+  let mainContent = null;
+
+  if (geoError) {
+    mainContent = (
+      <div className="alert alert-danger" style={{ marginTop: 16 }}>
+        {geoError}
+      </div>
+    );
+  } else if (isRegionRole && roleNameNormalized === "bmmu") {
+    mainContent = <BmmuDashboard geo={geo} />;
+  } else if (isRegionRole && roleNameNormalized === "dmmu") {
+    mainContent = <DistrictBlocksDashboard geo={geo} roleLabel="DMMU" />;
+  } else if (isRegionRole && roleNameNormalized === "dcnrlm") {
+    mainContent = <DistrictBlocksDashboard geo={geo} roleLabel="DCNRLM" />;
+  } else if (roleNameNormalized === "smmu") {
+    mainContent = <SmmuDashboard />;
+  } else if (isPartnerRole && roleNameNormalized === "training_partner") {
+    mainContent = <TpDashboard />;
+  } else if (isPartnerRole && roleNameNormalized === "master_trainer") {
+    mainContent = <MtDashboard />;
+  } else if (isPartnerRole && roleNameNormalized === "tp_contact_person") {
+    mainContent = <CpDashboard />;
+  } else if (isAdminRole) {
+    mainContent = (
+      <ModulePlaceholder
+        title="Admin Dashboard"
+        description="Admin overview dashboards will be configured here."
+      />
+    );
+  } else {
+    mainContent = (
+      <ModulePlaceholder
+        title="Dashboard"
+        description="Your role specific dashboard will appear here."
+      />
+    );
+  }
+
+  // For Training / MT / CRP roles → use TMS LeftNav by default
+  const useTmsNavForUser = isPartnerRole;
 
   return (
     <div className="app-shell">
-      <LeftNav />
+      {useTmsNavForUser ? <TmsLeftNav /> : <LeftNav />}
       <div className="main-area">
         <TopNav
-          left={<div className="topnav-left"><div className="app-title">Pragati Setu</div></div>}
-          right={<div className="topnav-right"><div className="topnav-user">Welcome {user?.username || 'User'}</div></div>}
+          left={
+            <div className="topnav-left">
+              <div className="app-title">
+                {useTmsNavForUser ? "Pragati Setu — TMS" : "Pragati Setu"}
+              </div>
+            </div>
+          }
+          // IMPORTANT: do NOT pass `right` so TopNav shows default user/logout controls
         />
-
-        <main className={`dashboard-main ${regionRoles.has(roleNameNormalized) ? 'region' : partnerRoles.has(roleNameNormalized) ? 'partner' : adminRoles.has(roleNameNormalized) ? 'admin' : ''}`} style={{ padding: 18 }}>
-          <LoadingModal open={globalLoading || resolvingRole} title={resolvingRole ? 'Resolving role' : 'Loading'} message={resolvingRole ? 'Preparing your dashboard...' : 'Please wait...'} />
-
-          {/* REGION ROLES */}
-          {regionRoles.has(roleNameNormalized) && (
-            <>
-              <header className="header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div>
-                  <h2 style={{ margin: 0 }}>{headingName}</h2>
-                  <div className="small-muted">Role: {roleNameNormalized || (user?.role_name || user?.role)}</div>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {selectedShg ? (
-                    <>
-                      <button onClick={backToShgs} className="btn btn-flat">Back to SHGs</button>
-                      <button onClick={() => fetchMembersForShg(selectedShg, membersPage)} className="btn btn-flat">Refresh Members</button>
-                      <button onClick={cancelMembersFetch} className="btn btn-warning" disabled={!membersLoading}>Cancel</button>
-                    </>
-                  ) : (
-                    <button onClick={() => fetchShgsForUser(user?.id, shgPage)} className="btn btn-flat">Refresh</button>
-                  )}
-                  <button onClick={logout} className="btn btn-outline">Logout</button>
-                </div>
-              </header>
-
-              <section className="card" style={{ padding: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div className="small-muted">
-                    {selectedShg ? `Members — page ${membersPage}${membersTotalCount ? ` — ${membersTotalCount} total` : ''}` : `SHGs — page ${shgPage}${shgTotalCount ? ` — ${shgTotalCount} total` : ''}`}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {!selectedShg ? (
-                      <>
-                        <button className="btn btn-sm" disabled={shgPage <= 1} onClick={() => handleShgPageChange(Math.max(1, shgPage - 1))}>Prev</button>
-                        <button className="btn btn-sm" onClick={() => handleShgPageChange(shgPage + 1)} style={{ marginLeft: 8 }}>Next</button>
-                      </>
-                    ) : (
-                      <>
-                        <label style={{ fontSize: 12, color: '#6b7280' }}>Page size:
-                          <select value={membersPageSize} onChange={(e) => { setMembersPageSize(Number(e.target.value)); fetchMembersForShg(selectedShg, 1); }} style={{ marginLeft: 8 }}>
-                            <option value={5}>5</option>
-                            <option value={10}>10</option>
-                            <option value={20}>20</option>
-                          </select>
-                        </label>
-                        <button className="btn btn-sm" disabled={membersPage <= 1} onClick={() => handleMembersPageChange(Math.max(1, membersPage - 1))}>Prev</button>
-                        <button className="btn btn-sm" onClick={() => handleMembersPageChange(membersPage + 1)} style={{ marginLeft: 8 }}>Next</button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="table-wrap" style={{ overflowX: 'auto', minHeight: 120 }}>
-                  { (shgLoading && !selectedShg) ? tableSpinner('Loading SHGs...') :
-                    (membersLoading && selectedShg) ? tableSpinner('Loading members...') : (
-                      <table className="s-table-compressed" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead style={{ background: '#0b5394', color: '#fff' }}>
-                          <tr>
-                            { (!selectedShg && shgHeaders.length === 0) && <th style={{ padding: 12 }}>No SHGs</th> }
-                            { (selectedShg && memberHeaders.length === 0) && <th style={{ padding: 12 }}>No members</th> }
-                            { !selectedShg && shgHeaders.map(h => <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: 12 }}>{h.replace(/_/g, ' ').toUpperCase()}</th>)}
-                            { selectedShg && memberHeaders.map(h => <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: 12 }}>{h.replace(/_/g, ' ').toUpperCase()}</th>)}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          { !selectedShg && shgs.length === 0 && (
-                            <tr><td colSpan={Math.max(1, shgHeaders.length)} style={{ padding: 20 }}>No SHGs found for your area.</td></tr>
-                          )}
-                          { selectedShg && members.length === 0 && (
-                            <tr><td colSpan={Math.max(1, memberHeaders.length)} style={{ padding: 20 }}>No members found for this SHG.</td></tr>
-                          )}
-                          { !selectedShg && shgs.map((row, i) => (
-                            <tr key={i} style={{ borderTop: '1px solid rgba(0,0,0,0.06)', cursor: 'pointer' }} onClick={() => onShgRowClick(row)}>
-                              { shgHeaders.map(h => {
-                                  const val = row[h];
-                                  const display = (val && typeof val === 'object') ? JSON.stringify(val) : (val === null ? '' : String(val));
-                                  const style = { padding: '8px 10px', fontSize: 13 };
-                                  if (h === 'shg_code') style.fontWeight = 700;
-                                  return <td key={h} style={style}>{display}</td>;
-                              })}
-                            </tr>
-                          ))}
-                          { selectedShg && members.map((row, i) => (
-                            <tr key={i} style={{ borderTop: '1px solid rgba(0,0,0,0.06)', cursor: 'pointer' }} onClick={() => onMemberRowClick(row)}>
-                              { memberHeaders.map(h => {
-                                  const val = row[h];
-                                  const display = (val && typeof val === 'object') ? JSON.stringify(val) : (val === null ? '' : String(val));
-                                  return <td key={h} style={{ padding: '8px 10px', fontSize: 13 }}>{display}</td>;
-                              })}
-                            </tr>
-                          )) }
-                        </tbody>
-                      </table>
-                    )
-                  }
-                </div>
-              </section>
-            </>
-          )}
-
-          {/* PARTNER ROLES */}
-          {partnerRoles.has(roleNameNormalized) && (
-            <>
-              <header className="header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div>
-                  <h2 style={{ margin: 0 }}>Partner Dashboard</h2>
-                  <div className="small-muted">Welcome, {user?.username || 'Partner'}</div>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => {}} className="btn btn-flat">Sync Data</button>
-                  <button onClick={logout} className="btn btn-outline">Logout</button>
-                </div>
-              </header>
-
-              <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-                <div className="card"><h3>Upcoming Trainings</h3><p className="small-muted">Next 30 days</p><ul><li>Training A — 12 Dec</li><li>Training B — 20 Dec</li></ul></div>
-                <div className="card"><h3>Participants</h3><p className="small-muted">Active participants</p><div style={{ fontSize: 24, fontWeight: 700 }}>128</div></div>
-                <div className="card"><h3>Quick Links</h3><ul><li><a href="/dashboard/epsakhi/register">Register Enterprise</a></li><li><a href="/dashboard/tms/create">Create Training Request</a></li></ul></div>
-              </section>
-            </>
-          )}
-
-          {/* ADMIN ROLES */}
-          {adminRoles.has(roleNameNormalized) && (
-            <>
-              <header className="header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div><h2 style={{ margin: 0 }}>Admin Dashboard</h2><div className="small-muted">System overview</div></div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => {}} className="btn btn-flat">System Settings</button>
-                  <button onClick={logout} className="btn btn-outline">Logout</button>
-                </div>
-              </header>
-
-              <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-                <div className="card"><h3>Total Users</h3><div style={{ fontSize: 28, fontWeight: 700 }}>1,234</div><p className="small-muted">Active / All</p></div>
-                <div className="card"><h3>Pending Approvals</h3><div style={{ fontSize: 28, fontWeight: 700 }}>14</div><p className="small-muted">Approve new partners and trainings</p></div>
-                <div className="card"><h3>Exports</h3><ul><li><a href="/admin/exports/users">Export users</a></li></ul></div>
-              </section>
-            </>
-          )}
-
-          {/* DEFAULT fallback */}
-          {!regionRoles.has(roleNameNormalized) && !partnerRoles.has(roleNameNormalized) && !adminRoles.has(roleNameNormalized) && (
-            <>
-              <header className="header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div><h2 style={{ margin: 0 }}>Dashboard</h2><div className="small-muted">Welcome — role: {roleNameNormalized || 'unknown'}</div></div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => {}} className="btn btn-flat">Refresh</button>
-                  <button onClick={logout} className="btn btn-outline">Logout</button>
-                </div>
-              </header>
-
-              <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-                <ModulePlaceholder title="Quick Actions" />
-                <ModulePlaceholder title="Reports" />
-                <ModulePlaceholder title="Help & Docs" />
-              </section>
-            </>
-          )}
+        <main className="dashboard-main" style={{ padding: 18 }}>
+          {mainContent}
         </main>
       </div>
     </div>
