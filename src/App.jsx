@@ -133,7 +133,8 @@ export default function App() {
 
       <Route path="/tms/tp/batches/create/:id" element={<TpCreateBatch />} />
 
-      <Route path="/tms/batches-list/:id" element={<TrainingBatchList />} />
+      <Route path="/tms/batches-list/" element={<TrainingBatchList />} />
+      <Route path="/tms/batches-list/:id/" element={<TrainingBatchList />} />
       <Route path="/tms/batch-detail/:id" element={<TrainingBatchDetail />} />
 
       <Route path="/tms/tp/cp-list" element={<TpListCP />} />

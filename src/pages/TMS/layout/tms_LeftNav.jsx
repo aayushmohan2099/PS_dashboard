@@ -125,8 +125,8 @@ const MENU = {
       key: "bmmu-requests",
     },
     {
-      label: "Batches & Schedules",
-      to: "/tms/bmmu/batches",
+      label: "All Training Batches",
+      to: "/tms/batches-list/",
       key: "bmmu-batches",
     },
     {
@@ -158,7 +158,11 @@ const MENU = {
       to: "/tms/dmmu/assign-mt",
       key: "dmmu-assign-mt",
     },
-    { label: "Training Batches", to: "/tms/dmmu/batches", key: "dmmu-batches" },
+    {
+      label: "All Training Batches",
+      to: "/tms/batches-list/",
+      key: "dmmu-batches",
+    },
     {
       label: "Attendance Aggregation",
       to: "/tms/dmmu/attendance",
@@ -185,7 +189,7 @@ const MENU = {
     },
     {
       label: "All Training Batches",
-      to: "/tms/smmu/batches",
+      to: "/tms/batches-list/",
       key: "smmu-batches",
     },
     {
