@@ -35,6 +35,7 @@ import TrainingRequestList from "./pages/TMS/TRs/training_req_list";
 import TrainingRequestDetail from "./pages/TMS/TRs/training_req_detail";
 import TrainingBatchList from "./pages/TMS/TRs/training_batch_list";
 import TrainingBatchDetail from "./pages/TMS/TRs/training_batch_detail";
+import BatchCertificate from "./pages/TMS/TRs/batch_certificate";
 
 import BmmuCreateTrainingPlan from "./pages/TMS/BMMU/bmmu_create_training_plan";
 
@@ -155,6 +156,8 @@ export default function App() {
       <Route path="/tms/cp/batch-list" element={<CpBatchList />} />
 
       <Route path="/tms/cp/batch-closure/:id" element={<CpBatchClosure />} />
+
+      <Route path="/tms/batch-certificate/:id" element={<BatchCertificate />} />
 
       {/* 404 */}
       <Route path="*" element={<div>404</div>} />
