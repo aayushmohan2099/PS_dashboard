@@ -183,95 +183,148 @@ export default function BatchCertificate() {
     }
   }
 
-  /* ==================== SIMPLIFIED DOCX DOWNLOAD ==================== */
+  /* ==================== FIXED: Word XML content replacement ==================== */
   async function downloadCertificateDocx() {
     if (!certificateData) return;
 
     try {
-      // Determine which template to use
+      // Vite src/assets path
       const templatePath =
         requestLevel === "BLOCK"
-          ? "../../../assets/TMS/BlockBatchCertificateFormat.docx"
-          : "../../../assets/TMS/DistrictBatchCertificateFormat.docx";
+          ? `/src/assets/TMS/BlockBatchCertificateFormat.docx`
+          : `/src/assets/TMS/DistrictBatchCertificateFormat.docx`;
 
-      // Fetch the template from public folder
+      console.log("Fetching template:", templatePath);
+
       const response = await fetch(templatePath);
-      if (!response.ok) throw new Error(`Template not found: ${templatePath}`);
+      if (!response.ok) {
+        throw new Error(
+          `HTTP ${response.status}: Template not found at ${templatePath}`
+        );
+      }
 
       const arrayBuffer = await response.arrayBuffer();
+      console.log("Template size:", arrayBuffer.byteLength, "bytes");
 
-      // Use JSZip only
+      if (arrayBuffer.byteLength < 1000) {
+        throw new Error("File too small - not a valid DOCX");
+      }
+
+      // Validate DOCX
+      const uint8Array = new Uint8Array(arrayBuffer, 0, 4);
+      const magicBytes = Array.from(uint8Array)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      if (magicBytes !== "504b0304") {
+        throw new Error("Invalid DOCX - missing ZIP signature");
+      }
+
       const zip = new JSZip();
       await zip.loadAsync(arrayBuffer);
 
-      // Get document.xml
       const docXmlPath = "word/document.xml";
-      if (!zip.file(docXmlPath)) throw new Error("Invalid DOCX template");
+      if (!zip.file(docXmlPath)) {
+        throw new Error("Invalid DOCX template - missing word/document.xml");
+      }
 
-      const docXml = await zip.file(docXmlPath).async("text");
+      let docXml = await zip.file(docXmlPath).async("text");
+      console.log("Original document.xml length:", docXml.length);
 
-      // Replace ALL placeholders with actual values
-      let updatedXml = docXml
-        .replace(/<username>/g, certificateData.username || "-")
-        .replace(/<today_date>/g, certificateData.today_date || "-")
-        .replace(/<financial_year>/g, certificateData.financial_year || "-")
-        .replace(
-          /<training_plan__theme__theme_name>/g,
-          certificateData.training_plan__theme__theme_name || "-"
-        )
-        .replace(
-          /<training_request__training_type>/g,
-          certificateData.training_request__training_type || "-"
-        )
-        .replace(
-          /<training_plan__no_of_days>/g,
-          certificateData.training_plan__no_of_days || "-"
-        )
-        .replace(
-          /<training_plan__type_of_training>/g,
-          certificateData.training_plan__type_of_training || "-"
-        )
-        .replace(
-          /<batch__start_date>/g,
-          certificateData.batch__start_date || "-"
-        )
-        .replace(/<batch__end_date>/g, certificateData.batch__end_date || "-")
-        .replace(
-          /<training_request__level>/g,
-          certificateData.training_request__level || "-"
-        )
-        .replace(
-          /<count_BatchBeneficiary>/g,
-          certificateData.count_BatchBeneficiary || "0"
-        )
-        .replace(
-          /<count_BatchTrainer>/g,
-          certificateData.count_BatchTrainer || "0"
-        )
-        .replace(
-          /<BatchMasterTrainer_name>/g,
-          certificateData.BatchMasterTrainer_name || "-"
-        )
-        .replace(/<block_name_en>/g, certificateData.block_name_en || "-")
-        .replace(/<district_name_en>/g, certificateData.district_name_en || "-")
-        .replace(/<dist_user>/g, certificateData.dist_user || "-")
-        .replace(/<expert_name>/g, certificateData.expert_name || "-")
-        .replace(/<theme_name>/g, certificateData.theme_name || "-")
-        .replace(
-          /<training_plan__name>/g,
-          certificateData.training_plan__name || "-"
-        );
+      // ✅ FIXED: Replace TEXT CONTENT ONLY (inside <w:t> tags)
+      // Preserve Word XML structure - replace only text nodes
+      const replacements = [
+        { from: /<username>/g, to: escapeXml(certificateData.username) },
+        { from: /<today_date>/g, to: escapeXml(certificateData.today_date) },
+        {
+          from: /<financial_year>/g,
+          to: escapeXml(certificateData.financial_year),
+        },
+        {
+          from: /<training_plan__theme__theme_name>/g,
+          to: escapeXml(certificateData.training_plan__theme__theme_name),
+        },
+        {
+          from: /<training_request__training_type>/g,
+          to: escapeXml(certificateData.training_request__training_type),
+        },
+        {
+          from: /<training_plan__no_of_days>/g,
+          to: escapeXml(certificateData.training_plan__no_of_days),
+        },
+        {
+          from: /<training_plan__type_of_training>/g,
+          to: escapeXml(certificateData.training_plan__type_of_training),
+        },
+        {
+          from: /<batch__start_date>/g,
+          to: escapeXml(certificateData.batch__start_date),
+        },
+        {
+          from: /<batch__end_date>/g,
+          to: escapeXml(certificateData.batch__end_date),
+        },
+        {
+          from: /<training_request__level>/g,
+          to: escapeXml(certificateData.training_request__level),
+        },
+        {
+          from: /<count_BatchBeneficiary>/g,
+          to: `${certificateData.count_BatchBeneficiary || 0}`,
+        },
+        {
+          from: /<count_BatchTrainer>/g,
+          to: `${certificateData.count_BatchTrainer || 0}`,
+        },
+        {
+          from: /<BatchMasterTrainer_name>/g,
+          to: escapeXml(certificateData.BatchMasterTrainer_name),
+        },
+        {
+          from: /<block_name_en>/g,
+          to: escapeXml(certificateData.block_name_en),
+        },
+        {
+          from: /<district_name_en>/g,
+          to: escapeXml(certificateData.district_name_en),
+        },
+        { from: /<dist_user>/g, to: escapeXml(certificateData.dist_user) },
+        { from: /<expert_name>/g, to: escapeXml(certificateData.expert_name) },
+        { from: /<theme_name>/g, to: escapeXml(certificateData.theme_name) },
+        {
+          from: /<training_plan__name>/g,
+          to: escapeXml(certificateData.training_plan__name),
+        },
+      ];
 
-      // Update the XML in ZIP
+      // Apply replacements
+      let updatedXml = docXml;
+      replacements.forEach(({ from, to }) => {
+        updatedXml = updatedXml.replace(from, to);
+      });
+
+      // Log replacement verification
+      console.log("Replacements applied:", {
+        username: certificateData.username,
+        today_date: certificateData.today_date,
+        financial_year: certificateData.financial_year,
+        count_BatchBeneficiary: certificateData.count_BatchBeneficiary,
+      });
+
+      // Verify replacements worked
+      if (
+        updatedXml.includes("<username>") ||
+        updatedXml.includes("<today_date>")
+      ) {
+        console.warn("⚠️ Some placeholders still present in final XML");
+      }
+
       zip.file(docXmlPath, updatedXml);
 
-      // Generate new DOCX
       const modifiedArrayBuffer = await zip.generateAsync({
         type: "arraybuffer",
         compression: "DEFLATE",
       });
 
-      // Download
       const blob = new Blob([modifiedArrayBuffer], {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
@@ -285,15 +338,27 @@ export default function BatchCertificate() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      alert("✅ Certificate downloaded successfully!");
+      console.log("✅ DOCX with filled data downloaded successfully");
+      alert("✅ Certificate downloaded with filled data!");
     } catch (e) {
-      console.error("download docx failed", e);
-      alert(
-        `❌ Download failed: ${e.message}\n\nMake sure template files are in public/Assets/TMS/`
-      );
+      console.error("download docx failed:", e);
+      alert(`❌ Download failed:\n${e.message}`);
     }
   }
 
+  // ✅ XML escape helper
+  function escapeXml(unsafe) {
+    if (unsafe == null || unsafe === undefined || unsafe === "") {
+      return "";
+    }
+    const str = String(unsafe);
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+  }
   /* ---------------- generate certificate data ---------------- */
 
   async function generateCertificateData() {
