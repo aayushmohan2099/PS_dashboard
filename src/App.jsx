@@ -42,6 +42,12 @@ import BmmuCreateTrainingPlan from "./pages/TMS/BMMU/bmmu_create_training_plan";
 import DmmuTrReview from "./pages/TMS/DMMU/dmmu_tr_review";
 import DmmuRequestClosure from "./pages/TMS/DMMU/dmmu_request_closure";
 
+// LDMS Dashboards
+import LdmsLayout from "./pages/LDMS/Layout/LdmsLayout";
+import BmmuLdmsDashboard from "./pages/LDMS/BMMU/bmmu_ldms_dashboard";
+import DmmuLdmsDashboard from "./pages/LDMS/DMMU/dmmu_ldms_dashboard";
+import SmmuLdmsDashboard from "./pages/LDMS/SMMU/smmu_ldms_dashboard";
+
 // tiny placeholder landing for /tms
 function TmsLanding() {
   return (
@@ -158,6 +164,19 @@ export default function App() {
       <Route path="/tms/cp/batch-closure/:id" element={<CpBatchClosure />} />
 
       <Route path="/tms/batch-certificate/:id" element={<BatchCertificate />} />
+
+      {/* ----- LDMS Routes (GLOBAL LAYOUT APPLIED) ----- */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/ldms" element={<LdmsLayout />}>
+          <Route path="bmmu/dashboard" element={<BmmuLdmsDashboard />} />
+          <Route path="dmmu/dashboard" element={<DmmuLdmsDashboard />} />
+          <Route path="smmu/dashboard" element={<SmmuLdmsDashboard />} />
+
+          {/* future LDMS pages */}
+          {/* <Route path="support-mapping" element={<SupportMapping />} /> */}
+          {/* <Route path="analytics" element={<LdmsAnalytics />} /> */}
+        </Route>
+      </Route>
 
       {/* 404 */}
       <Route path="*" element={<div>404</div>} />

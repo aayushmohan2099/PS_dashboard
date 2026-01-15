@@ -1,4 +1,3 @@
-// src/components/layout/LeftNav.jsx
 import React, { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -47,7 +46,12 @@ function resolveRoleKeyFallback(user) {
     if (rn.includes("training_partner")) return "training_partner";
     if (rn.includes("master_trainer")) return "master_trainer";
     if (rn.includes("dcnrlm")) return "dcnrlm";
-    if (rn.includes("contact") || rn.includes("tp_cp") || rn.includes("tp_contact")) return "tp_contact_person";
+    if (
+      rn.includes("contact") ||
+      rn.includes("tp_cp") ||
+      rn.includes("tp_contact")
+    )
+      return "tp_contact_person";
     if (rn.includes("crp_ep")) return "crp_ep";
     if (rn.includes("crp_ld")) return "crp_ld";
     if (rn.includes("state_admin")) return "state_admin";
@@ -55,7 +59,9 @@ function resolveRoleKeyFallback(user) {
   }
 
   try {
-    const geo = JSON.parse(window.localStorage.getItem("ps_user_geoscope") || "null");
+    const geo = JSON.parse(
+      window.localStorage.getItem("ps_user_geoscope") || "null"
+    );
     if (geo?.role) {
       const g = String(geo.role).toLowerCase();
       if (g.includes("bmmu")) return "bmmu";
@@ -64,7 +70,12 @@ function resolveRoleKeyFallback(user) {
       if (g.includes("training_partner")) return "training_partner";
       if (g.includes("master_trainer")) return "master_trainer";
       if (g.includes("dcnrlm")) return "dcnrlm";
-      if (g.includes("contact") || g.includes("tp_cp") || g.includes("tp_contact")) return "tp_contact_person";
+      if (
+        g.includes("contact") ||
+        g.includes("tp_cp") ||
+        g.includes("tp_contact")
+      )
+        return "tp_contact_person";
     }
   } catch (e) {
     // ignore parse errors
@@ -84,6 +95,16 @@ const ROLE_TMS_ROUTE = {
   master_trainer: "/tms/mt/dashboard",
   tp_contact_person: "/tms/cp/dashboard",
   default: "/tms",
+};
+
+/**
+ * Map canonical role key -> LDMS dashboard route
+ */
+const ROLE_LDMS_ROUTE = {
+  bmmu: "/ldms/bmmu/dashboard",
+  dmmu: "/ldms/dmmu/dashboard",
+  smmu: "/ldms/smmu/dashboard",
+  default: "/ldms",
 };
 
 export default function LeftNav() {
@@ -116,6 +137,10 @@ export default function LeftNav() {
   let tmsRoute = ROLE_TMS_ROUTE.default;
   if (roleKey && ROLE_TMS_ROUTE[roleKey]) tmsRoute = ROLE_TMS_ROUTE[roleKey];
 
+  // Determine ldmsRoute
+  let ldmsRoute = ROLE_LDMS_ROUTE.default;
+  if (roleKey && ROLE_LDMS_ROUTE[roleKey]) ldmsRoute = ROLE_LDMS_ROUTE[roleKey];
+
   function toggleGroup(key) {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   }
@@ -140,11 +165,13 @@ export default function LeftNav() {
     <aside className="left-nav">
       <div className="ln-header">
         <div className="ln-title">Pragati Setu</div>
-        <div className="ln-subtitle">{user?.username || user?.first_name || ""}</div>
+        <div className="ln-subtitle">
+          {user?.username || user?.first_name || ""}
+        </div>
       </div>
 
       <nav className="ln-nav">
-        {/* ---------------- Beneficiary Management — only for BMMU / DMMU / SMMU ---------------- */}
+        {/* ---------------- Beneficiary Management ---------------- */}
         {(roleKey === "bmmu" || roleKey === "dmmu" || roleKey === "smmu") && (
           <div className="ln-group">
             <button
@@ -154,20 +181,26 @@ export default function LeftNav() {
               aria-expanded={!!openGroups.beneficiary}
             >
               <span>Beneficiary Management</span>
-              <span className="ln-chevron">{openGroups.beneficiary ? "▾" : "▸"}</span>
+              <span className="ln-chevron">
+                {openGroups.beneficiary ? "▾" : "▸"}
+              </span>
             </button>
-            <div className={classNames("ln-group-body", openGroups.beneficiary ? "open" : "collapsed")}>
+            <div
+              className={classNames(
+                "ln-group-body",
+                openGroups.beneficiary ? "open" : "collapsed"
+              )}
+            >
               {renderItem("Dashboard Home", "/dashboard")}
             </div>
           </div>
         )}
 
-        {/* ---------------- TMS (only header + single nav to role dashboard) ---------------- */}
+        {/* ---------------- TMS ---------------- */}
         <div className="ln-group">
           <button
             className="ln-group-header"
             onClick={() => {
-              // toggle visual open state and navigate to role-specific TMS dashboard
               toggleGroup("tms");
               navigate(tmsRoute);
             }}
@@ -177,7 +210,6 @@ export default function LeftNav() {
             <span className={`caret ${openGroups.tms ? "open" : ""}`}>▸</span>
           </button>
 
-          {/* only show single link - no submenu items */}
           <div className={`ln-submenu ${openGroups.tms ? "show" : ""}`}>
             <NavLink to={tmsRoute} className="ln-item">
               <span>Go to Training Management</span>
@@ -185,7 +217,7 @@ export default function LeftNav() {
           </div>
         </div>
 
-        {/* ---------------- EP-Sakhi & Enterprise Profiling (restored) ---------------- */}
+        {/* ---------------- EP-Sakhi ---------------- */}
         <div className="ln-group">
           <button
             type="button"
@@ -196,28 +228,46 @@ export default function LeftNav() {
             <span>EP-Sakhi & Enterprise Profiling</span>
             <span className="ln-chevron">{openGroups.epsakhi ? "▾" : "▸"}</span>
           </button>
-          <div className={classNames("ln-group-body", openGroups.epsakhi ? "open" : "collapsed")}>
+          <div
+            className={classNames(
+              "ln-group-body",
+              openGroups.epsakhi ? "open" : "collapsed"
+            )}
+          >
             {renderItem("Dashboard", "/dashboard")}
           </div>
         </div>
 
-        {/* ---------------- Lakhpati Didi & Analytics (restored) ---------------- */}
+        {/* ---------------- Lakhpati Didi (LDMS) ---------------- */}
         <div className="ln-group">
           <button
             type="button"
             className="ln-group-header"
-            onClick={() => toggleGroup("lakhpati")}
+            onClick={() => {
+              toggleGroup("lakhpati");
+              navigate(ldmsRoute);
+            }}
             aria-expanded={!!openGroups.lakhpati}
           >
             <span>Lakhpati Didi & Analytics</span>
-            <span className="ln-chevron">{openGroups.lakhpati ? "▾" : "▸"}</span>
+            <span className="ln-chevron">
+              {openGroups.lakhpati ? "▾" : "▸"}
+            </span>
           </button>
-          <div className={classNames("ln-group-body", openGroups.lakhpati ? "open" : "collapsed")}>
-            {renderItem("Dashboard", "/dashboard")}
+
+          <div
+            className={classNames(
+              "ln-group-body",
+              openGroups.lakhpati ? "open" : "collapsed"
+            )}
+          >
+            <NavLink to={ldmsRoute} className="ln-item">
+              <span>Go to Lakhpati Didi</span>
+            </NavLink>
           </div>
         </div>
 
-        {/* ---------------- E-Commerce (restored) ---------------- */}
+        {/* ---------------- E-Commerce ---------------- */}
         <div className="ln-group">
           <button
             type="button"
@@ -226,9 +276,16 @@ export default function LeftNav() {
             aria-expanded={!!openGroups.ecommerce}
           >
             <span>E-Commerce</span>
-            <span className="ln-chevron">{openGroups.ecommerce ? "▾" : "▸"}</span>
+            <span className="ln-chevron">
+              {openGroups.ecommerce ? "▾" : "▸"}
+            </span>
           </button>
-          <div className={classNames("ln-group-body", openGroups.ecommerce ? "open" : "collapsed")}>
+          <div
+            className={classNames(
+              "ln-group-body",
+              openGroups.ecommerce ? "open" : "collapsed"
+            )}
+          >
             {renderItem("Marketplace", "/dashboard")}
           </div>
         </div>
