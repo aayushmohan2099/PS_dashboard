@@ -10,19 +10,22 @@ export default function BmmuLdmsDashboard() {
   return (
     <div className="bmmu-ldms-dashboard">
       {/* Row 1 */}
-      <div className="ldms-grid-row two-col">
+      <div className="ldms-grid-row one-col">
         <div className="ldms-card">
-          <h3>Block Map</h3>
+          <h3>Village Level Analytics</h3>
           <BlockMap />
-        </div>
-
-        <div className="ldms-card">
-          <h3>Meetings</h3>
-          <Meetings />
         </div>
       </div>
 
       {/* Row 2 */}
+      <div className="ldms-grid-row one-col">
+        <div className="ldms-card">
+          <h3>BLCC Meetings</h3>
+          <Meetings />
+        </div>
+      </div>
+
+      {/* Row 3 */}
       <div className="ldms-grid-row one-col">
         <div className="ldms-card">
           <h3>Demand Analytics</h3>
@@ -30,7 +33,7 @@ export default function BmmuLdmsDashboard() {
         </div>
       </div>
 
-      {/* Row 3 */}
+      {/* Row 4 */}
       <div className="ldms-grid-row one-col">
         <div className="ldms-card">
           <h3>Support Benefit Map</h3>
@@ -69,7 +72,7 @@ export default function BmmuLdmsDashboard() {
 
         .ldms-card h3 {
           margin: 0 0 8px 0;
-          font-size: 15px;
+          font-size: 20px;
           font-weight: 700;
           color: #0b2540;
         }

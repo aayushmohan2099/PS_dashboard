@@ -617,6 +617,21 @@ export const TMS_API = {
 };
 
 // ------------------------
+// LDMS APIS (Lakhpati Didi Management System)
+// ------------------------
+//
+// These map to LDMS.api.urls router viewsets, analytics + dashboard views.
+//
+
+export const LDMS_API = {
+  // Map Analytics via UPSRLM proxy (Total SHGs, VOs, CLFs)
+  upsrlmAnalytics: (params) =>
+    api.get(`/ldms/map-analytics/`, {
+      params,
+    }),
+};
+
+// ------------------------
 // NEW API add-on Section
 // ------------------------
 
