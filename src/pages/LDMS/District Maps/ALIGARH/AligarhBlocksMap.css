@@ -1,0 +1,87 @@
+.aligarh-map {
+  background: transparent;
+  height: 100%;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  margin-bottom: 5%;
+}
+
+.district-outline {
+  fill: none;
+  stroke: #000;
+  stroke-width: 3;
+}
+
+.block {
+  stroke: #1e1e1e;
+  stroke-width: 1.2;
+  cursor: pointer;
+  transition:
+    fill 0.2s ease,
+    transform 0.15s ease;
+}
+
+.block:hover {
+  filter: brightness(1.15);
+  transform: scale(1.01);
+}
+
+/* Distinct, muted map palette (no gradient) */
+
+.b1 {
+  fill: #d97706; /* amber */
+}
+
+.b2 {
+  fill: #2563eb; /* blue */
+}
+
+.b3 {
+  fill: #059669; /* emerald */
+}
+
+.b4 {
+  fill: #884774; /* violet */
+}
+
+.b5 {
+  fill: #dc2626; /* red */
+}
+
+.b6 {
+  fill: #0d9488; /* teal */
+}
+
+.b7 {
+  fill: #9333ea; /* purple */
+}
+
+.b8 {
+  fill: #ea580c; /* orange */
+}
+
+.b9 {
+  fill: #16a34a; /* green */
+}
+
+.b10 {
+  fill: #0284c7; /* sky blue */
+}
+
+.b11 {
+  fill: #be185d; /* rose */
+}
+
+.b12 {
+  fill: #4b5563; /* slate */
+}
+
+.block-label {
+  font-size: 5px;
+  font-weight: 600;
+  fill: #374151;
+  pointer-events: none;
+  user-select: none;
+}
