@@ -3,21 +3,21 @@ import React, { useState, useRef, useEffect } from "react";
 import "./AligarhBlocksMap.css";
 
 const blocks = [
-  { id: 313127, name: "TAPPAL", url: "/blocks/313127" },
-  { id: 313125, name: "KHAIR", url: "/blocks/313125" },
-  { id: 313119, name: "CHANDAUS", url: "/blocks/313119" },
-  { id: 313122, name: "GONDA", url: "/blocks/313122" },
-  { id: 313126, name: "LODHA", url: "/blocks/313126" },
-  { id: 313123, name: "IGLAS", url: "/blocks/313123" },
-  { id: 313124, name: "JAWAN SIKANDERPUR", url: "/blocks/313124" },
-  { id: 313120, name: "DHANIPUR", url: "/blocks/313120" },
-  { id: 313117, name: "ATRAULI", url: "/blocks/313117" },
-  { id: 313121, name: "GANGIRI", url: "/blocks/313121" },
-  { id: 313116, name: "AKRABAD", url: "/blocks/313116" },
-  { id: 313118, name: "BIJAULI", url: "/blocks/313118" },
+  { id: 313127, name: "TAPPAL" },
+  { id: 313125, name: "KHAIR" },
+  { id: 313119, name: "CHANDAUS" },
+  { id: 313122, name: "GONDA" },
+  { id: 313126, name: "LODHA" },
+  { id: 313123, name: "IGLAS" },
+  { id: 313124, name: "JAWAN SIKANDERPUR" },
+  { id: 313120, name: "DHANIPUR" },
+  { id: 313117, name: "ATRAULI" },
+  { id: 313121, name: "GANGIRI" },
+  { id: 313116, name: "AKRABAD" },
+  { id: 313118, name: "BIJAULI" },
 ];
 
-export default function AligarhBlocksMap({ onHover }) {
+export default function AligarhBlocksMap({ onHover, onBlockSelect }) {
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
 
@@ -96,6 +96,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[0].name}
             className="block b1"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[0].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -107,6 +108,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[1].name}
             className="block b2"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[1].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -118,6 +120,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[2].name}
             className="block b3"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[2].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -129,6 +132,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[3].name}
             className="block b4"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[3].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -140,6 +144,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[4].name}
             className="block b5"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[4].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -151,6 +156,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[5].name}
             className="block b6"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[5].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -162,6 +168,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[6].name}
             className="block b7"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[6].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -173,6 +180,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[7].name}
             className="block b8"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[7].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -184,6 +192,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[8].name}
             className="block b9"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[8].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -195,6 +204,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[9].name}
             className="block b10"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[9].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -206,6 +216,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[10].name}
             className="block b11"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[10].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>
@@ -217,6 +228,7 @@ export default function AligarhBlocksMap({ onHover }) {
             data-name={blocks[11].name}
             className="block b12"
             onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onBlockSelect?.(blocks[11].id)}
             onMouseLeave={() => onHover?.(null)}
           />
         </a>

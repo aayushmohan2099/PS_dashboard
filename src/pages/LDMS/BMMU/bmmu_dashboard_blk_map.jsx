@@ -1,54 +1,77 @@
 // src/pages/LDMS/BMMU/bmmu_dashboard_blk_map.jsx
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { LDMS_API } from "../../../api/axios";
 import api from "../../../api/axios";
 
 /**
- * Block Village Analytics – Table View (FINAL POLISHED)
+ * Block Village Analytics – Table View
+ *
+ * BEHAVIOR:
+ * - If `blockId` prop is provided → use it
+ * - Else → resolve block from logged-in user
  */
-
-export default function BlockMap() {
+export default function BlockMap({ blockId: propBlockId }) {
   const { user } = useContext(AuthContext) || {};
-  const [blockId, setBlockId] = useState(null);
+
+  /* ------------------ STATE ------------------ */
+  const [blockId, setBlockId] = useState(propBlockId || null);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* 🔽 SORT STATE (ONLY ADDITION) */
+  /* 🔽 SORT STATE */
   const [sortKey, setSortKey] = useState("total_shgs");
   const [sortDir, setSortDir] = useState("desc");
 
   /* ---------------------------
-     STEP 1: Get block_id
+     STEP 1: Resolve block_id
+     Priority:
+       1. propBlockId
+       2. logged-in user block
   --------------------------- */
   useEffect(() => {
+    if (propBlockId) {
+      setBlockId(propBlockId);
+      return;
+    }
+
     if (!user?.id) return;
+
     api
       .get(`/lookups/user-geoscope/${encodeURIComponent(user.id)}/`)
       .then((res) => {
         const blk = res?.data?.blocks?.[0];
         if (blk) setBlockId(blk);
-      });
-  }, [user?.id]);
+      })
+      .catch((e) => console.error("Failed to resolve user block", e));
+  }, [propBlockId, user?.id]);
 
   /* ---------------------------
      Fetch analytics
   --------------------------- */
-  const fetchAnalytics = () => {
+  const fetchAnalytics = useCallback(() => {
     if (!blockId) return;
+
     setLoading(true);
+
     LDMS_API.upsrlmAnalytics({
       block_id: blockId,
-      detail: true,
-    }).then((res) => {
-      setAnalytics(res.data);
-      setLoading(false);
-    });
-  };
+      detail: true, // ✅ CRITICAL
+    })
+      .then((res) => setAnalytics(res.data))
+      .finally(() => setLoading(false));
+  }, [blockId]);
 
   useEffect(() => {
+    setAnalytics(null);
     fetchAnalytics();
-  }, [blockId]);
+  }, [fetchAnalytics]);
 
   /* ---------------------------
      Prepare table data
@@ -99,7 +122,7 @@ export default function BlockMap() {
         acc.shgs += v.total_shgs;
         return acc;
       },
-      { ruralHH: 0, shgHH: 0, vos: 0, shgs: 0 }
+      { ruralHH: 0, shgHH: 0, vos: 0, shgs: 0 },
     );
   }, [tableData]);
 
@@ -162,7 +185,7 @@ export default function BlockMap() {
   return (
     <div className="ldms-village-table-wrapper">
       <div className="table-header">
-        <div className="table-title"></div>
+        <div className="table-title" />
 
         <button
           className="refresh-btn"
@@ -242,8 +265,6 @@ export default function BlockMap() {
           margin-bottom: 10px;
         }
 
-        .table-title { font-weight: 500; color: #0b2540; }
-
         .refresh-btn {
           border: none;
           background: #c62828;
@@ -264,15 +285,14 @@ export default function BlockMap() {
 
         table { width: 100%; border-collapse: collapse; }
 
-        /* 🔴 FIXED HEADER OVERRIDE */
-        .village-table thead th {
+        thead th {
           background: #c62828;
           color: #ffffff;
           padding: 10px 8px;
           font-weight: 700;
         }
 
-        .village-table td {
+        td {
           padding: 8px;
           border-bottom: 1px solid #e5e7eb;
         }
@@ -285,10 +305,8 @@ export default function BlockMap() {
         }
 
         .village-name { font-weight: 600; }
-
         .shg-bold { font-weight: 700; color: #8b1d1d; }
 
-        /* ---- ZERO SHG ---- */
         .zero-shg {
           border-left: 4px solid #c62828;
           background: #fff5f5;
@@ -308,7 +326,6 @@ export default function BlockMap() {
           font-weight: 700;
         }
 
-        /* ---- Top 3 Highlight ---- */
         .rank-1 {
           background: linear-gradient(to right, #fff1d6, #ffffff);
           border-left: 4px solid #d4af37;

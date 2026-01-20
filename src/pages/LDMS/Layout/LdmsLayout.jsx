@@ -4,6 +4,7 @@ import { Outlet } from "react-router-dom";
 import LdmsLeftNav from "./ldms_leftnav";
 import LdmsHeader from "./ldms_header";
 import LdmsFooter from "./ldms_footer";
+import bgImage from "../../../assets/ldms/background_vector.jpg";
 
 export default function LdmsLayout() {
   const [navCollapsed, setNavCollapsed] = useState(false);
@@ -57,14 +58,16 @@ export default function LdmsLayout() {
           flex-direction: column;
           min-width: 0;
           overflow: hidden;
-          background: #ffffff;
         }
 
         .ldms-hero {
           flex: 1;
           overflow-y: auto;
           padding: 16px 20px;
-          background: #ffffff;
+          background-image: url("/assets/ldms/background_vector.jpg");
+          background-repeat: no-repeat;
+          background-position: center bottom;
+          background-size: cover;
         }
       `}</style>
     </div>

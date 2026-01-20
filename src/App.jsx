@@ -45,7 +45,9 @@ import DmmuRequestClosure from "./pages/TMS/DMMU/dmmu_request_closure";
 // LDMS Dashboards
 import LdmsLayout from "./pages/LDMS/Layout/LdmsLayout";
 import BmmuLdmsDashboard from "./pages/LDMS/BMMU/bmmu_ldms_dashboard";
+import BlockMap from "./pages/LDMS/BMMU/bmmu_dashboard_blk_map";
 import DmmuLdmsDashboard from "./pages/LDMS/DMMU/dmmu_ldms_dashboard";
+import DmmuBlockMap from "./pages/LDMS/DMMU/dmmu_dashboard_blk_map";
 import SmmuLdmsDashboard from "./pages/LDMS/SMMU/smmu_ldms_dashboard";
 
 // tiny placeholder landing for /tms
@@ -177,6 +179,12 @@ export default function App() {
           {/* <Route path="analytics" element={<LdmsAnalytics />} /> */}
         </Route>
       </Route>
+
+      <Route path="/ldms/dash-block/:blockId" element={<BlockMap />} />
+      <Route
+        path="/ldms/dash-district/:districtId"
+        element={<DmmuBlockMap />}
+      />
 
       {/* 404 */}
       <Route path="*" element={<div>404</div>} />

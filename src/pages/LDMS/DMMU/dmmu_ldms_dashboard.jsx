@@ -1,16 +1,44 @@
-// dmmu_ldms_dashboard.jsx
-import React from "react";
+// src/pages/LDMS/DMMU/dmmu_ldms_dashboard.jsx
+import React, { useState } from "react";
 import DmmuBlockMap from "./dmmu_dashboard_blk_map";
+import BlockMap from "../BMMU/bmmu_dashboard_blk_map";
+
+/* ==================================================
+   DMMU – DISTRICT → BLOCK → VILLAGE DRILLDOWN
+================================================== */
 
 export default function DmmuLdmsDashboard() {
+  /* ---------------- STATE ---------------- */
+  const [blockId, setBlockId] = useState(null);
+
+  /* ---------------- HANDLERS ---------------- */
+  const openBlock = (id) => {
+    setBlockId(id);
+  };
+
+  const backToDistrict = () => {
+    setBlockId(null);
+  };
+
+  /* ---------------- RENDER ---------------- */
   return (
     <div className="dmmu-ldms-dashboard">
-      {/* ================= ROW 1 ================= */}
-      <div className="ldms-grid-row one-col">
-        <div className="ldms-card">
-          <h3>Block-wise Analytics (District View)</h3>
-          <DmmuBlockMap />
+      <div className="ldms-card">
+        {/* ================= HEADER ================= */}
+        <div className="header-bar">
+          {blockId ? (
+            <button className="back-btn" onClick={backToDistrict}>
+              ← Back to District
+            </button>
+          ) : (
+            <h3>District-wise Analytics (Block View)</h3>
+          )}
         </div>
+
+        {/* ================= CONTENT ================= */}
+        {!blockId && <DmmuBlockMap onBlockSelect={openBlock} />}
+
+        {blockId && <BlockMap blockId={blockId} />}
       </div>
 
       {/* ================= STYLES ================= */}
@@ -21,34 +49,39 @@ export default function DmmuLdmsDashboard() {
           gap: 16px;
         }
 
-        .ldms-grid-row {
-          display: grid;
-          gap: 16px;
-        }
-
-        .ldms-grid-row.two-col {
-          grid-template-columns: 1.2fr 1fr;
-        }
-
         .ldms-card {
           background: #ffffff;
-          border: 1px solid #e5e7eb;
+          border: 2px solid #ce0000b0;
+          box-shadow: 0 8px 35px rgba(163, 19, 19, 0.25);
           border-radius: 12px;
           padding: 12px;
-          min-height: 520px;
+          min-height: 600px;
         }
 
-        .ldms-card h3 {
-          margin: 0 0 10px 0;
+        .header-bar {
+          display: flex;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+
+        .header-bar h3 {
+          margin: 0;
           font-size: 20px;
           font-weight: 700;
-          color: #0b2540;
+          color: #400b0b;
         }
 
-        @media (max-width: 1024px) {
-          .ldms-grid-row.two-col {
-            grid-template-columns: 1fr;
-          }
+        .back-btn {
+          background: transparent;
+          border: none;
+          font-weight: 700;
+          color: #8b1d1d;
+          cursor: pointer;
+          font-size: 14px;
+        }
+
+        .back-btn:hover {
+          text-decoration: underline;
         }
       `}</style>
     </div>

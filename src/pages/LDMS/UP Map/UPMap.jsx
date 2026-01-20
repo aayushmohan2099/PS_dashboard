@@ -3,81 +3,81 @@ import React, { useState, useRef, useEffect } from "react";
 import "./UPMap.css";
 
 const districts = [
-  { id: 31311, name: "AGRA", url: "/ldms/dash-district/31311" },
-  { id: 31312, name: "ALIGARH", url: "/ldms/dash-district/31312" },
-  { id: 31313, name: "AMBEDKAR NAGAR", url: "/ldms/dash-district/31313" },
-  { id: 31314, name: "AMETHI", url: "/ldms/dash-district/31314" },
-  { id: 31315, name: "AMROHA", url: "/ldms/dash-district/31315" },
-  { id: 31316, name: "AURAIYA", url: "/ldms/dash-district/31316" },
-  { id: 31317, name: "AYODHYA", url: "/ldms/dash-district/31317" },
-  { id: 31318, name: "AZAMGARH", url: "/ldms/dash-district/31318" },
-  { id: 31319, name: "BAGHPAT", url: "/ldms/dash-district/31319" },
-  { id: 31320, name: "BAHRAICH", url: "/ldms/dash-district/31320" },
-  { id: 31321, name: "BALLIA", url: "/ldms/dash-district/31321" },
-  { id: 31012, name: "BALRAMPUR", url: "/ldms/dash-district/31012" },
-  { id: 31322, name: "BANDA", url: "/ldms/dash-district/31322" },
-  { id: 31323, name: "BARABANKI", url: "/ldms/dash-district/31323" },
-  { id: 31324, name: "BAREILLY", url: "/ldms/dash-district/31324" },
-  { id: 31325, name: "BASTI", url: "/ldms/dash-district/31325" },
-  { id: 31017, name: "BIJNOR", url: "/ldms/dash-district/31017" },
-  { id: 31018, name: "BUDAUN", url: "/ldms/dash-district/31018" },
-  { id: 31326, name: "BULANDSHAHR", url: "/ldms/dash-district/31326" },
-  { id: 31327, name: "CHANDAULI", url: "/ldms/dash-district/31327" },
-  { id: 31328, name: "CHITRAKOOT", url: "/ldms/dash-district/31328" },
-  { id: 31329, name: "DEORIA", url: "/ldms/dash-district/31329" },
-  { id: 31330, name: "ETAH", url: "/ldms/dash-district/31330" },
-  { id: 31331, name: "ETAWAH", url: "/ldms/dash-district/31331" },
-  { id: 31332, name: "FARRUKHABAD", url: "/ldms/dash-district/31332" },
-  { id: 31333, name: "FATEHPUR", url: "/ldms/dash-district/31333" },
-  { id: 31334, name: "FIROZABAD", url: "/ldms/dash-district/31334" },
-  { id: 31335, name: "GAUTAM BUDDHA NAGAR", url: "/ldms/dash-district/31335" },
-  { id: 31336, name: "GHAZIABAD", url: "/ldms/dash-district/31336" },
-  { id: 31337, name: "GHAZIPUR", url: "/ldms/dash-district/31337" },
-  { id: 31338, name: "GONDA", url: "/ldms/dash-district/31338" },
-  { id: 31339, name: "GORAKHPUR", url: "/ldms/dash-district/31339" },
-  { id: 31340, name: "HAMIRPUR", url: "/ldms/dash-district/31340" },
-  { id: 31341, name: "HAPUR", url: "/ldms/dash-district/31341" },
-  { id: 31342, name: "HARDOI", url: "/ldms/dash-district/31342" },
-  { id: 31343, name: "HATHRAS", url: "/ldms/dash-district/31343" },
-  { id: 31344, name: "JALAUN", url: "/ldms/dash-district/31344" },
-  { id: 31345, name: "JAUNPUR", url: "/ldms/dash-district/31345" },
-  { id: 31039, name: "JHANSI", url: "/ldms/dash-district/31039" },
-  { id: 31346, name: "KANNAUJ", url: "/ldms/dash-district/31346" },
-  { id: 31347, name: "KANPUR DEHAT", url: "/ldms/dash-district/31347" },
-  { id: 31348, name: "KANPUR NAGAR", url: "/ldms/dash-district/31348" },
-  { id: 31349, name: "KASGANJ", url: "/ldms/dash-district/31349" },
-  { id: 31350, name: "KAUSHAMBI", url: "/ldms/dash-district/31350" },
-  { id: 31351, name: "KHERI", url: "/ldms/dash-district/31351" },
-  { id: 31352, name: "KUSHI NAGAR", url: "/ldms/dash-district/31352" },
-  { id: 31353, name: "LALITPUR", url: "/ldms/dash-district/31353" },
-  { id: 31354, name: "LUCKNOW", url: "/ldms/dash-district/31354" },
-  { id: 31355, name: "MAHARAJGANJ", url: "/ldms/dash-district/31355" },
-  { id: 31356, name: "MAHOBA", url: "/ldms/dash-district/31356" },
-  { id: 31357, name: "MAINPURI", url: "/ldms/dash-district/31357" },
-  { id: 31358, name: "MATHURA", url: "/ldms/dash-district/31358" },
-  { id: 31359, name: "MAU", url: "/ldms/dash-district/31359" },
-  { id: 31360, name: "MEERUT", url: "/ldms/dash-district/31360" },
-  { id: 31361, name: "MIRZAPUR", url: "/ldms/dash-district/31361" },
-  { id: 31362, name: "MORADABAD", url: "/ldms/dash-district/31362" },
-  { id: 31363, name: "MUZAFFARNAGAR", url: "/ldms/dash-district/31363" },
-  { id: 31364, name: "PILIBHIT", url: "/ldms/dash-district/31364" },
-  { id: 31365, name: "PRATAPGARH", url: "/ldms/dash-district/31365" },
-  { id: 31366, name: "PRAYAGRAJ", url: "/ldms/dash-district/31366" },
-  { id: 31367, name: "RAE BARELI", url: "/ldms/dash-district/31367" },
-  { id: 31368, name: "RAMPUR", url: "/ldms/dash-district/31368" },
-  { id: 31369, name: "SAHARANPUR", url: "/ldms/dash-district/31369" },
-  { id: 31370, name: "SAMBHAL", url: "/ldms/dash-district/31370" },
-  { id: 31371, name: "SANT KABEER NAGAR", url: "/ldms/dash-district/31371" },
-  { id: 31372, name: "SANT RAVIDAS NAGAR", url: "/ldms/dash-district/31372" },
-  { id: 31373, name: "SHAHJAHANPUR", url: "/ldms/dash-district/31373" },
-  { id: 31374, name: "SHAMLI", url: "/ldms/dash-district/31374" },
-  { id: 31375, name: "SHRAVASTI", url: "/ldms/dash-district/31375" },
-  { id: 31376, name: "SIDDHARTH NAGAR", url: "/ldms/dash-district/31376" },
-  { id: 31377, name: "SITAPUR", url: "/ldms/dash-district/31377" },
-  { id: 31378, name: "SONBHADRA", url: "/ldms/dash-district/31378" },
-  { id: 31379, name: "SULTANPUR", url: "/ldms/dash-district/31379" },
-  { id: 31380, name: "UNNAO", url: "/ldms/dash-district/31380" },
-  { id: 31381, name: "VARANASI", url: "/ldms/dash-district/31381" },
+  { id: 31311, name: "AGRA" },
+  { id: 31312, name: "ALIGARH" },
+  { id: 31313, name: "AMBEDKAR NAGAR" },
+  { id: 31314, name: "AMETHI" },
+  { id: 31315, name: "AMROHA" },
+  { id: 31316, name: "AURAIYA" },
+  { id: 31317, name: "AYODHYA" },
+  { id: 31318, name: "AZAMGARH" },
+  { id: 31319, name: "BAGHPAT" },
+  { id: 31320, name: "BAHRAICH" },
+  { id: 31321, name: "BALLIA" },
+  { id: 31012, name: "BALRAMPUR" },
+  { id: 31322, name: "BANDA" },
+  { id: 31323, name: "BARABANKI" },
+  { id: 31324, name: "BAREILLY" },
+  { id: 31325, name: "BASTI" },
+  { id: 31017, name: "BIJNOR" },
+  { id: 31018, name: "BUDAUN" },
+  { id: 31326, name: "BULANDSHAHR" },
+  { id: 31327, name: "CHANDAULI" },
+  { id: 31328, name: "CHITRAKOOT" },
+  { id: 31329, name: "DEORIA" },
+  { id: 31330, name: "ETAH" },
+  { id: 31331, name: "ETAWAH" },
+  { id: 31332, name: "FARRUKHABAD" },
+  { id: 31333, name: "FATEHPUR" },
+  { id: 31334, name: "FIROZABAD" },
+  { id: 31335, name: "GAUTAM BUDDHA NAGAR" },
+  { id: 31336, name: "GHAZIABAD" },
+  { id: 31337, name: "GHAZIPUR" },
+  { id: 31338, name: "GONDA" },
+  { id: 31339, name: "GORAKHPUR" },
+  { id: 31340, name: "HAMIRPUR" },
+  { id: 31341, name: "HAPUR" },
+  { id: 31342, name: "HARDOI" },
+  { id: 31343, name: "HATHRAS" },
+  { id: 31344, name: "JALAUN" },
+  { id: 31345, name: "JAUNPUR" },
+  { id: 31039, name: "JHANSI" },
+  { id: 31346, name: "KANNAUJ" },
+  { id: 31347, name: "KANPUR DEHAT" },
+  { id: 31348, name: "KANPUR NAGAR" },
+  { id: 31349, name: "KASGANJ" },
+  { id: 31350, name: "KAUSHAMBI" },
+  { id: 31351, name: "KHERI" },
+  { id: 31352, name: "KUSHI NAGAR" },
+  { id: 31353, name: "LALITPUR" },
+  { id: 31354, name: "LUCKNOW" },
+  { id: 31355, name: "MAHARAJGANJ" },
+  { id: 31356, name: "MAHOBA" },
+  { id: 31357, name: "MAINPURI" },
+  { id: 31358, name: "MATHURA" },
+  { id: 31359, name: "MAU" },
+  { id: 31360, name: "MEERUT" },
+  { id: 31361, name: "MIRZAPUR" },
+  { id: 31362, name: "MORADABAD" },
+  { id: 31363, name: "MUZAFFARNAGAR" },
+  { id: 31364, name: "PILIBHIT" },
+  { id: 31365, name: "PRATAPGARH" },
+  { id: 31366, name: "PRAYAGRAJ" },
+  { id: 31367, name: "RAE BARELI" },
+  { id: 31368, name: "RAMPUR" },
+  { id: 31369, name: "SAHARANPUR" },
+  { id: 31370, name: "SAMBHAL" },
+  { id: 31371, name: "SANT KABEER NAGAR" },
+  { id: 31372, name: "SANT RAVIDAS NAGAR" },
+  { id: 31373, name: "SHAHJAHANPUR" },
+  { id: 31374, name: "SHAMLI" },
+  { id: 31375, name: "SHRAVASTI" },
+  { id: 31376, name: "SIDDHARTH NAGAR" },
+  { id: 31377, name: "SITAPUR" },
+  { id: 31378, name: "SONBHADRA" },
+  { id: 31379, name: "SULTANPUR" },
+  { id: 31380, name: "UNNAO" },
+  { id: 31381, name: "VARANASI" },
 ];
 
 // SVG Paths
@@ -383,9 +383,10 @@ const districtPaths = {
     "m 765.33398,729.70898 c 1.85026,0.0525 2.22517,0.59573 2.63868,2.29102 0.70649,2.89646 4.8012,4.01477 6.4707,1.76758 1.47924,-1.99109 4.93284,-2.70003 6.71094,-1.37891 0.8229,0.61141 2.30072,2.34883 3.28515,3.86133 1.37064,2.10588 2.58364,2.75 5.17578,2.75 1.86174,0 3.38477,-0.47613 3.38477,-1.05859 0,-0.58246 0.4454,-0.78399 0.99023,-0.44727 0.58562,0.36194 0.12925,1.77895 -1.11718,3.46484 -2.47167,3.34311 -1.96891,4.55703 2.69531,6.50586 3.95336,1.65182 4.20099,3.10617 1.44726,8.50391 l -1.98437,3.89063 -5.32422,-0.55079 c -3.98235,-0.41102 -5.70479,-0.16827 -6.83594,0.96289 -0.83176,0.83175 -2.37489,1.67969 -3.42968,1.88282 -2.82086,0.54325 -3.04183,3.88349 -0.38868,5.88476 l 2.26368,1.70899 -2.3125,3.24804 c -2.30628,3.23887 -2.33292,3.24579 -8.77344,2.58594 C 763.37029,774.87918 759,776.4134 759,779.52344 759,780.33576 758.59857,781 758.10742,781 756.73951,781 756,778.29872 756,773.30078 c 0,-4.29789 -0.1306,-4.50958 -2.5,-4.05664 -1.67641,0.32047 -2.5,0.03 -2.5,-0.88281 0,-1.79913 -2.03312,-1.72621 -4.74023,0.16992 -1.80737,1.26593 -2.53905,1.3112 -4.22266,0.25977 -2.32892,-1.45443 -2.46025,-2.13067 -0.95703,-4.93946 0.83812,-1.56603 0.71678,-2.41854 -0.54297,-3.81054 -1.44848,-1.60056 -1.45742,-1.85818 -0.0801,-2.38672 2.09573,-0.80421 1.95881,-5.61422 -0.20703,-7.27735 -1.63389,-1.25465 -1.60072,-1.38549 0.5,-1.97656 1.3128,-0.36937 2.25,-1.4187 2.25,-2.51758 0,-1.03585 0.45,-1.88281 1,-1.88281 1.20582,0 1.34423,-3.66831 0.16602,-4.39648 C 743.36976,739.1114 743.79638,733 744.62695,733 c 0.22004,0 1.26831,0.542 2.33008,1.20508 1.57601,0.98424 2.2778,0.89243 3.81641,-0.5 C 751.81002,732.767 753.54472,732 754.62891,732 c 1.08419,0 2.40096,-0.43026 2.92578,-0.95508 0.52481,-0.52481 2.94601,-1.08731 5.38086,-1.25 1.00067,-0.0669 1.78168,-0.10345 2.39843,-0.0859 z",
 };
 
-export default function UPMap({ onHover }) {
+export default function UPMap({ onHover, onDistrictSelect }) {
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
+
   const svgRef = useRef(null);
   const isPanning = useRef(false);
   const lastPoint = useRef({ x: 0, y: 0 });
@@ -411,26 +412,33 @@ export default function UPMap({ onHover }) {
       viewBox="0 0 1024 1010"
       preserveAspectRatio="xMidYMid meet"
       className="up-map"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseDown={(e) => {
+        isPanning.current = true;
+        lastPoint.current = { x: e.clientX, y: e.clientY };
+      }}
+      onMouseMove={(e) => {
+        if (!isPanning.current) return;
+        const dx = e.clientX - lastPoint.current.x;
+        const dy = e.clientY - lastPoint.current.y;
+        lastPoint.current = { x: e.clientX, y: e.clientY };
+        setTranslate((p) => ({ x: p.x + dx, y: p.y + dy }));
+      }}
+      onMouseUp={() => (isPanning.current = false)}
+      onMouseLeave={() => (isPanning.current = false)}
     >
-      <g
-        className="districts"
-        transform={`translate(${translate.x} ${translate.y}) scale(${scale})`}
-      >
+      <g transform={`translate(${translate.x} ${translate.y}) scale(${scale})`}>
         {districts.map((d, i) => (
-          <a key={d.id} href={d.url}>
-            <path
-              d={districtPaths[d.id] || ""}
-              data-id={d.id}
-              data-name={d.name}
-              className={`district-shape d${i + 1}`}
-              onMouseEnter={(e) => onHover?.(e.target.dataset)}
-              onMouseLeave={() => onHover?.(null)}
-            />
-          </a>
+          <path
+            key={d.id}
+            d={districtPaths[d.id]}
+            data-id={d.id}
+            data-name={d.name}
+            className={`district-shape d${i + 1}`}
+            onMouseEnter={(e) => onHover?.(e.target.dataset)}
+            onClick={() => onDistrictSelect?.(d.id)}
+            onMouseLeave={() => onHover?.(null)}
+            style={{ cursor: "pointer" }}
+          />
         ))}
       </g>
     </svg>

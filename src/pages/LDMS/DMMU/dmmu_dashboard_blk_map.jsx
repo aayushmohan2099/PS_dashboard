@@ -5,14 +5,19 @@ import api, { LDMS_API } from "../../../api/axios";
 
 /**
  * DMMU – District Block Map + Analytics Table
- * JSX driven | Tooltip based | Incremental loading
+ *
+ * BEHAVIOR:
+ * - If `districtId` prop is provided → use it
+ * - Else → resolve district from logged-in user
  */
-
-export default function DmmuBlockMap() {
+export default function DmmuBlockMap({
+  districtId: propDistrictId,
+  onBlockSelect,
+}) {
   const { user } = useContext(AuthContext) || {};
 
   /* ------------------ STATE ------------------ */
-  const [districtId, setDistrictId] = useState(null);
+  const [districtId, setDistrictId] = useState(propDistrictId || null);
   const [districtName, setDistrictName] = useState(null);
   const [blocks, setBlocks] = useState([]);
   const [analyticsCache, setAnalyticsCache] = useState({});
@@ -21,13 +26,20 @@ export default function DmmuBlockMap() {
   const [loading, setLoading] = useState(true);
 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-
   const mapContainerRef = useRef(null);
 
   /* ---------------------------
-     STEP 1: Get district_id
+     STEP 1: Resolve district_id
+     Priority:
+       1. propDistrictId
+       2. logged-in user district
   --------------------------- */
   useEffect(() => {
+    if (propDistrictId) {
+      setDistrictId(propDistrictId);
+      return;
+    }
+
     if (!user?.id) return;
 
     api
@@ -35,14 +47,20 @@ export default function DmmuBlockMap() {
       .then((res) => {
         const dist = res?.data?.districts?.[0];
         if (dist) setDistrictId(dist);
-      });
-  }, [user?.id]);
+      })
+      .catch((e) => console.error("Failed to resolve user district", e));
+  }, [propDistrictId, user?.id]);
 
   /* ---------------------------
      STEP 2: Get district name
   --------------------------- */
   useEffect(() => {
     if (!districtId) return;
+
+    setDistrictName(null);
+    setMapComponent(null);
+    setBlocks([]);
+    setAnalyticsCache({});
 
     api
       .get(`/lookups/districts/${districtId}`, {
@@ -75,24 +93,34 @@ export default function DmmuBlockMap() {
   useEffect(() => {
     if (!blocks.length) return;
 
+    let cancelled = false;
     setLoading(true);
 
-    blocks.forEach(async (b) => {
-      try {
-        const res = await LDMS_API.upsrlmAnalytics({
-          block_id: b.block_id,
-        });
+    const fetchAll = async () => {
+      for (const b of blocks) {
+        try {
+          const res = await LDMS_API.upsrlmAnalytics({
+            block_id: b.block_id,
+          });
 
-        setAnalyticsCache((prev) => ({
-          ...prev,
-          [b.block_id]: res.data,
-        }));
-      } catch (e) {
-        console.error("Analytics failed for", b.block_id);
+          if (!cancelled) {
+            setAnalyticsCache((prev) => ({
+              ...prev,
+              [b.block_id]: res.data,
+            }));
+          }
+        } catch (e) {
+          console.error("Analytics failed for", b.block_id);
+        }
       }
-    });
 
-    setLoading(false);
+      if (!cancelled) setLoading(false);
+    };
+
+    fetchAll();
+    return () => {
+      cancelled = true;
+    };
   }, [blocks]);
 
   /* ---------------------------
@@ -165,6 +193,11 @@ export default function DmmuBlockMap() {
                 setHoveredBlockId(Number(data.id));
               }
             }}
+            onSelect={(data) => {
+              if (data?.id && onBlockSelect) {
+                onBlockSelect(Number(data.id));
+              }
+            }}
           />
         )}
 
@@ -198,7 +231,13 @@ export default function DmmuBlockMap() {
           </thead>
           <tbody>
             {tableData.map((b, i) => (
-              <tr key={b.block_id}>
+              <tr
+                key={b.block_id}
+                className="clickable-row"
+                onClick={() => {
+                  if (onBlockSelect) onBlockSelect(b.block_id);
+                }}
+              >
                 <td>{i + 1}</td>
                 <td>{b.block_name_en}</td>
                 <td>{b.analytics?.totals?.total_vos ?? "—"}</td>
@@ -242,6 +281,13 @@ export default function DmmuBlockMap() {
           pointer-events: none;
           z-index: 50;
           min-width: 140px;
+        }
+
+        .clickable-row {
+          cursor: pointer;
+        }
+        .clickable-row:hover {
+          background: #fdecea;
         }
 
         .table-section {
