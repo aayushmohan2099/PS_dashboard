@@ -51,230 +51,230 @@
 /* Distinct, muted map palette (no gradient) */
 
 .d1 {
-  fill: #d97706;
-} /* amber */
+  fill: #7f1d1d;
+}
 .d2 {
-  fill: #2563eb;
-} /* blue */
+  fill: #881337;
+}
 .d3 {
-  fill: #059669;
-} /* emerald */
-.d4 {
-  fill: #884774;
-} /* violet */
-.d5 {
-  fill: #dc2626;
-} /* red */
-.d6 {
-  fill: #0d9488;
-} /* teal */
-.d7 {
-  fill: #9333ea;
-} /* purple */
-.d8 {
-  fill: #ea580c;
-} /* orange */
-.d9 {
-  fill: #16a34a;
-} /* green */
-.d10 {
-  fill: #0284c7;
-} /* sky blue */
-.d11 {
-  fill: #be185d;
-} /* rose */
-.d12 {
-  fill: #4b5563;
-} /* slate */
-.d13 {
-  fill: #7c3aed;
-} /* indigo */
-.d14 {
-  fill: #ca8a04;
-} /* mustard */
-.d15 {
-  fill: #0f766e;
-} /* deep teal */
-.d16 {
-  fill: #1d4ed8;
-} /* royal blue */
-.d17 {
-  fill: #15803d;
-} /* forest green */
-.d18 {
-  fill: #9d174d;
-} /* deep rose */
-.d19 {
-  fill: #a16207;
-} /* brown gold */
-.d20 {
-  fill: #0369a1;
-} /* steel blue */
-.d21 {
-  fill: #6d28d9;
-} /* deep violet */
-.d22 {
-  fill: #b91c1c;
-} /* dark red */
-.d23 {
-  fill: #047857;
-} /* pine green */
-.d24 {
-  fill: #c2410c;
-} /* burnt orange */
-.d25 {
-  fill: #4338ca;
-} /* blue violet */
-.d26 {
-  fill: #365314;
-} /* olive */
-.d27 {
-  fill: #0891b2;
-} /* cyan */
-.d28 {
-  fill: #7e22ce;
-} /* purple */
-.d29 {
-  fill: #92400e;
-} /* brown */
-.d30 {
-  fill: #064e3b;
-} /* dark green */
-.d31 {
-  fill: #701a75;
-} /* plum */
-.d32 {
-  fill: #1e40af;
-} /* navy */
-.d33 {
-  fill: #713f12;
-} /* umber */
-.d34 {
-  fill: #155e75;
-} /* blue teal */
-.d35 {
-  fill: #4c1d95;
-} /* indigo dark */
-.d36 {
-  fill: #3f6212;
-} /* olive green */
-.d37 {
-  fill: #0e7490;
-} /* ocean */
-.d38 {
-  fill: #78350f;
-} /* coffee */
-.d39 {
-  fill: #166534;
-} /* jungle */
-.d40 {
-  fill: #86198f;
-} /* magenta */
-.d41 {
-  fill: #1f2937;
-} /* charcoal */
-.d42 {
-  fill: #854d0e;
-} /* bronze */
-.d43 {
-  fill: #065f46;
-} /* deep teal */
-.d44 {
-  fill: #6b21a8;
-} /* royal purple */
-.d45 {
   fill: #991b1b;
-} /* wine red */
-.d46 {
-  fill: #0f172a;
-} /* midnight */
-.d47 {
-  fill: #14532d;
-} /* moss */
-.d48 {
-  fill: #581c87;
-} /* dark violet */
-.d49 {
-  fill: #92400e;
-} /* earth */
-.d50 {
-  fill: #164e63;
-} /* steel teal */
-.d51 {
-  fill: #3b0764;
-} /* deep purple */
-.d52 {
-  fill: #365314;
-} /* olive dark */
-.d53 {
-  fill: #075985;
-} /* deep sky */
-.d54 {
-  fill: #831843;
-} /* maroon */
-.d55 {
-  fill: #064e3b;
-} /* evergreen */
-.d56 {
-  fill: #312e81;
-} /* indigo night */
-.d57 {
-  fill: #713f12;
-} /* clay */
-.d58 {
-  fill: #083344;
-} /* blue black */
-.d59 {
-  fill: #14532d;
-} /* forest dark */
-.d60 {
-  fill: #4a044e;
-} /* grape */
-.d61 {
-  fill: #1c1917;
-} /* almost black */
-.d62 {
-  fill: #3f3f46;
-} /* zinc */
-.d63 {
-  fill: #27272a;
-} /* neutral dark */
-.d64 {
-  fill: #52525b;
-} /* graphite */
-.d65 {
-  fill: #292524;
-} /* warm charcoal */
-.d66 {
-  fill: #44403c;
-} /* stone */
-.d67 {
-  fill: #1f2933;
-} /* blue charcoal */
-.d68 {
-  fill: #2e1065;
-} /* indigo deep */
-.d69 {
+}
+.d4 {
+  fill: #9f1239;
+}
+.d5 {
+  fill: #b91c1c;
+}
+.d6 {
+  fill: #be123c;
+}
+.d7 {
+  fill: #dc2626;
+}
+.d8 {
+  fill: #e11d48;
+}
+.d9 {
+  fill: #ef4444;
+}
+.d10 {
+  fill: #f43f5e;
+}
+.d11 {
+  fill: #f87171;
+}
+.d12 {
+  fill: #fb7185;
+}
+.d13 {
+  fill: #fecaca;
+}
+.d14 {
+  fill: #ffe4e6;
+}
+.d15 {
+  fill: #450a0a;
+}
+.d16 {
   fill: #4c0519;
-} /* dark maroon */
+}
+.d17 {
+  fill: #5f0f0f;
+}
+.d18 {
+  fill: #6b0f1a;
+}
+.d19 {
+  fill: #7a1414;
+}
+.d20 {
+  fill: #8b0000;
+}
+.d21 {
+  fill: #9a1b1b;
+}
+.d22 {
+  fill: #a11212;
+}
+.d23 {
+  fill: #b91c1c;
+}
+.d24 {
+  fill: #c81e1e;
+}
+.d25 {
+  fill: #dc2626;
+}
+.d26 {
+  fill: #e02424;
+}
+.d27 {
+  fill: #ef4444;
+}
+.d28 {
+  fill: #f05252;
+}
+.d29 {
+  fill: #f87171;
+}
+.d30 {
+  fill: #faa5a5;
+}
+.d31 {
+  fill: #7c2d12;
+}
+.d32 {
+  fill: #8a2c2c;
+}
+.d33 {
+  fill: #9b2c2c;
+}
+.d34 {
+  fill: #a83232;
+}
+.d35 {
+  fill: #b93838;
+}
+.d36 {
+  fill: #c43c3c;
+}
+.d37 {
+  fill: #d14343;
+}
+.d38 {
+  fill: #dc4c4c;
+}
+.d39 {
+  fill: #e85d5d;
+}
+.d40 {
+  fill: #f27a7a;
+}
+.d41 {
+  fill: #3f0a0a;
+}
+.d42 {
+  fill: #4a0e0e;
+}
+.d43 {
+  fill: #550f0f;
+}
+.d44 {
+  fill: #601313;
+}
+.d45 {
+  fill: #6d1717;
+}
+.d46 {
+  fill: #7a1a1a;
+}
+.d47 {
+  fill: #871d1d;
+}
+.d48 {
+  fill: #941f1f;
+}
+.d49 {
+  fill: #a12121;
+}
+.d50 {
+  fill: #ae2323;
+}
+.d51 {
+  fill: #5b0f14;
+}
+.d52 {
+  fill: #661017;
+}
+.d53 {
+  fill: #73121a;
+}
+.d54 {
+  fill: #80141d;
+}
+.d55 {
+  fill: #8d1620;
+}
+.d56 {
+  fill: #9a1823;
+}
+.d57 {
+  fill: #a71a26;
+}
+.d58 {
+  fill: #b41c29;
+}
+.d59 {
+  fill: #c11e2c;
+}
+.d60 {
+  fill: #ce202f;
+}
+.d61 {
+  fill: #2b0606;
+}
+.d62 {
+  fill: #330707;
+}
+.d63 {
+  fill: #3b0808;
+}
+.d64 {
+  fill: #430909;
+}
+.d65 {
+  fill: #4b0a0a;
+}
+.d66 {
+  fill: #530b0b;
+}
+.d67 {
+  fill: #5b0c0c;
+}
+.d68 {
+  fill: #630d0d;
+}
+.d69 {
+  fill: #6b0e0e;
+}
 .d70 {
-  fill: #022c22;
-} /* deep green */
+  fill: #731010;
+}
 .d71 {
-  fill: #172554;
-} /* midnight blue */
+  fill: #7b1111;
+}
 .d72 {
-  fill: #3b021f;
-} /* wine */
+  fill: #831212;
+}
 .d73 {
-  fill: #052e16;
-} /* dark moss */
+  fill: #8b1313;
+}
 .d74 {
-  fill: #020617;
-} /* near black blue */
+  fill: #931414;
+}
 .d75 {
-  fill: #111827;
-} /* slate black */
+  fill: #9b1515;
+}
 
 .district-label {
   font-size: 5px;

@@ -1,3 +1,4 @@
+// src/pages/LDMS/SMMU/smmu_up_map.jsx
 import React, { useEffect, useMemo, useRef, useState, useContext } from "react";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { LDMS_API } from "../../../api/axios";
@@ -94,12 +95,18 @@ export default function SmmuUpMap({ onDistrictSelect }) {
     const row = rowRefs.current[hoveredDistrictId];
     const container = tableContainerRef.current;
 
-    if (row && container) {
-      row.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }
+    if (!row || !container) return;
+
+    const rowTop = row.offsetTop;
+    const rowHeight = row.offsetHeight;
+    const containerHeight = container.clientHeight;
+
+    const targetScroll = rowTop - containerHeight / 2 + rowHeight / 2;
+
+    container.scrollTo({
+      top: targetScroll,
+      behavior: "smooth",
+    });
   }, [hoveredDistrictId]);
 
   /* ---------------------------
@@ -210,6 +217,7 @@ export default function SmmuUpMap({ onDistrictSelect }) {
           display: flex;
           flex-direction: column;
           gap: 16px;
+          scrollbar-gutter: stable;
         }
 
         /* KPI */
@@ -287,7 +295,7 @@ export default function SmmuUpMap({ onDistrictSelect }) {
         th {
           position: sticky;
           top: 0;
-          background: #c62828;
+          background: #af0000;
           color: #ffffff;
           padding: 8px;
         }

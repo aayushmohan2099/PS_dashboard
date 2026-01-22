@@ -85,7 +85,7 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // ------------------------
@@ -180,7 +180,7 @@ api.interceptors.response.use(
     } catch (e) {
       return Promise.reject(e);
     }
-  }
+  },
 );
 
 // ------------------------
@@ -422,7 +422,7 @@ export const EPSAKHI_API = {
   beneficiaryRecordedByShg: (shgCode, params) =>
     api.get(
       `/epsakhi/beneficiary-recorded/by-shg/${encodeURIComponent(shgCode)}/`,
-      { params }
+      { params },
     ),
 
   // Detail by member code
@@ -430,9 +430,9 @@ export const EPSAKHI_API = {
   beneficiaryRecordedByMember: (memberCode, params) =>
     api.get(
       `/epsakhi/beneficiary-recorded/by-member/${encodeURIComponent(
-        memberCode
+        memberCode,
       )}/`,
-      { params }
+      { params },
     ),
 
   // CRP → Panchayats linkage
@@ -440,7 +440,7 @@ export const EPSAKHI_API = {
   crpLinkPanchayats: (crpId, data) =>
     api.post(
       `/epsakhi/crp/${encodeURIComponent(crpId)}/link-panchayats/`,
-      data
+      data,
     ),
 
   // GET /epsakhi/crp/<id>/panchayats/
@@ -521,7 +521,7 @@ export const TMS_API = {
   trainingPartners: makeCrud("/tms/training-partners/"),
   trainingPartnerBanks: makeCrud("/tms/training-partner-banks/"),
   trainingPartnerContactPersons: makeCrud(
-    "/tms/training-partner-contact-persons/"
+    "/tms/training-partner-contact-persons/",
   ),
   trainingPartnerCentres: makeCrud("/tms/training-partner-centres/"),
   trainingPartnerCentreRooms: makeCrud("/tms/training-partner-centre-rooms/"),
@@ -539,7 +539,7 @@ export const TMS_API = {
 
   // For BMMU TMS Dashboard
   trainingRequestBeneficiaries: makeCrud(
-    "/tms/training-request-beneficiaries/"
+    "/tms/training-request-beneficiaries/",
   ),
   trainingRequestTrainers: makeCrud("/tms/training-request-trainers/"),
 
@@ -558,7 +558,7 @@ export const TMS_API = {
   batchClosureRequests: makeCrud("/tms/batch-closure-requests/"),
   trClosures: makeCrud("/tms/tr-closures/"),
   batchParticipantCertificates: makeCrud(
-    "/tms/batch-participant-certificates/"
+    "/tms/batch-participant-certificates/",
   ),
 
   // ------------------------
@@ -582,7 +582,7 @@ export const TMS_API = {
     batchAttendanceByDate: (batchId, params) =>
       api.get(
         `/tms/bmmu/batches/${encodeURIComponent(batchId)}/attendance-by-date/`,
-        { params }
+        { params },
       ),
   },
 
@@ -611,7 +611,7 @@ export const TMS_API = {
     batchAttendanceByDate: (batchId, params) =>
       api.get(
         `/tms/dmmu/batches/${encodeURIComponent(batchId)}/attendance-by-date/`,
-        { params }
+        { params },
       ),
   },
 };
@@ -627,6 +627,17 @@ export const LDMS_API = {
   // Map Analytics via UPSRLM proxy (Total SHGs, VOs, CLFs)
   upsrlmAnalytics: (params) =>
     api.get(`/ldms/map-analytics/`, {
+      params,
+    }),
+
+  // Departments and Schemes
+  departments: (params) =>
+    api.get(`/ldms/departments/`, {
+      params,
+    }),
+
+  schemes: (params) =>
+    api.get(`/ldms/schemes/`, {
       params,
     }),
 };

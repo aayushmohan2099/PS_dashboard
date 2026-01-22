@@ -259,7 +259,7 @@ export default function DmmuBlockMap({
 
         .map-section {
           position: relative;
-          border: 1px solid #e5e7eb;
+          border: 2px solid #af0000;
           border-radius: 12px;
           padding: 8px;
           background: #ffffff;
@@ -291,7 +291,7 @@ export default function DmmuBlockMap({
         }
 
         .table-section {
-          border: 1px solid #e5e7eb;
+          border: 2px solid #af0000;
           border-radius: 12px;
           overflow-y: auto;
           background: #ffffff;
@@ -303,7 +303,7 @@ export default function DmmuBlockMap({
         }
 
         th {
-          background: #c62828;
+          background: #af0000;
           color: #ffffff;
           padding: 8px;
         }

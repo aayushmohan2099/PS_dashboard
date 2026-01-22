@@ -15,11 +15,6 @@ import {
   LabelList,
 } from "recharts";
 
-/**
- * BMMU – Demand Analytics (Hypothetical)
- * Theme: White + Red (LDMS)
- */
-
 export default function DemandAnalytics() {
   /* ---------------------------
      Survey Year Selectors
@@ -52,7 +47,7 @@ export default function DemandAnalytics() {
       { name: "Market Access", count: 46 },
       { name: "Govt Scheme Mapping", count: 61 },
     ],
-    [vprpYear]
+    [vprpYear],
   );
 
   /* ---------------------------
@@ -66,7 +61,7 @@ export default function DemandAnalytics() {
       { name: "Food Processing", count: 59 },
       { name: "Retail & Trade", count: 71 },
     ],
-    [aepYear]
+    [aepYear],
   );
 
   return (
