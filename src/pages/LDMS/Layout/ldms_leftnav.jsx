@@ -1,7 +1,16 @@
+// src/pages/LDMS/Layout/ldms_leftnav.jsx
 import React, { useContext } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../contexts/AuthContext";
 import logo from "../../../assets/LDMS/logo.png";
+import {
+  FaTachometerAlt,
+  FaUsers,
+  FaChartBar,
+  FaBook,
+  FaHandsHelping,
+  FaDatabase,
+} from "react-icons/fa";
 
 /**
  * LDMS Left Navigation
@@ -12,10 +21,32 @@ import logo from "../../../assets/LDMS/logo.png";
 
 const MENU = {
   bmmu: [
-    { label: "Dashboard", to: "/ldms/bmmu/dashboard" },
-    { label: "Meetings", to: "#" },
-    { label: "Demand Analytics", to: "#" },
-    { label: "Support Mapping", to: "#" },
+    { label: "Dashboard", to: "/ldms/bmmu/dashboard", icon: FaTachometerAlt },
+    { label: "Meetings", to: "#", icon: FaUsers },
+    { label: "Demand Analytics", to: "#", icon: FaChartBar },
+    { label: "Scheme Dictionary", to: "#", icon: FaBook },
+    {
+      label: "Support Mapping",
+      to: "/ldms/support-capture",
+      icon: FaHandsHelping,
+    },
+  ],
+  dmmu: [
+    { label: "Dashboard", to: "/ldms/dmmu/dashboard", icon: FaTachometerAlt },
+    { label: "Meetings", to: "#", icon: FaUsers },
+    { label: "Demand Analytics", to: "#", icon: FaChartBar },
+    { label: "Scheme Dictionary", to: "#", icon: FaBook },
+    {
+      label: "Support Mapping",
+      to: "/ldms/support-capture",
+      icon: FaHandsHelping,
+    },
+    { label: "Support benefit Extension", to: "#", icon: FaHandsHelping },
+  ],
+  smmu: [
+    { label: "Dashboard", to: "/ldms/smmu/dashboard", icon: FaTachometerAlt },
+    { label: "PLD DataBank", to: "#", icon: FaDatabase },
+    { label: "Support benefit Extension", to: "#", icon: FaHandsHelping },
   ],
 };
 
@@ -39,7 +70,7 @@ export default function LdmsLeftNav({ collapsed, onToggle }) {
       {/* LOGO */}
       <div className="ldms-logo" onClick={() => navigate("/dashboard")}>
         <img src={logo} alt="LDMS" />
-        {!collapsed && <span> Back to Home</span>}
+        <span className="logo-text">Back to Home</span>
       </div>
 
       {/* NAV */}
@@ -52,15 +83,17 @@ export default function LdmsLeftNav({ collapsed, onToggle }) {
               "ldms-nav-item" + (isActive ? " active" : "")
             }
           >
-            <span className="dot" />
-            {!collapsed && item.label}
+            <span className="nav-icon">
+              <item.icon size={20} />
+            </span>
+            <span className="nav-label">{item.label}</span>
           </NavLink>
         ))}
       </nav>
 
       {/* TOGGLE */}
       <button className="ldms-toggle" onClick={onToggle}>
-        {collapsed ? "▶" : "◀"}
+        {collapsed ? "→" : "←"}
       </button>
 
       {/* STYLES */}
@@ -72,6 +105,7 @@ export default function LdmsLeftNav({ collapsed, onToggle }) {
           display: flex;
           flex-direction: column;
           transition: width 0.25s ease;
+          overflow: hidden; 
         }
 
         .ldms-leftnav.collapsed {
@@ -89,11 +123,22 @@ export default function LdmsLeftNav({ collapsed, onToggle }) {
           cursor: pointer;
           font-weight: 700;
           color: #c62828;
+          white-space: nowrap;
         }
 
         .ldms-logo img {
-          height: 28px;
+          height: 45px;
           width: auto;
+        }
+
+        .logo-text {
+          transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .ldms-leftnav.collapsed .logo-text {
+          opacity: 0;
+          transform: translateX(-8px);
+          pointer-events: none;
         }
 
         /* Nav */
@@ -116,6 +161,7 @@ export default function LdmsLeftNav({ collapsed, onToggle }) {
           color: #374151;
           font-size: 14px;
           transition: background 0.2s ease;
+          white-space: nowrap;
         }
 
         .ldms-nav-item .dot {
@@ -124,6 +170,20 @@ export default function LdmsLeftNav({ collapsed, onToggle }) {
           border-radius: 50%;
           background: #c62828;
           flex-shrink: 0;
+        }
+
+        /* Label animation */
+        .nav-label {
+          transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .ldms-leftnav.collapsed .nav-label {
+          opacity: 0;
+          width: 0;
+          overflow: hidden;
+          margin: 0;
+          padding: 0;
+          pointer-events: none;
         }
 
         .ldms-nav-item:hover {
@@ -147,7 +207,31 @@ export default function LdmsLeftNav({ collapsed, onToggle }) {
           border-top: 1px solid #e5e7eb;
           cursor: pointer;
           font-size: 14px;
+          color: #fff;
         }
+        .nav-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 20px;
+          color: #c62828;
+          transition: color 0.2s ease;
+        }
+
+        .ldms-nav-item.active .nav-icon {
+          color: #ffffff;
+        }
+
+        /* Center icon when collapsed */
+        .ldms-leftnav.collapsed .ldms-nav-item {
+          justify-content: center;
+          padding: 10px 0;
+          gap: 0;
+        }
+
+        .ldms-leftnav.collapsed .nav-icon {
+          margin: 0 auto;
+        }          
       `}</style>
     </aside>
   );

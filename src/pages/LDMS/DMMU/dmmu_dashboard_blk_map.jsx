@@ -267,6 +267,7 @@ export default function DmmuBlockMap({
           display: flex;
           align-items: center;
           justify-content: center;
+          overflow: hidden;
         }
 
         .map-tooltip {

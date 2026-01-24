@@ -49,6 +49,7 @@ import BlockMap from "./pages/LDMS/BMMU/bmmu_dashboard_blk_map";
 import DmmuLdmsDashboard from "./pages/LDMS/DMMU/dmmu_ldms_dashboard";
 import DmmuBlockMap from "./pages/LDMS/DMMU/dmmu_dashboard_blk_map";
 import SmmuLdmsDashboard from "./pages/LDMS/SMMU/smmu_ldms_dashboard";
+import SupportCapture from "./pages/LDMS/Support Map/ldms_support_capture";
 
 // tiny placeholder landing for /tms
 function TmsLanding() {
@@ -173,6 +174,7 @@ export default function App() {
           <Route path="bmmu/dashboard" element={<BmmuLdmsDashboard />} />
           <Route path="dmmu/dashboard" element={<DmmuLdmsDashboard />} />
           <Route path="smmu/dashboard" element={<SmmuLdmsDashboard />} />
+          <Route path="support-capture" element={<SupportCapture />} />
 
           {/* future LDMS pages */}
           {/* <Route path="support-mapping" element={<SupportMapping />} /> */}
