@@ -7,7 +7,8 @@ import RoleSelector from "../components/auth/RoleSelector";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import LoadingModal from "../components/ui/LoadingModal";
-import { getUser } from "../utils/storage"; // ✅ CORRECT IMPORT
+import { getUser } from "../utils/storage";
+import psLogo from "../assets/PS_lolo.png"; 
 
 /**
  * Backend role_id → frontend role key mapping
@@ -136,87 +137,234 @@ export default function Login() {
     setTimeout(() => navigate("/dashboard"), 400);
   };
 
-  return (
-    <div className="page-container">
-      <LoadingModal
-        open={loading}
-        title={loading ? "Logging in" : "Please wait"}
-        message={loading ? "Logging in — verifying credentials" : ""}
-      />
+return (
+  <div className="login-page">
 
-      <h1>Pragati Setu — Login</h1>
+    <LoadingModal
+      open={loading}
+      title={loading ? "Logging in" : "Please wait"}
+      message={loading ? "Logging in — verifying credentials" : ""}
+    />
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <label>User Type</label>
-        <div>
-          <label>
-            <input
-              type="radio"
-              value="Admin"
-              {...register("userType")}
-              onChange={() => {
-                setUserType("Admin");
-                setValue("userType", "Admin");
-                setRole("");
-              }}
-              defaultChecked
-            />
-            Admin
-          </label>
+    {/* BACKGROUND */}
+    <div className="login-bg-image" />
 
-          <label style={{ marginLeft: 12 }}>
-            <input
-              type="radio"
-              value="General"
-              {...register("userType")}
-              onChange={() => {
-                setUserType("General");
-                setValue("userType", "General");
-                setRole("");
-              }}
-            />
-            General User
-          </label>
-        </div>
-        {errors.userType && (
-          <div className="error">{errors.userType.message}</div>
-        )}
+    <div className="overlay">
+      <form className="login-form" onSubmit={handleSubmit(onSubmit)}>
 
-        <label>Role</label>
-        <RoleSelector
-          userType={userType}
-          value={role}
-          onChange={(v) => setRole(v)}
-        />
-        {errors.role && <div className="error">{errors.role.message}</div>}
-
-        <div className="form-row">
-          <label>Username</label>
-          <input {...register("username")} />
-          {errors.username && (
-            <div className="error">{errors.username.message}</div>
-          )}
+        {/* LOGO HEADER */}
+        <div className="logo-header">
+          <img src={psLogo} alt="Pragati Setu" />
         </div>
 
-        <div className="form-row">
-          <label>Password</label>
-          <input type="password" {...register("password")} />
-          {errors.password && (
-            <div className="error">{errors.password.message}</div>
-          )}
-        </div>
+        <div className="con">
 
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <button type="submit">Login</button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => alert("Forgot password flow placeholder")}
-          >
-            Forgot Password
-          </button>
+          {/* USER TYPE */}
+          <label className="block-label">User Type</label>
+          <div className="radio-row">
+            <label>
+              <input
+                type="radio"
+                value="Admin"
+                {...register("userType")}
+                onChange={() => {
+                  setUserType("Admin");
+                  setValue("userType", "Admin");
+                  setRole("");
+                }}
+                defaultChecked
+              /> Admin
+            </label>
+
+            <label>
+              <input
+                type="radio"
+                value="General"
+                {...register("userType")}
+                onChange={() => {
+                  setUserType("General");
+                  setValue("userType", "General");
+                  setRole("");
+                }}
+              /> General
+            </label>
+          </div>
+          {errors.userType && <div className="error">{errors.userType.message}</div>}
+
+          {/* ROLE */}
+          <label className="block-label">Role</label>
+          <RoleSelector
+            userType={userType}
+            value={role}
+            onChange={(v) => setRole(v)}
+          />
+          {errors.role && <div className="error">{errors.role.message}</div>}
+
+          {/* USERNAME */}
+          <label className="block-label">Username</label>
+          <input
+            className="form-input"
+            placeholder="Enter username"
+            {...register("username")}
+          />
+          {errors.username && <div className="error">{errors.username.message}</div>}
+
+          {/* PASSWORD */}
+          <label className="block-label">Password</label>
+          <input
+            className="form-input"
+            type="password"
+            placeholder="Enter password"
+            {...register("password")}
+          />
+          {errors.password && <div className="error">{errors.password.message}</div>}
+
+          {/* SUBMIT */}
+          <button className="log-in" type="submit">Log In</button>
+
+          {/* FORGOT */}
+          <div className="other">
+            <button
+              type="button"
+              className="frgt-pass"
+              onClick={() => alert("Forgot password flow placeholder")}
+            >
+              Forgot Password?
+            </button>
+          </div>
+
         </div>
       </form>
     </div>
-  );
+
+    {/* ===== UI STYLES ONLY ===== */}
+    <style>{`
+      .login-page {
+        min-height: 100vh;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Abel', sans-serif;
+        background: #0f172a;
+      }
+
+      /* BACKGROUND IMAGE */
+      .login-bg-image {
+        position: absolute;
+        inset: 0;
+        background-image: url("/assets/login_bg.jpg"); /* 🔁 replace with actual bg */
+        background-size: cover;
+        background-position: center;
+        filter: brightness(0.55);
+        z-index: 0;
+      }
+
+      .overlay {
+        z-index: 2;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+
+      .login-form {
+        width: 460px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 12px;
+        padding: 36px 32px;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.45);
+        color: #0f172a;
+      }
+
+      .logo-header {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 24px;
+      }
+
+      .logo-header img {
+        height:90px;
+        object-fit: contain;
+      }
+
+      .con {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .block-label {
+        font-size: 14px;
+        font-weight: 600;
+        margin-top: 6px;
+        color: #0f172a;
+      }
+
+      .radio-row {
+        display: flex;
+        gap: 18px;
+        font-size: 14px;
+      }
+
+      .form-input {
+        height: 46px;
+        padding: 0 14px;
+        border-radius: 6px;
+        border: 1px solid #cbd5f5;
+        font-size: 14px;
+        color: #0f172a;
+        background: #ffffff;
+      }
+
+      .form-input::placeholder {
+        color: #64748b;
+      }
+
+      .log-in {
+        margin-top: 18px;
+        height: 48px;
+        background: #0f172a;
+        color: #ffffff;
+        font-weight: 700;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.25s ease;
+      }
+
+      .log-in:hover {
+        background: #1e293b;
+        transform: translateY(1px);
+      }
+
+      .other {
+        text-align: center;
+        margin-top: 12px;
+      }
+
+      .frgt-pass {
+        background: transparent;
+        color: #2563eb;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .frgt-pass:hover {
+        text-decoration: underline;
+      }
+
+      .error {
+        font-size: 12px;
+        color: #dc2626;
+      }
+
+      @media (max-width: 520px) {
+        .login-form {
+          width: 92%;
+        }
+      }
+    `}</style>
+  </div>
+);
+
+
 }

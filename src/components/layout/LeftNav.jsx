@@ -1,92 +1,25 @@
-import React, { useState } from "react";
+// src/components/Layout/DashboardLeftNav.jsx
+import React, { useContext, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
-
-// render TMS left nav when in /tms space
-import TmsLeftNav from "../../pages/TMS/layout/tms_LeftNav";
-
-// Use role utils provided in your frontend snapshot
+import { AuthContext } from "../../contexts/AuthContext";
 import { getCanonicalRole } from "../../utils/roleUtils";
+import logo from "../../assets/PS_LOGO.jpg";
+
+import {
+  FaHome,
+  FaChalkboardTeacher,
+  FaChartLine,
+  FaUsers,
+  FaStore,
+} from "react-icons/fa";
 
 function classNames(...args) {
   return args.filter(Boolean).join(" ");
 }
 
-/**
- * Fallback role mapping (if roleUtils isn't behaving as expected).
- * Keep this in sync with your roles table.
- */
-const ROLE_ID_MAP = {
-  1: "bmmu",
-  2: "dmmu",
-  3: "smmu",
-  4: "training_partner",
-  5: "crp_ld",
-  6: "crp_ep",
-  7: "master_trainer",
-  8: "state_admin",
-  9: "pmu_admin",
-  10: "dcnrlm",
-  11: "tp_contact_person",
-};
-
-function resolveRoleKeyFallback(user) {
-  if (!user) return "";
-
-  const maybeRoleId = Number(user.role_id ?? user.role);
-  if (!Number.isNaN(maybeRoleId) && ROLE_ID_MAP[maybeRoleId]) {
-    return ROLE_ID_MAP[maybeRoleId];
-  }
-
-  if (user.role_name) {
-    const rn = String(user.role_name).toLowerCase();
-    if (rn.includes("bmmu")) return "bmmu";
-    if (rn.includes("dmmu")) return "dmmu";
-    if (rn.includes("smmu") || rn.includes("state_mission")) return "smmu";
-    if (rn.includes("training_partner")) return "training_partner";
-    if (rn.includes("master_trainer")) return "master_trainer";
-    if (rn.includes("dcnrlm")) return "dcnrlm";
-    if (
-      rn.includes("contact") ||
-      rn.includes("tp_cp") ||
-      rn.includes("tp_contact")
-    )
-      return "tp_contact_person";
-    if (rn.includes("crp_ep")) return "crp_ep";
-    if (rn.includes("crp_ld")) return "crp_ld";
-    if (rn.includes("state_admin")) return "state_admin";
-    if (rn.includes("pmu_admin")) return "pmu_admin";
-  }
-
-  try {
-    const geo = JSON.parse(
-      window.localStorage.getItem("ps_user_geoscope") || "null"
-    );
-    if (geo?.role) {
-      const g = String(geo.role).toLowerCase();
-      if (g.includes("bmmu")) return "bmmu";
-      if (g.includes("dmmu")) return "dmmu";
-      if (g.includes("smmu") || g.includes("state_mission")) return "smmu";
-      if (g.includes("training_partner")) return "training_partner";
-      if (g.includes("master_trainer")) return "master_trainer";
-      if (g.includes("dcnrlm")) return "dcnrlm";
-      if (
-        g.includes("contact") ||
-        g.includes("tp_cp") ||
-        g.includes("tp_contact")
-      )
-        return "tp_contact_person";
-    }
-  } catch (e) {
-    // ignore parse errors
-  }
-
-  return "";
-}
-
-/**
- * Map canonical role key -> TMS dashboard route
- */
+/* -------------------------------------------------
+   ROLE → ROUTES
+-------------------------------------------------- */
 const ROLE_TMS_ROUTE = {
   bmmu: "/tms/bmmu/dashboard",
   dmmu: "/tms/dmmu/dashboard",
@@ -97,9 +30,6 @@ const ROLE_TMS_ROUTE = {
   default: "/tms",
 };
 
-/**
- * Map canonical role key -> LDMS dashboard route
- */
 const ROLE_LDMS_ROUTE = {
   bmmu: "/ldms/bmmu/dashboard",
   dmmu: "/ldms/dmmu/dashboard",
@@ -107,189 +37,229 @@ const ROLE_LDMS_ROUTE = {
   default: "/ldms",
 };
 
-export default function LeftNav() {
-  const location = useLocation();
+/* -------------------------------------------------
+   MENU STRUCTURE
+-------------------------------------------------- */
+const MENU = [
+  {
+    key: "beneficiary",
+    label: "Beneficiary Management",
+    icon: FaUsers,
+    to: "/dashboard",
+    roles: ["bmmu", "dmmu", "smmu"],
+  },
+  {
+    key: "tms",
+    label: "Training Management",
+    icon: FaChalkboardTeacher,
+    resolveRoute: (roleKey) =>
+      ROLE_TMS_ROUTE[roleKey] || ROLE_TMS_ROUTE.default,
+  },
+  {
+    key: "ldms",
+    label: "Lakhpati Didi & Analytics",
+    icon: FaChartLine,
+    resolveRoute: (roleKey) =>
+      ROLE_LDMS_ROUTE[roleKey] || ROLE_LDMS_ROUTE.default,
+  },
+  {
+    key: "epsakhi",
+    label: "EP-Sakhi",
+    icon: FaHome,
+    to: "/dashboard",
+  },
+  {
+    key: "ecommerce",
+    label: "E-Commerce",
+    icon: FaStore,
+    to: "/dashboard",
+  },
+];
+
+export default function DashboardLeftNav() {
+  const { user } = useContext(AuthContext) || {};
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [openGroups, setOpenGroups] = useState({
-    beneficiary: true,
-    tms: false,
-    epsakhi: false,
-    lakhpati: false,
-    ecommerce: false,
-  });
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
 
-  // If inside /tms path, return the specialized TMS left nav (unchanged)
-  if (location.pathname.startsWith("/tms")) {
-    return <TmsLeftNav />;
-  }
-
-  // Resolve role key using getCanonicalRole; fallback if needed
+  /* Resolve role */
   let roleKey = "";
   try {
-    roleKey = getCanonicalRole ? getCanonicalRole(user) : "";
-  } catch (err) {
+    roleKey = getCanonicalRole(user);
+  } catch {
     roleKey = "";
   }
-  if (!roleKey) roleKey = resolveRoleKeyFallback(user);
 
-  // Determine tmsRoute
-  let tmsRoute = ROLE_TMS_ROUTE.default;
-  if (roleKey && ROLE_TMS_ROUTE[roleKey]) tmsRoute = ROLE_TMS_ROUTE[roleKey];
-
-  // Determine ldmsRoute
-  let ldmsRoute = ROLE_LDMS_ROUTE.default;
-  if (roleKey && ROLE_LDMS_ROUTE[roleKey]) ldmsRoute = ROLE_LDMS_ROUTE[roleKey];
-
-  function toggleGroup(key) {
-    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
-  }
-
-  function renderItem(label, to) {
-    return (
-      <NavLink
-        to={to}
-        className={({ isActive }) =>
-          classNames(
-            "ln-item",
-            isActive || location.pathname === to ? "ln-item-active" : ""
-          )
-        }
-      >
-        <span>{label}</span>
-      </NavLink>
-    );
+  function handleNav(item) {
+    if (item.resolveRoute) {
+      navigate(item.resolveRoute(roleKey));
+    } else if (item.to) {
+      navigate(item.to);
+    }
   }
 
   return (
-    <aside className="left-nav">
-      <div className="ln-header">
-        <div className="ln-title">Pragati Setu</div>
-        <div className="ln-subtitle">
-          {user?.username || user?.first_name || ""}
-        </div>
+    <aside className={`dashboard-leftnav ${collapsed ? "collapsed" : ""}`}>
+      {/* HEADER */}
+      <div className="dash-logo" onClick={() => navigate("/dashboard")}>
+        <img className="logo-image" src={logo} alt="PRAGATI-SETU" />
       </div>
 
-      <nav className="ln-nav">
-        {/* ---------------- Beneficiary Management ---------------- */}
-        {(roleKey === "bmmu" || roleKey === "dmmu" || roleKey === "smmu") && (
-          <div className="ln-group">
-            <button
-              type="button"
-              className="ln-group-header"
-              onClick={() => toggleGroup("beneficiary")}
-              aria-expanded={!!openGroups.beneficiary}
+      {/* NAV */}
+      <nav className="dash-nav">
+        {MENU.map((item) => {
+          if (item.roles && !item.roles.includes(roleKey)) return null;
+
+          const to = item.resolveRoute
+            ? item.resolveRoute(roleKey)
+            : item.to;
+
+          return (
+            <NavLink
+              key={item.key}
+              to={to}
+              className={({ isActive }) =>
+                classNames(
+                  "dash-nav-item",
+                  isActive || location.pathname === to ? "active" : ""
+                )
+              }
+              onClick={() => handleNav(item)}
             >
-              <span>Beneficiary Management</span>
-              <span className="ln-chevron">
-                {openGroups.beneficiary ? "▾" : "▸"}
+              <span className="nav-icon">
+                <item.icon size={20} />
               </span>
-            </button>
-            <div
-              className={classNames(
-                "ln-group-body",
-                openGroups.beneficiary ? "open" : "collapsed"
-              )}
-            >
-              {renderItem("Dashboard Home", "/dashboard")}
-            </div>
-          </div>
-        )}
-
-        {/* ---------------- TMS ---------------- */}
-        <div className="ln-group">
-          <button
-            className="ln-group-header"
-            onClick={() => {
-              toggleGroup("tms");
-              navigate(tmsRoute);
-            }}
-            aria-expanded={!!openGroups.tms}
-          >
-            <span>Training Management</span>
-            <span className={`caret ${openGroups.tms ? "open" : ""}`}>▸</span>
-          </button>
-
-          <div className={`ln-submenu ${openGroups.tms ? "show" : ""}`}>
-            <NavLink to={tmsRoute} className="ln-item">
-              <span>Go to Training Management</span>
+              <span className="nav-label">{item.label}</span>
             </NavLink>
-          </div>
-        </div>
-
-        {/* ---------------- EP-Sakhi ---------------- */}
-        <div className="ln-group">
-          <button
-            type="button"
-            className="ln-group-header"
-            onClick={() => toggleGroup("epsakhi")}
-            aria-expanded={!!openGroups.epsakhi}
-          >
-            <span>EP-Sakhi & Enterprise Profiling</span>
-            <span className="ln-chevron">{openGroups.epsakhi ? "▾" : "▸"}</span>
-          </button>
-          <div
-            className={classNames(
-              "ln-group-body",
-              openGroups.epsakhi ? "open" : "collapsed"
-            )}
-          >
-            {renderItem("Dashboard", "/dashboard")}
-          </div>
-        </div>
-
-        {/* ---------------- Lakhpati Didi (LDMS) ---------------- */}
-        <div className="ln-group">
-          <button
-            type="button"
-            className="ln-group-header"
-            onClick={() => {
-              toggleGroup("lakhpati");
-              navigate(ldmsRoute);
-            }}
-            aria-expanded={!!openGroups.lakhpati}
-          >
-            <span>Lakhpati Didi & Analytics</span>
-            <span className="ln-chevron">
-              {openGroups.lakhpati ? "▾" : "▸"}
-            </span>
-          </button>
-
-          <div
-            className={classNames(
-              "ln-group-body",
-              openGroups.lakhpati ? "open" : "collapsed"
-            )}
-          >
-            <NavLink to={ldmsRoute} className="ln-item">
-              <span>Go to Lakhpati Didi</span>
-            </NavLink>
-          </div>
-        </div>
-
-        {/* ---------------- E-Commerce ---------------- */}
-        <div className="ln-group">
-          <button
-            type="button"
-            className="ln-group-header"
-            onClick={() => toggleGroup("ecommerce")}
-            aria-expanded={!!openGroups.ecommerce}
-          >
-            <span>E-Commerce</span>
-            <span className="ln-chevron">
-              {openGroups.ecommerce ? "▾" : "▸"}
-            </span>
-          </button>
-          <div
-            className={classNames(
-              "ln-group-body",
-              openGroups.ecommerce ? "open" : "collapsed"
-            )}
-          >
-            {renderItem("Marketplace", "/dashboard")}
-          </div>
-        </div>
+          );
+        })}
       </nav>
+
+      {/* TOGGLE */}
+      <button
+        className="dash-toggle"
+        onClick={() => setCollapsed((v) => !v)}
+      >
+        {collapsed ? "→" : "←"}
+      </button>
+
+      {/* STYLES */}
+      <style>{`
+        .dashboard-leftnav {
+          width: 220px;
+          background: #ffffff;
+          border-right: 1px solid #e5e7eb;
+          display: flex;
+          flex-direction: column;
+          transition: width 0.25s ease;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .dashboard-leftnav.collapsed {
+          width: 64px;
+        }
+
+        /* HEADER */
+        .dash-logo {
+          height: 56px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-bottom: 1px solid #f1f5f9;
+          font-weight: 800;
+          color: #010433;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .logo-image {
+          max-height: 40px;
+          max-width: 70px;
+        }
+
+        .dash-title {
+          transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .dashboard-leftnav.collapsed .dash-title {
+          opacity: 0;
+          transform: translateX(-8px);
+          pointer-events: none;
+        }
+
+        /* NAV */
+        .dash-nav {
+          flex: 1;
+          padding: 12px 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          overflow-y: auto;
+        }
+
+        .dash-nav-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 12px;
+          border-radius: 8px;
+          text-decoration: none;
+          color: #374151;
+          font-size: 14px;
+          transition: background 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .dash-nav-item:hover {
+          background: #fdecea;
+        }
+
+        .dash-nav-item.active {
+          background: #080133;
+          color: #ffffff;
+        }
+
+        .nav-icon {
+          min-width: 20px;
+          color: #01062e;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .dash-nav-item.active .nav-icon {
+          color: #ffffff;
+        }
+
+        .nav-label {
+          transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .dashboard-leftnav.collapsed .nav-label {
+          opacity: 0;
+          width: 0;
+          overflow: hidden;
+          pointer-events: none;
+        }
+
+        /* TOGGLE */
+        .dash-toggle {
+        height: 40px;
+        border: none;
+        background: #133074;
+        color: #ffffff;
+        font-size: 14px;
+        cursor: pointer;
+
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+
+        border-top: 1px solid #e5e7eb;
+        }
+      `}</style>
     </aside>
   );
 }

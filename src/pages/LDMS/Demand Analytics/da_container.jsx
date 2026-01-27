@@ -1,17 +1,17 @@
-// src/pages/LDMS/Support Map/ldms_support_capture.jsx
+// src/pages/LDMS/Demand Analytics/da_container.jsx
 import React from "react";
 
-export default function SupportCapture() {
+export default function DemandAnalytics() {
   return (
     <div className="bmmu-ldms-dashboard">
       {/* Row 1 */}
       <div className="ldms-grid-row two-col">
         <div className="ldms-card">
-          <h3>Support Capture Header</h3>
+          <h3>Demand Analytics Header</h3>
           {/* <SCHeader /> */}
         </div>
         <div className="ldms-card">
-          <h3>Support Capture Records</h3>
+          <h3>Demand Analytics Records</h3>
           {/* <SCRecor /> */}
         </div>
       </div>
@@ -19,11 +19,11 @@ export default function SupportCapture() {
       {/* Row 2 */}
       <div className="ldms-grid-row two-col">
         <div className="ldms-card">
-          <h3>Support Capture Department Scheme</h3>
+          <h3>Demand Analytics Department Scheme</h3>
           {/* <SCDepSche /> */}
         </div>
         <div className="ldms-card">
-          <h3>Support Capture PLDs</h3>
+          <h3>Demand Analytics PLDs</h3>
           {/* <SCPLDs /> */}
         </div>
       </div>

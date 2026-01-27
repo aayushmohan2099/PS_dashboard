@@ -73,55 +73,64 @@ export default function DmmuBlockMap({
   }, [districtId]);
 
   /* ---------------------------
-     STEP 3: Get ALL blocks
+    STEP 3+4: Get ALL blocks + analytics (SINGLE CALL)
   --------------------------- */
   useEffect(() => {
     if (!districtId) return;
 
-    api
-      .get(`/lookups/blocks/${districtId}`, {
-        params: { page_size: 100 },
-      })
-      .then((res) => {
-        setBlocks(res?.data?.results || []);
-      });
-  }, [districtId]);
-
-  /* ---------------------------
-     STEP 4: Fetch analytics (INCREMENTAL)
-  --------------------------- */
-  useEffect(() => {
-    if (!blocks.length) return;
-
     let cancelled = false;
     setLoading(true);
 
-    const fetchAll = async () => {
-      for (const b of blocks) {
-        try {
-          const res = await LDMS_API.upsrlmAnalytics({
+    // reset state (same behavior as before)
+    setBlocks([]);
+    setAnalyticsCache({});
+
+    LDMS_API.upsrlmAnalytics({
+      district_id: districtId,
+      detail: 1,
+    })
+      .then((res) => {
+        if (cancelled) return;
+
+        const apiBlocks = res?.data?.blocks || [];
+
+        // 1️⃣ Populate blocks (for map + table structure)
+        setBlocks(
+          apiBlocks.map((b) => ({
             block_id: b.block_id,
-          });
+            block_name_en: b.block_name,
+          }))
+        );
 
-          if (!cancelled) {
-            setAnalyticsCache((prev) => ({
-              ...prev,
-              [b.block_id]: res.data,
-            }));
-          }
-        } catch (e) {
-          console.error("Analytics failed for", b.block_id);
-        }
-      }
+        // 2️⃣ Populate analytics cache (exact shape UI expects)
+        const cache = {};
+        apiBlocks.forEach((b) => {
+          cache[b.block_id] = {
+            block_name: b.block_name,
+            totals: {
+              total_vos: b.total_vos,
+              total_clfs: b.total_clfs,
+              total_shgs: b.total_shgs,
+              total_rural_hh: b.total_rural_hh,
+              total_hh_under_shgs: b.total_hh_under_shgs,
+            },
+            updated_at: b.updated_at,
+          };
+        });
 
-      if (!cancelled) setLoading(false);
-    };
+        setAnalyticsCache(cache);
+      })
+      .catch((e) => {
+        console.error("District block analytics failed", e);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-    fetchAll();
     return () => {
       cancelled = true;
     };
-  }, [blocks]);
+  }, [districtId]);
 
   /* ---------------------------
      STEP 5: Load JSX District Map
@@ -213,6 +222,8 @@ export default function DmmuBlockMap({
             <div>VOs: {tooltipData.totals?.total_vos ?? "—"}</div>
             <div>CLFs: {tooltipData.totals?.total_clfs ?? "—"}</div>
             <div>SHGs: {tooltipData.totals?.total_shgs ?? "—"}</div>
+            <div>Rural Households: {tooltipData.totals?.total_rural_hh ?? "—"}</div>      
+            <div>Households under SHGs: {tooltipData.totals?.total_hh_under_shgs ?? "—"}</div>   
           </div>
         )}
       </div>
@@ -227,6 +238,8 @@ export default function DmmuBlockMap({
               <th>VOs</th>
               <th>CLFs</th>
               <th>SHGs</th>
+              <th>Rural HouseHolds</th>
+              <th>Households under SHGs</th>                            
             </tr>
           </thead>
           <tbody>
@@ -243,6 +256,8 @@ export default function DmmuBlockMap({
                 <td>{b.analytics?.totals?.total_vos ?? "—"}</td>
                 <td>{b.analytics?.totals?.total_clfs ?? "—"}</td>
                 <td>{b.analytics?.totals?.total_shgs ?? "—"}</td>
+                <td>{b.analytics?.totals?.total_rural_hh ?? "—"}</td>       
+                <td>{b.analytics?.totals?.total_hh_under_shgs ?? "—"}</td>                 
               </tr>
             ))}
           </tbody>

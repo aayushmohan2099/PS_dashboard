@@ -50,6 +50,9 @@ import DmmuLdmsDashboard from "./pages/LDMS/DMMU/dmmu_ldms_dashboard";
 import DmmuBlockMap from "./pages/LDMS/DMMU/dmmu_dashboard_blk_map";
 import SmmuLdmsDashboard from "./pages/LDMS/SMMU/smmu_ldms_dashboard";
 import SupportCapture from "./pages/LDMS/Support Map/ldms_support_capture";
+import DemandAnalytics from "./pages/LDMS/Demand Analytics/da_container";
+import BLCCMeetings from "./pages/LDMS/BMMU/bmmu_BLCC_meetings";
+import SchemeDictionary from "./pages/LDMS/scheme_dict";
 
 // tiny placeholder landing for /tms
 function TmsLanding() {
@@ -171,10 +174,17 @@ export default function App() {
       {/* ----- LDMS Routes (GLOBAL LAYOUT APPLIED) ----- */}
       <Route element={<ProtectedRoute />}>
         <Route path="/ldms" element={<LdmsLayout />}>
+          {/* BMMU Routes */}
           <Route path="bmmu/dashboard" element={<BmmuLdmsDashboard />} />
+          <Route path="bmmu/blcc-meetings" element={<BLCCMeetings />} />          
+          {/* DMMU Routes */}          
           <Route path="dmmu/dashboard" element={<DmmuLdmsDashboard />} />
+          {/* SMMU Routes */}          
           <Route path="smmu/dashboard" element={<SmmuLdmsDashboard />} />
+          {/* Global Routes */}          
           <Route path="support-capture" element={<SupportCapture />} />
+          <Route path="scheme-dictionary" element={<SchemeDictionary />} />
+          <Route path="demand-analytics" element={<DemandAnalytics />} />
 
           {/* future LDMS pages */}
           {/* <Route path="support-mapping" element={<SupportMapping />} /> */}

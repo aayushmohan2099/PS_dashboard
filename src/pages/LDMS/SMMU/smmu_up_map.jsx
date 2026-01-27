@@ -138,6 +138,18 @@ export default function SmmuUpMap({ onDistrictSelect }) {
             <AnimatedNumber value={stateTotals?.total_shgs} />
           </div>
         </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Total Rural Households</div>
+          <div className="kpi-value">
+            <AnimatedNumber value={stateTotals?.total_rural_hh} />
+          </div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Total Households under SHGs</div>
+          <div className="kpi-value">
+            <AnimatedNumber value={stateTotals?.total_hh_under_shgs} />
+          </div>
+        </div>                
       </div>
 
       {/* ================= MAP + TABLE ================= */}
@@ -174,6 +186,8 @@ export default function SmmuUpMap({ onDistrictSelect }) {
               <div>VOs: {tooltipData.total_vos}</div>
               <div>CLFs: {tooltipData.total_clfs}</div>
               <div>SHGs: {tooltipData.total_shgs}</div>
+              <div>Rural Households: {tooltipData.total_rural_hh ?? "—"}</div>        
+              <div>Households under SHGs: {tooltipData.total_hh_under_shgs ?? "—"}</div> 
             </div>
           )}
         </div>
@@ -188,6 +202,8 @@ export default function SmmuUpMap({ onDistrictSelect }) {
                 <th>VOs</th>
                 <th>CLFs</th>
                 <th>SHGs</th>
+                <th>Rural Households</th>
+                <th>Households under SHGs</th>
               </tr>
             </thead>
             <tbody>
@@ -204,6 +220,8 @@ export default function SmmuUpMap({ onDistrictSelect }) {
                   <td>{d.total_vos}</td>
                   <td>{d.total_clfs}</td>
                   <td>{d.total_shgs}</td>
+                  <td>{d.total_rural_hh ?? "—"}</td>     
+                  <td>{d.total_hh_under_shgs ?? "—"}</td>                  
                 </tr>
               ))}
             </tbody>

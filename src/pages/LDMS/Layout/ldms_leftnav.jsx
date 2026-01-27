@@ -22,9 +22,9 @@ import {
 const MENU = {
   bmmu: [
     { label: "Dashboard", to: "/ldms/bmmu/dashboard", icon: FaTachometerAlt },
-    { label: "Meetings", to: "#", icon: FaUsers },
-    { label: "Demand Analytics", to: "#", icon: FaChartBar },
-    { label: "Scheme Dictionary", to: "#", icon: FaBook },
+    { label: "Meetings", to: "/ldms/bmmu/blcc-meetings", icon: FaUsers },
+    { label: "Demand Analytics", to: "/ldms/demand-analytics", icon: FaChartBar },
+    { label: "Scheme Dictionary", to: "/ldms/scheme-dictionary", icon: FaBook },
     {
       label: "Support Mapping",
       to: "/ldms/support-capture",

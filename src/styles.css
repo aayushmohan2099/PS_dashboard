@@ -261,7 +261,7 @@ textarea {
 
 /* Main area when left nav present */
 .main-area {
-  margin-left: 220px; /* matches left-nav width */
+  border-left: 1px solid #eef2f7;
   flex: 1;
   min-height: 100vh;
   display: flex;
@@ -273,7 +273,7 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 18px;
+  padding: 12px 18px 12px 12px;
   border-bottom: 1px solid #eef2f7;
   background: #fff;
   position: sticky;
