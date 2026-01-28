@@ -1,12 +1,18 @@
 // src/pages/LDMS/Support Map/ldms_support_capture.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SCHeader from "./sup_cap_comps/SCHeader";
 import SCRecor from "./sup_cap_comps/SCRecor";
 import SCDepSche from "./sup_cap_comps/SCDepSche";
 import SCPLDs from "./sup_cap_comps/SCPLDs";
 import SCSubmitDock from "./sup_cap_comps/SCSubmitDock";
+import { useParams } from "react-router-dom";
+import { LDMS_API } from "../../../api/axios";
+import LoadingModal from "../../../components/ui/LoadingModal";
 
 export default function SupportCapture() {
+  const [loading, setLoading] = useState(false);
+  const { supportApprovalId } = useParams();
+  const isEditMode = Boolean(supportApprovalId);
   const [supportData, setSupportData] = useState({
     bucketType: "",
     customBucket: "",
@@ -18,14 +24,65 @@ export default function SupportCapture() {
   });
   const [selectedScheme, setSelectedScheme] = useState(null);
   const [selectedBeneficiaries, setSelectedBeneficiaries] = useState([]);
+  useEffect(() => {
+    if (!isEditMode) return;
 
+    async function loadDraft() {
+      try {
+        setLoading(true);
+        const res = await LDMS_API.BucketApprovals.retrieve(
+          `${supportApprovalId}/full-detail`,
+        );
+
+        const sb = res.data.support_bucket;
+
+        // 1️⃣ Scheme
+        setSelectedScheme(sb.scheme);
+
+        // 2️⃣ Support data
+        setSupportData({
+          bucketType: sb.bucket_type.bucket_type,
+          customBucket: "",
+          benefitName: sb.benefit_name || "",
+          benefitAmount: sb.benefit_amount || "",
+          description: sb.benefit_description || "",
+          trainingTheme: sb.training_support?.training_theme?.id || "",
+          trainingPlan: sb.training_support?.training_plan?.id || "",
+        });
+
+        // 3️⃣ Beneficiaries
+        setSelectedBeneficiaries(
+          sb.recorded_benefs.map((b) => ({
+            member: b,
+            shg: { code: b.lokos_shg_code },
+          })),
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadDraft();
+  }, [isEditMode, supportApprovalId]);
+  if (loading) {
+    return (
+      <LoadingModal
+        open
+        title="Loading Draft Support Map"
+        message="Fetching draft details…"
+      />
+    );
+  }
   return (
     <div className="bmmu-ldms-dashboard">
       {/* Row 1 */}
       <div className="ldms-grid-row two-col">
         <div className="ldms-card">
           <h3>Step 1: Selecting Department and Schemes</h3>
-          <SCHeader onSchemeSelect={setSelectedScheme} />
+          <SCHeader
+            selectedScheme={selectedScheme}
+            onSchemeSelect={setSelectedScheme}
+          />
         </div>
         <div className="ldms-card">
           <h3>Step 2: Choosing Support Bucket</h3>
@@ -59,6 +116,8 @@ export default function SupportCapture() {
           scheme={selectedScheme}
           supportData={supportData}
           beneficiaries={selectedBeneficiaries}
+          editMode={isEditMode}
+          supportApprovalId={supportApprovalId}
         />
       </div>
 

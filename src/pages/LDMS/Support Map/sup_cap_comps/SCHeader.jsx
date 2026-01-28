@@ -7,13 +7,11 @@ import {
 } from "react-icons/fa";
 import { LDMS_API } from "../../../../api/axios";
 
-export default function SCHeader({ onSchemeSelect }) {
+export default function SCHeader({ onSchemeSelect, selectedScheme }) {
   const [departments, setDepartments] = useState([]);
   const [schemes, setSchemes] = useState([]);
 
   const [selectedDept, setSelectedDept] = useState("");
-  const [selectedScheme, setSelectedScheme] = useState(null);
-
   const [loadingDept, setLoadingDept] = useState(false);
   const [loadingScheme, setLoadingScheme] = useState(false);
 
@@ -25,11 +23,28 @@ export default function SCHeader({ onSchemeSelect }) {
       .finally(() => setLoadingDept(false));
   }, []);
 
-  /* ---------------- Fetch Schemes on Dept Change ---------------- */
+  /* ---------------- Sync Dept when editing ---------------- */
+  useEffect(() => {
+    if (!selectedScheme || !departments.length) return;
+
+    // Match scheme's department to department list
+    const dept = departments.find(
+      (d) =>
+        d.id === selectedScheme.department ||
+        d.code === selectedScheme.department ||
+        d.name === selectedScheme.department ||
+        d.id === selectedScheme.department?.id,
+    );
+
+    if (dept) {
+      setSelectedDept(dept.id);
+    }
+  }, [selectedScheme, departments]);
+
+  /* ---------------- Fetch Schemes when Dept changes ---------------- */
   useEffect(() => {
     if (!selectedDept) {
       setSchemes([]);
-      setSelectedScheme(null);
       return;
     }
 
@@ -69,13 +84,13 @@ export default function SCHeader({ onSchemeSelect }) {
             <FaProjectDiagram /> Scheme
           </label>
           <select
+            value={selectedScheme?.id || ""}
             disabled={!selectedDept || loadingScheme}
             onChange={(e) => {
               const scheme = schemes.find(
                 (s) => s.id === Number(e.target.value),
               );
-              setSelectedScheme(scheme);
-              onSchemeSelect?.(scheme); // To pass to parent
+              onSchemeSelect?.(scheme);
             }}
           >
             <option value="">

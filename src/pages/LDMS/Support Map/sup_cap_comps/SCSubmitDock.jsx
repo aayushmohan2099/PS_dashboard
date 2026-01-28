@@ -4,6 +4,7 @@ import {
   FaSave,
   FaChevronUp,
   FaChevronDown,
+  FaTrash,
 } from "react-icons/fa";
 import { LDMS_API, LOOKUP_API } from "../../../../api/axios";
 import { AuthContext } from "../../../../contexts/AuthContext";
@@ -14,6 +15,8 @@ export default function SCSubmitDock({
   scheme,
   supportData,
   beneficiaries,
+  editMode,
+  supportApprovalId,
 }) {
   const { user } = useContext(AuthContext) || {};
   const [expanded, setExpanded] = useState(false);
@@ -21,6 +24,9 @@ export default function SCSubmitDock({
   const [blockId, setBlockId] = useState(null);
   const [loadingText, setLoadingText] = useState("");
   const [showLoader, setShowLoader] = useState(false);
+  const [supportBucketId, setSupportBucketId] = useState(null);
+  const [sbTypeId, setSbTypeId] = useState(null);
+  const [trainingSupportId, setTrainingSupportId] = useState(null);
 
   /* -------- Load block -------- */
   useEffect(() => {
@@ -32,6 +38,24 @@ export default function SCSubmitDock({
     }
     loadGeoscope();
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!editMode || !supportApprovalId) return;
+
+    async function loadEditIds() {
+      const res = await LDMS_API.BucketApprovals.retrieve(
+        `${supportApprovalId}/full-detail`,
+      );
+
+      const sb = res.data.support_bucket;
+
+      setSupportBucketId(sb.id);
+      setSbTypeId(sb.bucket_type.id);
+      setTrainingSupportId(sb.training_support?.id || null);
+    }
+
+    loadEditIds();
+  }, [editMode, supportApprovalId]);
 
   const isTraining = supportData.bucketType === "Training";
 
@@ -52,6 +76,86 @@ export default function SCSubmitDock({
           ? "Saving support map as draft…"
           : "Submitting support map for approval…",
       );
+
+      /* ======================= EDIT MODE ======================= */
+      if (editMode) {
+        /* 1️⃣ Update SBType */
+        await LDMS_API.SBTypes.update(sbTypeId, {
+          bucket_type:
+            supportData.bucketType === "Others"
+              ? supportData.customBucket
+              : supportData.bucketType,
+          updated_by: user.id,
+        });
+
+        /* 2️⃣ Update Support Bucket */
+        await LDMS_API.SupportBuckets.update(supportBucketId, {
+          benefit_name: supportData.benefitName,
+          benefit_amount: supportData.benefitAmount,
+          benefit_description: supportData.description || "",
+          updated_by: user.id,
+        });
+
+        /* 3️⃣ Training Support UPSERT */
+        if (supportData.bucketType === "Training") {
+          if (trainingSupportId) {
+            await LDMS_API.SBTrainings.update(trainingSupportId, {
+              training_theme: supportData.trainingTheme,
+              training_plan: supportData.trainingPlan,
+              updated_by: user.id,
+            });
+          } else {
+            await LDMS_API.SBTrainings.create({
+              training_theme: supportData.trainingTheme,
+              training_plan: supportData.trainingPlan,
+              support_bucket: supportBucketId,
+              created_by: user.id,
+            });
+          }
+        }
+
+        /* 4️⃣ Replace Beneficiaries */
+        await LDMS_API.recorPLDS.deleteBySupportBucket(supportBucketId);
+
+        await Promise.all(
+          beneficiaries.map(({ member, shg }) =>
+            LDMS_API.recorPLDS.create({
+              lokos_shg_code: shg.code,
+              lokos_member_code: member.member_code,
+              pld_status: member.pld_status ? "Yes" : "No",
+              member_name: member.member_name,
+              designation: member.member_designations?.[0]?.designation || "",
+              gender: member.gender,
+              religion: member.religion,
+              marital_status: member.marital_status,
+              father_husband_name: member.relation_name,
+              social_category: member.social_category,
+              education: member.education,
+              district_id: shg.districtId,
+              block_id: shg.blockId,
+              panchayat_id: shg.panchayatId,
+              village_id: shg.villageId,
+              mobile: member.member_phones?.[0]?.phone_no || "",
+              age: member.age,
+              support_bucket: supportBucketId,
+              created_by: user.id,
+            }),
+          ),
+        );
+
+        /* 5️⃣ Update Approval */
+        await LDMS_API.BucketApprovals.update(supportApprovalId, {
+          approval_status: mode,
+          updated_by: user.id,
+        });
+
+        alert(
+          mode === "DRAFT"
+            ? "Draft updated successfully."
+            : "Draft submitted for approval.",
+        );
+        return;
+      }
 
       /* ---------- 1. SBTypes ---------- */
       const finalBucketType =
@@ -151,6 +255,30 @@ export default function SCSubmitDock({
       setLoadingText("");
     }
   }
+  async function handleDelete() {
+    if (!supportApprovalId) return;
+
+    const ok = window.confirm(
+      "This will permanently remove the entire support map draft. Continue?",
+    );
+    if (!ok) return;
+
+    try {
+      setShowLoader(true);
+      setLoadingText("Deleting support map…");
+
+      await LDMS_API.BucketApprovals.delete(supportApprovalId);
+
+      alert("Support map deleted successfully.");
+      window.location.href = "/ldms/support-buckets";
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete support map.");
+    } finally {
+      setShowLoader(false);
+      setLoadingText("");
+    }
+  }
 
   return (
     <div className={`sc-submit-dock ${expanded ? "open" : ""}`}>
@@ -174,6 +302,16 @@ export default function SCSubmitDock({
           >
             <FaPaperPlane /> Submit
           </button>
+
+          {editMode && (
+            <button
+              className="danger"
+              onClick={handleDelete}
+              disabled={submitting}
+            >
+              <FaTrash /> Delete Entirely
+            </button>
+          )}
         </div>
       )}
       <LoadingModal
@@ -223,6 +361,17 @@ export default function SCSubmitDock({
           background: #7a0c0c;
           color: #fff;
           border-color: #7a0c0c;
+        }
+
+        .actions button.danger {
+          background: #fee2e2;
+          color: #7f1d1d;
+          border: 1px solid #fecaca;
+        }
+
+        .actions button.danger:hover {
+          background: #7f1d1d;
+          color: #fff;
         }
 
         button:disabled {

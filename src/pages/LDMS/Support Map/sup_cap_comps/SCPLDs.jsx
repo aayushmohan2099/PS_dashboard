@@ -51,7 +51,7 @@ export default function SCPLDs({ beneficiaries = [], onRemove }) {
 
           return (
             <div
-              key={member.member_code}
+              key={member.id || member.member_code || member.lokos_member_code}
               className={`scplds-card ${isPLD ? "pld" : ""}`}
             >
               <div className="scplds-main">
