@@ -640,11 +640,13 @@ export const LDMS_API = {
     api.get(`/ldms/schemes/`, {
       params,
     }),
-   
+
+  // Support Mapping and Capturing
   recorPLDS: makeCrud("/ldms/recorded-plds/"),
   SBTypes: makeCrud("/ldms/sbtypes/"),
   SupportBuckets: makeCrud("/ldms/support-buckets/"),
   SBTrainings: makeCrud("/ldms/training-supports/"),
+  BucketApprovals: makeCrud("/ldms/bucket-approvals/"),
 };
 
 // ------------------------

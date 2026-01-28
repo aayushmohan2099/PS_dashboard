@@ -1,31 +1,65 @@
 // src/pages/LDMS/Support Map/ldms_support_capture.jsx
-import React from "react";
+import React, { useState } from "react";
+import SCHeader from "./sup_cap_comps/SCHeader";
+import SCRecor from "./sup_cap_comps/SCRecor";
+import SCDepSche from "./sup_cap_comps/SCDepSche";
+import SCPLDs from "./sup_cap_comps/SCPLDs";
+import SCSubmitDock from "./sup_cap_comps/SCSubmitDock";
 
 export default function SupportCapture() {
+  const [supportData, setSupportData] = useState({
+    bucketType: "",
+    customBucket: "",
+    benefitName: "",
+    benefitAmount: "",
+    description: "",
+    trainingTheme: "",
+    trainingPlan: "",
+  });
+  const [selectedScheme, setSelectedScheme] = useState(null);
+  const [selectedBeneficiaries, setSelectedBeneficiaries] = useState([]);
+
   return (
     <div className="bmmu-ldms-dashboard">
       {/* Row 1 */}
       <div className="ldms-grid-row two-col">
         <div className="ldms-card">
-          <h3>Support Capture Header</h3>
-          {/* <SCHeader /> */}
+          <h3>Step 1: Selecting Department and Schemes</h3>
+          <SCHeader onSchemeSelect={setSelectedScheme} />
         </div>
         <div className="ldms-card">
-          <h3>Support Capture Records</h3>
-          {/* <SCRecor /> */}
+          <h3>Step 2: Choosing Support Bucket</h3>
+          <SCRecor
+            selectedScheme={selectedScheme}
+            supportData={supportData}
+            onChange={setSupportData}
+          />
         </div>
       </div>
 
       {/* Row 2 */}
       <div className="ldms-grid-row two-col">
         <div className="ldms-card">
-          <h3>Support Capture Department Scheme</h3>
-          {/* <SCDepSche /> */}
+          <h3>Step 3: Select Supported Beneficiaries</h3>
+          <SCDepSche onSelectionChange={setSelectedBeneficiaries} />
         </div>
         <div className="ldms-card">
-          <h3>Support Capture PLDs</h3>
-          {/* <SCPLDs /> */}
+          <h3>Mapped Beneficiaries</h3>
+          <SCPLDs
+            beneficiaries={selectedBeneficiaries}
+            onRemove={(memberCode) =>
+              setSelectedBeneficiaries((prev) =>
+                prev.filter((b) => b.member.member_code !== memberCode),
+              )
+            }
+          />
         </div>
+        <SCSubmitDock
+          department={selectedScheme?.department}
+          scheme={selectedScheme}
+          supportData={supportData}
+          beneficiaries={selectedBeneficiaries}
+        />
       </div>
 
       {/* ---- styles ---- */}

@@ -53,6 +53,10 @@ import SupportCapture from "./pages/LDMS/Support Map/ldms_support_capture";
 import DemandAnalytics from "./pages/LDMS/Demand Analytics/da_container";
 import BLCCMeetings from "./pages/LDMS/BMMU/bmmu_BLCC_meetings";
 import SchemeDictionary from "./pages/LDMS/scheme_dict";
+import SupPLDList from "./pages/LDMS/Support Map/SupPLDList";
+import SupPLDDetail from "./pages/LDMS/Support Map/SupPLDDetail";
+import SupportBucketList from "./pages/LDMS/Support Map/record_support_list";
+import RecordSupportDetail from "./pages/LDMS/Support Map/record_support_detail";
 
 // tiny placeholder landing for /tms
 function TmsLanding() {
@@ -176,15 +180,29 @@ export default function App() {
         <Route path="/ldms" element={<LdmsLayout />}>
           {/* BMMU Routes */}
           <Route path="bmmu/dashboard" element={<BmmuLdmsDashboard />} />
-          <Route path="bmmu/blcc-meetings" element={<BLCCMeetings />} />          
-          {/* DMMU Routes */}          
+          <Route path="bmmu/blcc-meetings" element={<BLCCMeetings />} />
+          {/* DMMU Routes */}
           <Route path="dmmu/dashboard" element={<DmmuLdmsDashboard />} />
-          {/* SMMU Routes */}          
+          {/* SMMU Routes */}
           <Route path="smmu/dashboard" element={<SmmuLdmsDashboard />} />
-          {/* Global Routes */}          
+          {/* Global Routes */}
           <Route path="support-capture" element={<SupportCapture />} />
+          <Route
+            path="support-map/edit/:supportApprovalId"
+            element={<SupportCapture />}
+          />
           <Route path="scheme-dictionary" element={<SchemeDictionary />} />
           <Route path="demand-analytics" element={<DemandAnalytics />} />
+          <Route path="support-map-list" element={<SupportBucketList />} />
+          <Route
+            path="support-map-detail/:id"
+            element={<RecordSupportDetail />}
+          />
+          <Route path="supported-pld-list" element={<SupPLDList />} />
+          <Route
+            path="supported-pld-list/detail/:pldId"
+            element={<SupPLDDetail />}
+          />
 
           {/* future LDMS pages */}
           {/* <Route path="support-mapping" element={<SupportMapping />} /> */}

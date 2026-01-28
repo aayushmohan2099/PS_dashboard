@@ -10,6 +10,7 @@ import {
   FaBook,
   FaHandsHelping,
   FaDatabase,
+  FaAddressBook,
 } from "react-icons/fa";
 
 /**
@@ -23,13 +24,23 @@ const MENU = {
   bmmu: [
     { label: "Dashboard", to: "/ldms/bmmu/dashboard", icon: FaTachometerAlt },
     { label: "Meetings", to: "/ldms/bmmu/blcc-meetings", icon: FaUsers },
-    { label: "Demand Analytics", to: "/ldms/demand-analytics", icon: FaChartBar },
+    {
+      label: "Demand Analytics",
+      to: "/ldms/demand-analytics",
+      icon: FaChartBar,
+    },
     { label: "Scheme Dictionary", to: "/ldms/scheme-dictionary", icon: FaBook },
     {
       label: "Support Mapping",
       to: "/ldms/support-capture",
       icon: FaHandsHelping,
     },
+    {
+      label: "Support Bucket List",
+      to: "/ldms/support-map-list",
+      icon: FaAddressBook,
+    },
+    { label: "PLD Database", to: "/ldms/supported-pld-list", icon: FaDatabase },
   ],
   dmmu: [
     { label: "Dashboard", to: "/ldms/dmmu/dashboard", icon: FaTachometerAlt },
@@ -37,16 +48,22 @@ const MENU = {
     { label: "Demand Analytics", to: "#", icon: FaChartBar },
     { label: "Scheme Dictionary", to: "#", icon: FaBook },
     {
-      label: "Support Mapping",
-      to: "/ldms/support-capture",
-      icon: FaHandsHelping,
+      label: "Support Bucket List",
+      to: "/ldms/support-map-list",
+      icon: FaAddressBook,
     },
     { label: "Support benefit Extension", to: "#", icon: FaHandsHelping },
+    { label: "PLD Database", to: "/ldms/supported-pld-list", icon: FaDatabase },
   ],
   smmu: [
     { label: "Dashboard", to: "/ldms/smmu/dashboard", icon: FaTachometerAlt },
-    { label: "PLD DataBank", to: "#", icon: FaDatabase },
+    {
+      label: "Support Bucket List",
+      to: "/ldms/support-map-list",
+      icon: FaAddressBook,
+    },
     { label: "Support benefit Extension", to: "#", icon: FaHandsHelping },
+    { label: "PLD Database", to: "/ldms/supported-pld-list", icon: FaDatabase },
   ],
 };
 
