@@ -255,11 +255,12 @@ export default function SCSubmitDock({
       setLoadingText("");
     }
   }
+  
   async function handleDelete() {
-    if (!supportApprovalId) return;
+    if (!supportApprovalId || !supportBucketId || !sbTypeId) return;
 
     const ok = window.confirm(
-      "This will permanently remove the entire support map draft. Continue?",
+      "This will permanently delete the entire Support Map.\n\nThis action CANNOT be undone.\n\nProceed?",
     );
     if (!ok) return;
 
@@ -267,13 +268,38 @@ export default function SCSubmitDock({
       setShowLoader(true);
       setLoadingText("Deleting support map…");
 
-      await LDMS_API.BucketApprovals.delete(supportApprovalId);
+      /* 1️⃣ Delete Bucket Approval */
+      await LDMS_API.BucketApprovals.destroy(supportApprovalId);
 
-      alert("Support map deleted successfully.");
+      /* 2️⃣ Delete Training Support (if any) */
+      if (trainingSupportId) {
+        await LDMS_API.SBTrainings.destroy(trainingSupportId);
+      }
+
+      /* 3️⃣ Delete ALL Recorded Beneficiaries */
+      const pldRes = await LDMS_API.recorPLDS.list({
+        support_bucket: supportBucketId,
+      });
+
+      await Promise.all(
+        (pldRes.data.results || []).map((pld) =>
+          LDMS_API.recorPLDS.destroy(pld.id),
+        ),
+      );
+
+      /* 4️⃣ Delete Support Bucket */
+      await LDMS_API.SupportBuckets.destroy(supportBucketId);
+
+      /* 5️⃣ Delete SBType */
+      await LDMS_API.SBTypes.destroy(sbTypeId);
+
+      alert("Support Map deleted successfully.");
       window.location.href = "/ldms/support-buckets";
-    } catch (e) {
-      console.error(e);
-      alert("Failed to delete support map.");
+    } catch (err) {
+      console.error(err);
+      alert(
+        "Deletion failed.\nSome records may still exist.\nPlease contact administrator.",
+      );
     } finally {
       setShowLoader(false);
       setLoadingText("");
