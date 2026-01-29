@@ -3,6 +3,7 @@ import React, { useContext, useState } from "react";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { AUTH_API } from "../../../api/axios";
 import { clearAuth } from "../../../utils/storage";
+import ldmsLogo from "../../../assets/ldms_logo.png";
 
 export default function LdmsHeader() {
   const { user } = useContext(AuthContext) || {};
@@ -33,6 +34,7 @@ export default function LdmsHeader() {
     <header className="ldms-header">
       {/* -------- LEFT -------- */}
       <div className="ldms-header-left">
+        <img src={ldmsLogo} className="ldms-applogo" />
         <span className="ldms-govt-badge" />
         <h1 className="ldms-title">
           Lakhpati Didi <span>Management System</span>
@@ -109,6 +111,13 @@ export default function LdmsHeader() {
           justify-content: space-between;
           padding: 0 20px;
           z-index: 50;
+        }
+
+        .ldms-applogo {
+          height: 40px;
+          width: auto;
+          margin-right: -5px;
+          margin-left: -7px;
         }
 
         .ldms-header-left {

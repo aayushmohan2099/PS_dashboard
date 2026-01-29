@@ -216,6 +216,15 @@ export default function SupportBucketList() {
                       <FaEdit />
                     </button>
                   )}
+                  {/* MAI YAHA THA 29-01-2026 */}
+                  {isDMMU && r.approval_status === "PENDING" && (
+                    <button
+                      className="edit"
+                      onClick={() => navigate(`/ldms/support-map/edit/${r.id}`)}
+                    >
+                      <FaEdit />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
