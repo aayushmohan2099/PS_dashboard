@@ -57,6 +57,8 @@ import SupPLDList from "./pages/LDMS/Support Map/SupPLDList";
 import SupPLDDetail from "./pages/LDMS/Support Map/SupPLDDetail";
 import SupportBucketList from "./pages/LDMS/Support Map/record_support_list";
 import RecordSupportDetail from "./pages/LDMS/Support Map/record_support_detail";
+import DmmuLdmsApprove from "./pages/LDMS/DMMU/dmmu_ldms_approve";
+import LdmsReports from "./pages/LDMS/Reports/ldms_reports";
 
 // tiny placeholder landing for /tms
 function TmsLanding() {
@@ -183,6 +185,10 @@ export default function App() {
           <Route path="bmmu/blcc-meetings" element={<BLCCMeetings />} />
           {/* DMMU Routes */}
           <Route path="dmmu/dashboard" element={<DmmuLdmsDashboard />} />
+          <Route
+            path="dmmu/approve-support/:id"
+            element={<DmmuLdmsApprove />}
+          />
           {/* SMMU Routes */}
           <Route path="smmu/dashboard" element={<SmmuLdmsDashboard />} />
           {/* Global Routes */}
@@ -203,7 +209,8 @@ export default function App() {
             path="supported-pld-list/detail/:pldId"
             element={<SupPLDDetail />}
           />
-
+          <Route path="reports" element={<LdmsReports />} />
+          
           {/* future LDMS pages */}
           {/* <Route path="support-mapping" element={<SupportMapping />} /> */}
           {/* <Route path="analytics" element={<LdmsAnalytics />} /> */}

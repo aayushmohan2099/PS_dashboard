@@ -216,11 +216,10 @@ export default function SupportBucketList() {
                       <FaEdit />
                     </button>
                   )}
-                  {/* MAI YAHA THA 29-01-2026 */}
                   {isDMMU && r.approval_status === "PENDING" && (
                     <button
                       className="edit"
-                      onClick={() => navigate(`/ldms/support-map/edit/${r.id}`)}
+                      onClick={() => navigate(`/ldms/dmmu/approve-support/${r.id}`)}
                     >
                       <FaEdit />
                     </button>

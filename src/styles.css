@@ -577,4 +577,84 @@ th {
   border-radius: 6px;
 } */
 
+/* ===============================
+   Pragati Setu Multi-Color Loader
+   =============================== */
+
+.ps-loader {
+  width: 42px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  margin: 8px auto 16px;
+
+  background:
+    linear-gradient(#2563eb 0 0), /* Blue */
+    linear-gradient(#2563eb 0 0),
+
+    linear-gradient(#dc2626 0 0), /* Red */
+    linear-gradient(#dc2626 0 0),
+
+    linear-gradient(#facc15 0 0), /* Yellow */
+    linear-gradient(#facc15 0 0),
+
+    linear-gradient(#16a34a 0 0), /* Green */
+    linear-gradient(#16a34a 0 0),
+
+    linear-gradient(#fb923c 0 0), /* Orange */
+    linear-gradient(#fb923c 0 0),
+
+    #ffffff; /* White base */
+
+  background-repeat: no-repeat;
+  background-position: top left, bottom right;
+  animation: ps-loader-anim 2.5s infinite ease-in-out;
+}
+
+@keyframes ps-loader-anim {
+  0% {
+    background-size:
+      0 100%, 0 100%,
+      100% 0, 100% 0,
+      0 100%, 0 100%,
+      100% 0, 100% 0,
+      0 0;
+  }
+
+  20%, 25% {
+    background-size:
+      0 100%, 0 100%,
+      100% 0, 100% 0,
+      0 100%, 0 100%,
+      100% 50%, 100% 50%,
+      0 0;
+  }
+
+  45%, 50% {
+    background-size:
+      0 100%, 0 100%,
+      100% 0, 100% 0,
+      50% 100%, 50% 100%,
+      100% 50%, 100% 50%,
+      0 0;
+  }
+
+  70%, 75% {
+    background-size:
+      0 100%, 0 100%,
+      100% 50%, 100% 50%,
+      50% 100%, 50% 100%,
+      100% 50%, 100% 50%,
+      0 0;
+  }
+
+  95%, 100% {
+    background-size:
+      50% 100%, 50% 100%,
+      100% 50%, 100% 50%,
+      50% 100%, 50% 100%,
+      100% 50%, 100% 50%,
+      0 0;
+  }
+}
+
 /* End of file */

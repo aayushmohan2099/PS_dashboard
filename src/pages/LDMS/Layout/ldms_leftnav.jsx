@@ -11,6 +11,7 @@ import {
   FaHandsHelping,
   FaDatabase,
   FaAddressBook,
+  FaClipboardCheck
 } from "react-icons/fa";
 
 /**
@@ -41,6 +42,7 @@ const MENU = {
       icon: FaAddressBook,
     },
     { label: "PLD Database", to: "/ldms/supported-pld-list", icon: FaDatabase },
+    { label: "Reports", to: "/ldms/reports", icon: FaClipboardCheck },
   ],
   dmmu: [
     { label: "Dashboard", to: "/ldms/dmmu/dashboard", icon: FaTachometerAlt },
@@ -54,6 +56,7 @@ const MENU = {
     },
     { label: "Support benefit Extension", to: "#", icon: FaHandsHelping },
     { label: "PLD Database", to: "/ldms/supported-pld-list", icon: FaDatabase },
+    { label: "Reports", to: "/ldms/reports", icon: FaClipboardCheck },    
   ],
   smmu: [
     { label: "Dashboard", to: "/ldms/smmu/dashboard", icon: FaTachometerAlt },
@@ -64,6 +67,7 @@ const MENU = {
     },
     { label: "Support benefit Extension", to: "#", icon: FaHandsHelping },
     { label: "PLD Database", to: "/ldms/supported-pld-list", icon: FaDatabase },
+    { label: "Reports", to: "/ldms/reports", icon: FaClipboardCheck },    
   ],
 };
 
