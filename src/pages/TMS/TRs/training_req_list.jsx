@@ -1,8 +1,8 @@
 // src/pages/TMS/TRs/training_req_list.jsx
 import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API } from "../../../api/axios";
 import { getCanonicalRole } from "../../../utils/roleUtils";
@@ -19,7 +19,7 @@ function saveCache(payload, meta = {}) {
   try {
     localStorage.setItem(
       CACHE_KEY,
-      JSON.stringify({ ts: Date.now(), payload, meta })
+      JSON.stringify({ ts: Date.now(), payload, meta }),
     );
   } catch {}
 }
@@ -107,7 +107,7 @@ export default function TrainingRequestList() {
   async function ensureUserGeoscope() {
     try {
       const cached = JSON.parse(
-        localStorage.getItem("ps_user_geoscope") || "null"
+        localStorage.getItem("ps_user_geoscope") || "null",
       );
       if (cached) return cached;
     } catch {}
@@ -148,7 +148,7 @@ export default function TrainingRequestList() {
               fields: "username",
             });
             return { id, v: r?.data?.results?.[0]?.username };
-          })
+          }),
         ),
         Promise.all(
           missingPartners.map(async (id) => {
@@ -157,7 +157,7 @@ export default function TrainingRequestList() {
               fields: "name",
             });
             return { id, v: r?.data?.results?.[0]?.name };
-          })
+          }),
         ),
         Promise.all(
           missingPlans.map(async (id) => {
@@ -169,7 +169,7 @@ export default function TrainingRequestList() {
               id,
               v: r?.data?.results?.[0]?.training_name,
             };
-          })
+          }),
         ),
       ]);
 

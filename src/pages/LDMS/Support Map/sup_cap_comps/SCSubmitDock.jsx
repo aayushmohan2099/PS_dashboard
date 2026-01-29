@@ -1,3 +1,4 @@
+// src/pages/LDMS/Support Map/sup_cap_comps/SCSubmitDock.jsx
 import React, { useState, useContext, useEffect } from "react";
 import {
   FaPaperPlane,
@@ -255,7 +256,7 @@ export default function SCSubmitDock({
       setLoadingText("");
     }
   }
-  
+
   async function handleDelete() {
     if (!supportApprovalId || !supportBucketId || !sbTypeId) return;
 

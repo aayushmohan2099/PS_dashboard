@@ -1,7 +1,7 @@
 // src/pages/TMS/TP/tp_cp_assignment.jsx
 import React, { useContext, useEffect, useState } from "react";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API } from "../../../api/axios";
 

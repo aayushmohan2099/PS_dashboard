@@ -1,14 +1,8 @@
 // src/pages/TMS/TP/tp_create_batch.jsx
-import React, {
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  useRef,
-} from "react";
+import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API, LOOKUP_API } from "../../../api/axios"; // shared axios instance with interceptors [web:39][web:40]
 
@@ -381,8 +375,7 @@ function ParticipantTable({
         </thead>
         <tbody>
           {slice.map((p) => {
-            const blockId =
-              trainingType === "BENEFICIARY" ? p.block : p.block;
+            const blockId = trainingType === "BENEFICIARY" ? p.block : p.block;
             if (blockId) {
               ensureBlockName(blockId);
             }
@@ -395,7 +388,7 @@ function ParticipantTable({
                     type="checkbox"
                     disabled={!isParticipantFree(p)}
                     checked={(selectedForBatch[trId] || []).some(
-                      (x) => x.id === p.id
+                      (x) => x.id === p.id,
                     )}
                     onChange={() => toggle(p)}
                   />
@@ -491,7 +484,7 @@ function CombinedParticipantSelector({
         },
       });
       const results = (resp?.data?.results || []).filter(
-        (tr) => tr.id !== openedTRId
+        (tr) => tr.id !== openedTRId,
       );
       setBlockTRs(results);
     } finally {
@@ -615,7 +608,7 @@ function CombinedParticipantSelector({
                 setBlockNamesCache={setBlockNamesCache}
                 markBatchTouched={markBatchTouched}
               />
-            ) : null
+            ) : null,
           )}
         </div>
       )}
@@ -694,7 +687,7 @@ function BatchSubmitSection({
         status: "PENDING",
         code: generateBatchCode(
           trainingReq.block?.block_name_en,
-          trainingReq.district?.district_name_en
+          trainingReq.district?.district_name_en,
         ),
         created_by: user.id,
       };
@@ -744,7 +737,7 @@ function BatchSubmitSection({
             }/${p.id}/`,
             {
               remarks: `COMBINED WITH TR - ${trainingReq.id}`,
-            }
+            },
           );
         }
       }
@@ -861,7 +854,7 @@ export default function TpCreateBatch() {
 
         if (r.data.training_plan?.theme) {
           const t = await api.get(
-            `/tms/training-themes/${r.data.training_plan.theme}/`
+            `/tms/training-themes/${r.data.training_plan.theme}/`,
           );
           setThemeName(t.data.theme_name);
         }
@@ -938,20 +931,27 @@ export default function TpCreateBatch() {
         if (!b.startDate) errs.push("Start date not selected");
 
         return { ...b, errors: errs };
-      })
+      }),
     );
-  }, [participantSelections, centres.length, trainingReq, JSON.stringify(batches.map(b => ({
-    key: b.key,
-    batchType: b.batchType,
-    centreId: b.centre?.id || null,
-    startDate: b.startDate,
-  })))]);
+  }, [
+    participantSelections,
+    centres.length,
+    trainingReq,
+    JSON.stringify(
+      batches.map((b) => ({
+        key: b.key,
+        batchType: b.batchType,
+        centreId: b.centre?.id || null,
+        startDate: b.startDate,
+      })),
+    ),
+  ]);
 
   useEffect(() => {
-    const hasAnyErrors = batches.some(
-      (b) => b.touched && b.errors.length > 0
+    const hasAnyErrors = batches.some((b) => b.touched && b.errors.length > 0);
+    setGlobalErrors(
+      hasAnyErrors ? ["Please resolve errors in all batches"] : [],
     );
-    setGlobalErrors(hasAnyErrors ? ["Please resolve errors in all batches"] : []);
   }, [batches]);
 
   function updateBatch(key, patch, markTouched = false) {
@@ -959,16 +959,14 @@ export default function TpCreateBatch() {
       prev.map((b) =>
         b.key === key
           ? { ...b, ...patch, touched: markTouched ? true : b.touched }
-          : b
-      )
+          : b,
+      ),
     );
   }
 
   function markBatchTouched(key) {
     setBatches((prev) =>
-      prev.map((b) =>
-        b.key === key ? { ...b, touched: true } : b
-      )
+      prev.map((b) => (b.key === key ? { ...b, touched: true } : b)),
     );
   }
 
@@ -1003,9 +1001,7 @@ export default function TpCreateBatch() {
   async function handleViewCentre(id) {
     setViewLoadingId(id);
     try {
-      const d = await api.get(
-        `/tms/training-partner-centres/${id}/detail/`
-      );
+      const d = await api.get(`/tms/training-partner-centres/${id}/detail/`);
       setCentrePreview(d.data);
     } finally {
       setViewLoadingId(null);
@@ -1104,7 +1100,7 @@ export default function TpCreateBatch() {
                               updateBatch(
                                 batch.key,
                                 { batchType: e.target.value },
-                                true
+                                true,
                               )
                             }
                           >
@@ -1174,7 +1170,9 @@ export default function TpCreateBatch() {
                           {loadingCentres ? (
                             <p>Loading centres…</p>
                           ) : centres.length === 0 ? (
-                            <p>No centres found. Please register a centre first.</p>
+                            <p>
+                              No centres found. Please register a centre first.
+                            </p>
                           ) : (
                             <table className="table table-compact">
                               <thead>
@@ -1198,7 +1196,7 @@ export default function TpCreateBatch() {
                                           updateBatch(
                                             batch.key,
                                             { centre: c },
-                                            true
+                                            true,
                                           )
                                         }
                                       />
@@ -1241,7 +1239,7 @@ export default function TpCreateBatch() {
                               const ed = trainingReq?.training_plan?.no_of_days
                                 ? calcEndDate(
                                     sd,
-                                    trainingReq.training_plan.no_of_days
+                                    trainingReq.training_plan.no_of_days,
                                   )
                                 : "";
                               updateBatch(
@@ -1250,7 +1248,7 @@ export default function TpCreateBatch() {
                                   startDate: sd,
                                   endDate: ed,
                                 },
-                                true
+                                true,
                               );
                             }}
                           />

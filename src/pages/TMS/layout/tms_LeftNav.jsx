@@ -52,7 +52,7 @@ function getRoleKey(user) {
 
   try {
     const geo = JSON.parse(
-      window.localStorage.getItem("ps_user_geoscope") || "null"
+      window.localStorage.getItem("ps_user_geoscope") || "null",
     );
     if (geo?.role) {
       const g = String(geo.role).toLowerCase();
@@ -254,7 +254,7 @@ const MENU = {
   tp_contact_person: [
     {
       label: "TMS Dashboard",
-      to: "/dashboard",
+      to: "/tms/cp/dashboard",
       key: "cp-dashboard",
     },
     {
@@ -393,13 +393,13 @@ export default function TmsLeftNav() {
     const foundByKey = menu.find((i) =>
       String(i.key || "")
         .toLowerCase()
-        .includes("request")
+        .includes("request"),
     );
     if (foundByKey && foundByKey.to) return foundByKey.to;
     const foundByTo = menu.find((i) =>
       String(i.to || "")
         .toLowerCase()
-        .includes("requests")
+        .includes("requests"),
     );
     if (foundByTo && foundByTo.to) return foundByTo.to;
     // fallback generic

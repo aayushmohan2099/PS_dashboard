@@ -28,6 +28,21 @@
   transform: scale(1.01);
 }
 
+/* Aspirational Blocks */
+.Ablock {
+  stroke: #ffc400;
+  stroke-width: 8;
+  cursor: pointer;
+  transition:
+    fill 0.2s ease,
+    transform 0.15s ease;
+}
+
+.Ablock:hover {
+  filter: brightness(1.15);
+  transform: scale(1.01);
+}
+
 /* Distinct, muted map palette (no gradient) */
 
 .b1 {
@@ -54,6 +69,9 @@
 .b8 {
   fill: #450a0a;
 } /* maroon */
+.b9 {
+  fill: #ff0000;
+} /* pure red */
 
 .block-label {
   font-size: 5px;

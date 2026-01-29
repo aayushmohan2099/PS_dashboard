@@ -1,6 +1,6 @@
 // src/pages/TMS/SMMU/smmu_tms_dashboard.jsx
 import React, { useEffect, useState, useContext, useRef } from "react";
-import TmsLeftNav from "../layout/tms_LeftNav"; // switched to TmsLeftNav
+import TmsLeftNav from "../layout/tms_LeftNav";
 import TopNav from "../../../components/layout/TopNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API } from "../../../api/axios";
@@ -34,7 +34,9 @@ async function resolveEffectiveUserId(user) {
       const res = await LOOKUP_API.userGeoscopeByUserId(uid);
       const payload = res?.data ?? res;
       if (payload) {
-        try { window.localStorage.setItem(GEOSCOPE_KEY, JSON.stringify(payload)); } catch (e) {}
+        try {
+          window.localStorage.setItem(GEOSCOPE_KEY, JSON.stringify(payload));
+        } catch (e) {}
         if (payload.user_id) return payload.user_id;
       }
     }
@@ -85,7 +87,7 @@ function useAnimatedNumber(toVal, ms = 900) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toVal]);
 
   return display;
@@ -104,7 +106,12 @@ export default function SmmuTmsDashboard() {
   const [effectiveUserId, setEffectiveUserId] = useState(null);
 
   // real values
-  const [kpis, setKpis] = useState({ themes: 0, plans: 0, partners: 0, targets: 0 });
+  const [kpis, setKpis] = useState({
+    themes: 0,
+    plans: 0,
+    partners: 0,
+    targets: 0,
+  });
   const [loadingKpis, setLoadingKpis] = useState(false);
 
   // animated displays
@@ -177,12 +184,16 @@ export default function SmmuTmsDashboard() {
     try {
       // 1) themes list (we need theme ids to call plans per-theme)
       const themesRes = await TMS_API.trainingThemes.list({ limit: 500 }); // get all themes
-      const themes = (themesRes?.data?.results ?? themesRes?.results ?? []) || [];
+      const themes =
+        (themesRes?.data?.results ?? themesRes?.results ?? []) || [];
       // 2) for each theme fetch plans (theme-specific)
       const plansCollected = [];
       for (const th of themes) {
         try {
-          const resp = await TMS_API.trainingPlans.list({ theme: th.id, limit: 500 });
+          const resp = await TMS_API.trainingPlans.list({
+            theme: th.id,
+            limit: 500,
+          });
           const arr = (resp?.data?.results ?? resp?.results ?? []) || [];
           arr.forEach((p) => plansCollected.push(p));
         } catch (e) {
@@ -191,17 +202,26 @@ export default function SmmuTmsDashboard() {
       }
 
       // 3) training partners (full list) to map ids->names and also count
-      const partnersResp = await TMS_API.trainingPartners.list({ limit: 10000 });
-      const partnersArr = (partnersResp?.data?.results ?? partnersResp?.results ?? []) || [];
+      const partnersResp = await TMS_API.trainingPartners.list({
+        limit: 10000,
+      });
+      const partnersArr =
+        (partnersResp?.data?.results ?? partnersResp?.results ?? []) || [];
 
       // 4) targets count (scoped to this smmu user)
-      const targetsParams = uidForTargets ? { created_by: uidForTargets, limit: 1 } : { limit: 1 };
-      const targetsRes = await TMS_API.trainingPartnerTargets.list(targetsParams);
+      const targetsParams = uidForTargets
+        ? { created_by: uidForTargets, limit: 1 }
+        : { limit: 1 };
+      const targetsRes =
+        await TMS_API.trainingPartnerTargets.list(targetsParams);
 
       const newKpis = {
         themes: themes.length,
         plans: plansCollected.length,
-        partners: partnersResp?.data?.count ?? partnersResp?.count ?? partnersArr.length,
+        partners:
+          partnersResp?.data?.count ??
+          partnersResp?.count ??
+          partnersArr.length,
         targets: targetsRes?.data?.count ?? targetsRes?.count ?? 0,
       };
 
@@ -275,18 +295,23 @@ export default function SmmuTmsDashboard() {
 
       // hydrate partner name & plan name from our maps (fallback to embedded fields)
       const hydrated = results.map((t) => {
-        const partnerObj = partnersMap[t.partner] || (t.partner_obj || null);
-        const planObj = plansMap[t.training_plan] || (t.training_plan_obj || null);
+        const partnerObj = partnersMap[t.partner] || t.partner_obj || null;
+        const planObj =
+          plansMap[t.training_plan] || t.training_plan_obj || null;
         return {
           ...t,
-          partner_name: partnerObj?.name || t.partner_name || (partnerObj && (partnerObj.name)) || String(t.partner),
-          training_plan_name: planObj?.training_name || t.training_plan_name || null,
+          partner_name:
+            partnerObj?.name ||
+            t.partner_name ||
+            (partnerObj && partnerObj.name) ||
+            String(t.partner),
+          training_plan_name:
+            planObj?.training_name || t.training_plan_name || null,
         };
       });
 
       setTargets(hydrated);
       setTotalTargets(data?.count ?? res?.count ?? 0);
-
     } catch (err) {
       console.error("fetchTargets", err);
       setTargets([]);
@@ -315,7 +340,8 @@ export default function SmmuTmsDashboard() {
 
   // small helper to compute progress column
   function computeProgress(t) {
-    const achieved = t.achieved_count ?? t.achieved_batches ?? t.achieved ?? null;
+    const achieved =
+      t.achieved_count ?? t.achieved_batches ?? t.achieved ?? null;
     const target = t.target_count ?? null;
     if (achieved == null || target == null || target === 0) return "—";
     const pct = Math.round((Number(achieved) / Number(target)) * 100);
@@ -324,14 +350,21 @@ export default function SmmuTmsDashboard() {
 
   // UI variables
   const totalPages = Math.max(1, Math.ceil(totalTargets / pageSize));
-  const cardStyle = { background: "#fff", borderRadius: 8, padding: 18, boxShadow: "0 2px 8px rgba(10,20,40,0.04)", minWidth: 160 };
+  const cardStyle = {
+    background: "#fff",
+    borderRadius: 8,
+    padding: 18,
+    boxShadow: "0 2px 8px rgba(10,20,40,0.04)",
+    minWidth: 160,
+  };
   const small = { color: "#6c757d", fontSize: 13 };
 
   // render partner cell: prefer partner_name set on target, otherwise map lookup
   function renderPartnerName(t) {
     if (t.partner_name) return t.partner_name;
     const pid = t.partner;
-    if (partnersMap && partnersMap[pid]) return partnersMap[pid].name || String(pid);
+    if (partnersMap && partnersMap[pid])
+      return partnersMap[pid].name || String(pid);
     return String(pid);
   }
 
@@ -339,117 +372,287 @@ export default function SmmuTmsDashboard() {
     <div className="app-shell">
       <TmsLeftNav />
       <div className="main-area">
-        <TopNav left={<div className="app-title">Pragati Setu — TMS (SMMU)</div>} />
+        <TopNav
+          left={<div className="app-title">Pragati Setu — TMS (SMMU)</div>}
+        />
 
         <main className="dashboard-main" style={{ padding: 18 }}>
-          <div style={{ maxWidth: 1100, margin: "20px auto", padding: "0 16px" }}>
-            <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 16 }}>
+          <div
+            style={{ maxWidth: 1100, margin: "20px auto", padding: "0 16px" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: 16,
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
               <h2 style={{ margin: 0 }}>SMMU — Training Management</h2>
-              <div style={{ marginLeft: "auto", color: "#6c757d", display: "flex", gap: 12, alignItems: "center" }}>
-                <div style={{ fontSize: 13 }}>{user?.first_name ? `Welcome, ${user.first_name}` : "Welcome"}</div>
-                <button className="btn" onClick={handleRefresh} disabled={refreshing} style={{ padding: "6px 10px", borderRadius: 6 }}>
-                  {refreshing ? "Refreshing…" : (usingCache ? "Refresh (reload APIs)" : "Refresh")}
+              <div
+                style={{
+                  marginLeft: "auto",
+                  color: "#6c757d",
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "center",
+                }}
+              >
+                <div style={{ fontSize: 13 }}>
+                  {user?.first_name ? `Welcome, ${user.first_name}` : "Welcome"}
+                </div>
+                <button
+                  className="btn"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  style={{ padding: "6px 10px", borderRadius: 6 }}
+                >
+                  {refreshing
+                    ? "Refreshing…"
+                    : usingCache
+                      ? "Refresh (reload APIs)"
+                      : "Refresh"}
                 </button>
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 18 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: 12,
+                marginBottom: 18,
+              }}
+            >
               <div style={cardStyle}>
-                <div style={{ fontSize: 28, fontWeight: 700 }}>{loadingKpis ? "…" : animTargets}</div>
-                <div style={{ marginTop: 6, fontWeight: 700 }}>My Partner Targets</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {loadingKpis ? "…" : animTargets}
+                </div>
+                <div style={{ marginTop: 6, fontWeight: 700 }}>
+                  My Partner Targets
+                </div>
                 <div style={small}>Targets created by you</div>
               </div>
 
               <div style={cardStyle}>
-                <div style={{ fontSize: 28, fontWeight: 700 }}>{loadingKpis ? "…" : animPlans}</div>
-                <div style={{ marginTop: 6, fontWeight: 700 }}>Training Plans</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {loadingKpis ? "…" : animPlans}
+                </div>
+                <div style={{ marginTop: 6, fontWeight: 700 }}>
+                  Training Plans
+                </div>
                 <div style={small}>Available modules (theme-specific)</div>
               </div>
 
               <div style={cardStyle}>
-                <div style={{ fontSize: 28, fontWeight: 700 }}>{loadingKpis ? "…" : animThemes}</div>
-                <div style={{ marginTop: 6, fontWeight: 700 }}>Training Themes</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {loadingKpis ? "…" : animThemes}
+                </div>
+                <div style={{ marginTop: 6, fontWeight: 700 }}>
+                  Training Themes
+                </div>
                 <div style={small}>Theme categories</div>
               </div>
 
               <div style={cardStyle}>
-                <div style={{ fontSize: 28, fontWeight: 700 }}>{loadingKpis ? "…" : animPartners}</div>
-                <div style={{ marginTop: 6, fontWeight: 700 }}>Training Partners</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {loadingKpis ? "…" : animPartners}
+                </div>
+                <div style={{ marginTop: 6, fontWeight: 700 }}>
+                  Training Partners
+                </div>
                 <div style={small}>Registered partners</div>
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 20 }}>
-              <div style={{ background: "#fff", borderRadius: 8, padding: 16, boxShadow: "0 1px 0 rgba(10,20,40,0.03)" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 420px",
+                gap: 20,
+              }}
+            >
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: 8,
+                  padding: 16,
+                  boxShadow: "0 1px 0 rgba(10,20,40,0.03)",
+                }}
+              >
                 <h3 style={{ marginTop: 0 }}>Quick Actions</h3>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button onClick={() => navigate("/tms/smmu/partner-targets")} className="btn" style={{ background: "#0b2540", color: "#fff", padding: "8px 12px", borderRadius: 6 }}>
+                  <button
+                    onClick={() => navigate("/tms/smmu/partner-targets")}
+                    className="btn"
+                    style={{
+                      background: "#0b2540",
+                      color: "#fff",
+                      padding: "8px 12px",
+                      borderRadius: 6,
+                    }}
+                  >
                     Create Partner Targets
                   </button>
-                  <button onClick={() => navigate("/tms/training-plans")} className="btn" style={{ padding: "8px 12px", borderRadius: 6 }}>
+                  <button
+                    onClick={() => navigate("/tms/training-plans")}
+                    className="btn"
+                    style={{ padding: "8px 12px", borderRadius: 6 }}
+                  >
                     Training Plans
                   </button>
-                  <button onClick={() => navigate("/tms/training-themes")} className="btn" style={{ padding: "8px 12px", borderRadius: 6 }}>
+                  <button
+                    onClick={() => navigate("/tms/training-themes")}
+                    className="btn"
+                    style={{ padding: "8px 12px", borderRadius: 6 }}
+                  >
                     Training Themes
                   </button>
-                  <button onClick={() => navigate("/tms/smmu/batches")} className="btn" style={{ padding: "8px 12px", borderRadius: 6 }}>
+                  <button
+                    onClick={() => navigate("/tms/smmu/batches")}
+                    className="btn"
+                    style={{ padding: "8px 12px", borderRadius: 6 }}
+                  >
                     All Training Batches
                   </button>
                 </div>
 
                 <div style={{ marginTop: 16 }}>
                   <h4 style={{ margin: "8px 0" }}>Recent activity</h4>
-                  <div style={small}>No recent activity tracked yet — use the Create Partner Targets screen to assign targets to partners.</div>
+                  <div style={small}>
+                    No recent activity tracked yet — use the Create Partner
+                    Targets screen to assign targets to partners.
+                  </div>
                 </div>
               </div>
 
-              <aside style={{ background: "#fff", borderRadius: 8, padding: 16, boxShadow: "0 1px 0 rgba(10,20,40,0.03)" }}>
+              <aside
+                style={{
+                  background: "#fff",
+                  borderRadius: 8,
+                  padding: 16,
+                  boxShadow: "0 1px 0 rgba(10,20,40,0.03)",
+                }}
+              >
                 <h4 style={{ marginTop: 0 }}>My Assigned Targets</h4>
-                <div style={{ fontSize: 13, color: "#6c757d", marginBottom: 12 }}>Paginated list of targets created by you (progress = targets vs achieved).</div>
+                <div
+                  style={{ fontSize: 13, color: "#6c757d", marginBottom: 12 }}
+                >
+                  Paginated list of targets created by you (progress = targets
+                  vs achieved).
+                </div>
 
-                <div style={{ maxHeight: 360, overflow: "auto", borderTop: "1px solid #f1f3f5", paddingTop: 8 }}>
+                <div
+                  style={{
+                    maxHeight: 360,
+                    overflow: "auto",
+                    borderTop: "1px solid #f1f3f5",
+                    paddingTop: 8,
+                  }}
+                >
                   {loadingTargets ? (
-                    <div style={{ padding: 12, color: "#6c757d" }}>Loading targets…</div>
+                    <div style={{ padding: 12, color: "#6c757d" }}>
+                      Loading targets…
+                    </div>
                   ) : targets.length ? (
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        fontSize: 13,
+                      }}
+                    >
                       <thead>
-                        <tr style={{ textAlign: "left", borderBottom: "1px solid #eef1f4" }}>
+                        <tr
+                          style={{
+                            textAlign: "left",
+                            borderBottom: "1px solid #eef1f4",
+                          }}
+                        >
                           <th style={{ padding: "8px 6px" }}>Partner</th>
                           <th style={{ padding: "8px 6px" }}>Scope</th>
                           <th style={{ padding: "8px 6px", width: 120 }}>FY</th>
-                          <th style={{ padding: "8px 6px", width: 140 }}>Progress</th>
+                          <th style={{ padding: "8px 6px", width: 140 }}>
+                            Progress
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {targets.map((t) => (
-                          <tr key={t.id} style={{ borderBottom: "1px solid #fbfbfb" }}>
-                            <td style={{ padding: "8px 6px" }}>{renderPartnerName(t)}</td>
+                          <tr
+                            key={t.id}
+                            style={{ borderBottom: "1px solid #fbfbfb" }}
+                          >
+                            <td style={{ padding: "8px 6px" }}>
+                              {renderPartnerName(t)}
+                            </td>
                             <td style={{ padding: "8px 6px" }}>
                               {t.target_type}
-                              {t.target_type === "MODULE" && (t.training_plan_name || (plansMap[t.training_plan] && plansMap[t.training_plan].training_name)) ? ` — ${t.training_plan_name || plansMap[t.training_plan].training_name}` : t.theme ? ` — ${t.theme}` : ""}
-                              {t.target_type === "DISTRICT" && t.district_name ? ` — ${t.district_name}` : ""}
+                              {t.target_type === "MODULE" &&
+                              (t.training_plan_name ||
+                                (plansMap[t.training_plan] &&
+                                  plansMap[t.training_plan].training_name))
+                                ? ` — ${t.training_plan_name || plansMap[t.training_plan].training_name}`
+                                : t.theme
+                                  ? ` — ${t.theme}`
+                                  : ""}
+                              {t.target_type === "DISTRICT" && t.district_name
+                                ? ` — ${t.district_name}`
+                                : ""}
                             </td>
-                            <td style={{ padding: "8px 6px" }}>{t.financial_year || "—"}</td>
-                            <td style={{ padding: "8px 6px" }}>{computeProgress(t)}</td>
+                            <td style={{ padding: "8px 6px" }}>
+                              {t.financial_year || "—"}
+                            </td>
+                            <td style={{ padding: "8px 6px" }}>
+                              {computeProgress(t)}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   ) : (
-                    <div style={{ padding: 12, color: "#6c757d" }}>No assigned targets.</div>
+                    <div style={{ padding: 12, color: "#6c757d" }}>
+                      No assigned targets.
+                    </div>
                   )}
                 </div>
 
                 {/* pagination */}
-                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
-                  <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: "6px 8px", borderRadius: 6 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                    marginTop: 12,
+                  }}
+                >
+                  <button
+                    className="btn"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    style={{ padding: "6px 8px", borderRadius: 6 }}
+                  >
                     Prev
                   </button>
-                  <div style={small}>Page {page} / {totalPages}</div>
-                  <button className="btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ padding: "6px 8px", borderRadius: 6 }}>
+                  <div style={small}>
+                    Page {page} / {totalPages}
+                  </div>
+                  <button
+                    className="btn"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    style={{ padding: "6px 8px", borderRadius: 6 }}
+                  >
                     Next
                   </button>
-                  <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} style={{ marginLeft: "auto", padding: 6 }}>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    style={{ marginLeft: "auto", padding: 6 }}
+                  >
                     <option value={5}>5</option>
                     <option value={10}>10</option>
                     <option value={25}>25</option>

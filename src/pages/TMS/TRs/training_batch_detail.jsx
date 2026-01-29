@@ -1,8 +1,8 @@
 // src/pages/TMS/TRs/training_batch_detail.jsx
 import React, { useContext, useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api from "../../../api/axios";
 
@@ -22,7 +22,7 @@ function saveCache(id, payload) {
   try {
     localStorage.setItem(
       DETAIL_CACHE_PREFIX + id,
-      JSON.stringify({ ts: Date.now(), payload })
+      JSON.stringify({ ts: Date.now(), payload }),
     );
   } catch (e) {}
 }
@@ -62,7 +62,7 @@ export default function TrainingBatchDetail() {
 
   const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(null);
   const [selectedAttendanceRecords, setSelectedAttendanceRecords] = useState(
-    []
+    [],
   );
   const [loadingSelectedAttendance, setLoadingSelectedAttendance] =
     useState(false);
@@ -109,7 +109,7 @@ export default function TrainingBatchDetail() {
           console.log("✅ Using cache");
           setBatchData(cached.payload.batchData);
           setTrainingRequestDetail(
-            cached.payload.trainingRequestDetail || null
+            cached.payload.trainingRequestDetail || null,
           );
           setParticipants(cached.payload.participants || []);
           setMasterTrainers(cached.payload.masterTrainers || []);
@@ -137,10 +137,10 @@ export default function TrainingBatchDetail() {
       // 2. Fetch FULL Training Request → /tms/training-requests/1/detail/
       if (requestId) {
         console.log(
-          "📋 Fetching /tms/training-requests/" + requestId + "/detail/"
+          "📋 Fetching /tms/training-requests/" + requestId + "/detail/",
         );
         const trResp = await api.get(
-          `/tms/training-requests/${requestId}/detail/`
+          `/tms/training-requests/${requestId}/detail/`,
         );
         trDetail = trResp?.data || null;
         console.log("✅ Training Request detail:", trDetail);
@@ -151,10 +151,10 @@ export default function TrainingBatchDetail() {
       if (batchResponse?.centre?.id) {
         const centreId = batchResponse.centre.id;
         console.log(
-          "🏢 Fetching /tms/training-partner-centres/" + centreId + "/detail/"
+          "🏢 Fetching /tms/training-partner-centres/" + centreId + "/detail/",
         );
         const centreResp = await api.get(
-          `/tms/training-partner-centres/${centreId}/detail/`
+          `/tms/training-partner-centres/${centreId}/detail/`,
         );
         fullCentreData = centreResp?.data || batchResponse.centre;
         console.log("✅ Full centre detail with media:", fullCentreData);
@@ -166,7 +166,7 @@ export default function TrainingBatchDetail() {
         setLoadingAttendance(true);
         console.log("📅 Fetching /tms/batch-attendance/?batch=" + batchId);
         const attResp = await api.get(
-          `/tms/batch-attendance/?batch=${batchId}`
+          `/tms/batch-attendance/?batch=${batchId}`,
         );
         const attData = attResp?.data ?? attResp ?? {};
         attendances = attData.results || attData || [];
@@ -206,7 +206,7 @@ export default function TrainingBatchDetail() {
       setLoadingClosureInfo(true);
       // closure
       const crResp = await api.get(
-        `/tms/batch-closure-requests/?batch=${batchId}`
+        `/tms/batch-closure-requests/?batch=${batchId}`,
       );
       const crData = crResp?.data ?? crResp ?? {};
       const crList = crData.results || crData || [];
@@ -214,7 +214,7 @@ export default function TrainingBatchDetail() {
 
       // media
       const mediaResp = await api.get(
-        `/tms/batch-media/?batch=${batchId}&page_size=500`
+        `/tms/batch-media/?batch=${batchId}&page_size=500`,
       );
       const mData = mediaResp?.data ?? mediaResp ?? {};
       const mList = mData.results || mData || [];
@@ -259,7 +259,7 @@ export default function TrainingBatchDetail() {
     try {
       // 1) Find the BatchAttendance row for this date
       const attResp = await api.get(
-        `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`
+        `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`,
       );
       const attData = attResp?.data ?? attResp ?? {};
       const attendance = (attData.results || attData || [])[0];
@@ -270,7 +270,7 @@ export default function TrainingBatchDetail() {
 
       // 2) Fetch participant records for this attendance id
       const recResp = await api.get(
-        `/tms/participant-attendance/?attendance=${attendance.id}`
+        `/tms/participant-attendance/?attendance=${attendance.id}`,
       );
       const recData = recResp?.data ?? recResp ?? {};
       const recs = recData.results || recData || [];
@@ -544,7 +544,7 @@ export default function TrainingBatchDetail() {
                                       }
                                       onClick={() =>
                                         fetchAttendanceParticipantsForDate(
-                                          att.date
+                                          att.date,
                                         )
                                       }
                                     >
@@ -927,7 +927,7 @@ export default function TrainingBatchDetail() {
                                   {centreDetail.submissions.map(
                                     (submission) => {
                                       const src = normalizeMediaUrl(
-                                        submission.file
+                                        submission.file,
                                       );
                                       return (
                                         <div
@@ -963,7 +963,7 @@ export default function TrainingBatchDetail() {
                                           </div>
                                         </div>
                                       );
-                                    }
+                                    },
                                   )}
                                 </div>
                               </div>

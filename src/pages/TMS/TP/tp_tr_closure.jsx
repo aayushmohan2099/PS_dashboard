@@ -1,8 +1,8 @@
 // src/pages/TMS/TP/tp_tr_closure.jsx
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API } from "../../../api/axios";
 import api from "../../../api/axios";
@@ -133,7 +133,7 @@ export default function TpTrainingRequestClosure() {
       setLoadingTrInfo(true);
       try {
         const resp = await api.get(
-          `/tms/training-requests/${requestId}/detail/`
+          `/tms/training-requests/${requestId}/detail/`,
         );
         setTrInfo(resp?.data || null);
       } catch (e) {
@@ -206,7 +206,7 @@ export default function TpTrainingRequestClosure() {
     setLoadingCosting((m) => ({ ...m, [batchId]: true }));
     try {
       const resp = await api.get(
-        `/tms/tp-batch-cost-breakups/?batch=${batchId}`
+        `/tms/tp-batch-cost-breakups/?batch=${batchId}`,
       );
       const data = resp?.data ?? resp ?? {};
       const list = data.results || data || [];
@@ -294,7 +294,7 @@ export default function TpTrainingRequestClosure() {
     const breakup = costingByBatch[batchId];
     if (!breakup || !breakup.id) {
       alert(
-        "Cost breakup not found for this batch. Please ensure batch costing (centre/hostel/fooding etc.) is submitted before entering trainer/TP fees."
+        "Cost breakup not found for this batch. Please ensure batch costing (centre/hostel/fooding etc.) is submitted before entering trainer/TP fees.",
       );
       return;
     }
@@ -331,12 +331,12 @@ export default function TpTrainingRequestClosure() {
       alert(
         method === "post"
           ? "Batch costing details saved successfully."
-          : "Batch costing details updated successfully."
+          : "Batch costing details updated successfully.",
       );
     } catch (e) {
       console.error("tp_tr_closure: save/update batch-costs failed", e);
       alert(
-        "Failed to save costing for this batch. Please check values and try again."
+        "Failed to save costing for this batch. Please check values and try again.",
       );
     } finally {
       setSavingCost((m) => ({ ...m, [batchId]: false }));
@@ -392,13 +392,13 @@ export default function TpTrainingRequestClosure() {
     if (!requestId || !user?.id) return;
     if (trClosure) {
       alert(
-        "A closure request already exists for this training and is under review."
+        "A closure request already exists for this training and is under review.",
       );
       return;
     }
     if (
       !window.confirm(
-        "Are you sure you want to create a closure request for this training?"
+        "Are you sure you want to create a closure request for this training?",
       )
     ) {
       return;
@@ -416,7 +416,7 @@ export default function TpTrainingRequestClosure() {
     } catch (e) {
       console.error("tp_tr_closure: create TRClosure failed", e);
       alert(
-        "Failed to create training closure request. Please verify all details and try again."
+        "Failed to create training closure request. Please verify all details and try again.",
       );
     } finally {
       setCreatingClosure(false);
@@ -763,7 +763,7 @@ export default function TpTrainingRequestClosure() {
                                             handleBreakupFieldChange(
                                               bid,
                                               "total_cost",
-                                              e.target.value
+                                              e.target.value,
                                             )
                                           }
                                         />
@@ -778,7 +778,7 @@ export default function TpTrainingRequestClosure() {
                                             handleBreakupFieldChange(
                                               bid,
                                               "centre_cost",
-                                              e.target.value
+                                              e.target.value,
                                             )
                                           }
                                         />
@@ -793,7 +793,7 @@ export default function TpTrainingRequestClosure() {
                                             handleBreakupFieldChange(
                                               bid,
                                               "hostel_cost",
-                                              e.target.value
+                                              e.target.value,
                                             )
                                           }
                                         />
@@ -808,7 +808,7 @@ export default function TpTrainingRequestClosure() {
                                             handleBreakupFieldChange(
                                               bid,
                                               "fooding_cost",
-                                              e.target.value
+                                              e.target.value,
                                             )
                                           }
                                         />
@@ -823,7 +823,7 @@ export default function TpTrainingRequestClosure() {
                                             handleBreakupFieldChange(
                                               bid,
                                               "dresses_cost",
-                                              e.target.value
+                                              e.target.value,
                                             )
                                           }
                                         />
@@ -838,7 +838,7 @@ export default function TpTrainingRequestClosure() {
                                             handleBreakupFieldChange(
                                               bid,
                                               "study_material_cost",
-                                              e.target.value
+                                              e.target.value,
                                             )
                                           }
                                         />
@@ -944,7 +944,7 @@ export default function TpTrainingRequestClosure() {
                                       handleFeeChange(
                                         bid,
                                         "trainer",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                     className="form-control"
@@ -1093,7 +1093,7 @@ function saveDetailCache(id, payload) {
   try {
     localStorage.setItem(
       DETAIL_CACHE_PREFIX + id,
-      JSON.stringify({ ts: Date.now(), payload })
+      JSON.stringify({ ts: Date.now(), payload }),
     );
   } catch {}
 }
@@ -1113,7 +1113,7 @@ function BatchDetailInner({ batchId, mediaPreviewSrc, setMediaPreviewSrc }) {
 
   const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(null);
   const [selectedAttendanceRecords, setSelectedAttendanceRecords] = useState(
-    []
+    [],
   );
   const [loadingSelectedAttendance, setLoadingSelectedAttendance] =
     useState(false);
@@ -1153,7 +1153,7 @@ function BatchDetailInner({ batchId, mediaPreviewSrc, setMediaPreviewSrc }) {
         if (cached?.payload?.batchData) {
           setBatchData(cached.payload.batchData);
           setTrainingRequestDetail(
-            cached.payload.trainingRequestDetail || null
+            cached.payload.trainingRequestDetail || null,
           );
           setParticipants(cached.payload.participants || []);
           setMasterTrainers(cached.payload.masterTrainers || []);
@@ -1175,7 +1175,7 @@ function BatchDetailInner({ batchId, mediaPreviewSrc, setMediaPreviewSrc }) {
 
       if (requestId) {
         const trResp = await api.get(
-          `/tms/training-requests/${requestId}/detail/`
+          `/tms/training-requests/${requestId}/detail/`,
         );
         trDetail = trResp?.data || null;
         setTrainingRequestDetail(trDetail);
@@ -1184,7 +1184,7 @@ function BatchDetailInner({ batchId, mediaPreviewSrc, setMediaPreviewSrc }) {
       if (batchResponse?.centre?.id) {
         const centreId = batchResponse.centre.id;
         const centreResp = await api.get(
-          `/tms/training-partner-centres/${centreId}/detail/`
+          `/tms/training-partner-centres/${centreId}/detail/`,
         );
         fullCentreData = centreResp?.data || batchResponse.centre;
         setCentreDetail(fullCentreData);
@@ -1193,7 +1193,7 @@ function BatchDetailInner({ batchId, mediaPreviewSrc, setMediaPreviewSrc }) {
       try {
         setLoadingAttendance(true);
         const attResp = await api.get(
-          `/tms/batch-attendance/?batch=${batchId}`
+          `/tms/batch-attendance/?batch=${batchId}`,
         );
         const attData = attResp?.data ?? attResp ?? {};
         attendances = attData.results || attData || [];
@@ -1227,14 +1227,14 @@ function BatchDetailInner({ batchId, mediaPreviewSrc, setMediaPreviewSrc }) {
     try {
       setLoadingClosureInfo(true);
       const crResp = await api.get(
-        `/tms/batch-closure-requests/?batch=${batchId}`
+        `/tms/batch-closure-requests/?batch=${batchId}`,
       );
       const crData = crResp?.data ?? crResp ?? {};
       const crList = crData.results || crData || [];
       setClosureRequest(crList[0] || null);
 
       const mediaResp = await api.get(
-        `/tms/batch-media/?batch=${batchId}&page_size=500`
+        `/tms/batch-media/?batch=${batchId}&page_size=500`,
       );
       const mData = mediaResp?.data ?? mediaResp ?? {};
       const mList = mData.results || mData || [];
@@ -1277,7 +1277,7 @@ function BatchDetailInner({ batchId, mediaPreviewSrc, setMediaPreviewSrc }) {
 
     try {
       const attResp = await api.get(
-        `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`
+        `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`,
       );
       const attData = attResp?.data ?? attResp ?? {};
       const attendance = (attData.results || attData || [])[0];
@@ -1287,7 +1287,7 @@ function BatchDetailInner({ batchId, mediaPreviewSrc, setMediaPreviewSrc }) {
       }
 
       const recResp = await api.get(
-        `/tms/participant-attendance/?attendance=${attendance.id}`
+        `/tms/participant-attendance/?attendance=${attendance.id}`,
       );
       const recData = recResp?.data ?? recResp ?? {};
       const recs = recData.results || recData || [];
@@ -1295,7 +1295,7 @@ function BatchDetailInner({ batchId, mediaPreviewSrc, setMediaPreviewSrc }) {
     } catch (e) {
       console.error(
         "tp_tr_closure: fetchAttendanceParticipantsForDate failed",
-        e
+        e,
       );
       setSelectedAttendanceRecords([]);
     } finally {

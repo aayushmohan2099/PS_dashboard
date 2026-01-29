@@ -2,6 +2,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TmsLeftNav from "../layout/tms_LeftNav";
+import TopNav from "../../../components/layout/TopNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API } from "../../../api/axios";
 
@@ -44,12 +45,12 @@ export default function CpBatchList() {
   const [cpRecord, setCpRecord] = useState(null);
   const [centreLink, setCentreLink] = useState(null);
   const [centre, setCentre] = useState(
-    () => loadJson(CP_CENTRE_CACHE_KEY)?.payload || null
+    () => loadJson(CP_CENTRE_CACHE_KEY)?.payload || null,
   );
 
   const [batchesLoading, setBatchesLoading] = useState(false);
   const [batches, setBatches] = useState(
-    () => loadJson(CP_BATCHES_CACHE_KEY)?.payload || []
+    () => loadJson(CP_BATCHES_CACHE_KEY)?.payload || [],
   );
 
   const didRunRef = useRef(false);
@@ -74,7 +75,7 @@ export default function CpBatchList() {
     try {
       // 1) contact person
       const cpResp = await api.get(
-        `/tms/training-partner-contact-persons/?master_user=${user.id}`
+        `/tms/training-partner-contact-persons/?master_user=${user.id}`,
       );
       const cp = cpResp?.data?.results?.[0] || null;
       setCpRecord(cp);
@@ -88,7 +89,7 @@ export default function CpBatchList() {
 
       // 2) centre link
       const linkResp = await api.get(
-        `/tms/tpcp-centre-links/?contact_person=${cp.id}`
+        `/tms/tpcp-centre-links/?contact_person=${cp.id}`,
       );
       const link = linkResp?.data?.results?.[0] || null;
       setCentreLink(link);
@@ -96,7 +97,7 @@ export default function CpBatchList() {
       // 3) centre detail
       if (link?.allocated_centre) {
         const centreResp = await api.get(
-          `/tms/training-partner-centres/${link.allocated_centre}/detail/`
+          `/tms/training-partner-centres/${link.allocated_centre}/detail/`,
         );
         const centreData = centreResp?.data || null;
         setCentre(centreData);
@@ -213,6 +214,7 @@ export default function CpBatchList() {
     <div className="app-shell">
       <TmsLeftNav />
       <div className="main-area">
+        <TopNav />
         <main style={{ padding: 18 }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <h2 style={{ marginTop: 8 }}>Contact Person — Batches</h2>
@@ -337,7 +339,7 @@ export default function CpBatchList() {
                     <tbody>
                       {rows.map((batch, index) => {
                         const participantsCount = Array.isArray(
-                          batch.beneficiary
+                          batch.beneficiary,
                         )
                           ? batch.beneficiary.length
                           : "-";

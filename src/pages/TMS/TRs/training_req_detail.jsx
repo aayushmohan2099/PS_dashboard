@@ -1,8 +1,8 @@
 // src/pages/TMS/TRs/training_req_detail.jsx
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API } from "../../../api/axios";
 import { getCanonicalRole } from "../../../utils/roleUtils";
@@ -22,7 +22,7 @@ function saveCache(id, payload) {
   try {
     localStorage.setItem(
       DETAIL_CACHE_PREFIX + id,
-      JSON.stringify({ ts: Date.now(), payload })
+      JSON.stringify({ ts: Date.now(), payload }),
     );
   } catch (e) {}
 }
@@ -284,7 +284,7 @@ export default function TrainingRequestDetail() {
         if (trObj?.partner) {
           if (TMS_API.trainingPartners && TMS_API.trainingPartners.retrieve) {
             const pResp = await TMS_API.trainingPartners.retrieve(
-              trObj.partner
+              trObj.partner,
             );
             partnerObj = pResp?.data ?? pResp ?? null;
           } else {
@@ -795,7 +795,7 @@ export default function TrainingRequestDetail() {
                         {/* Other statuses → VIEW BATCHES */}
                         {(!isTP ||
                           !["REVIEW"].includes(
-                            (tr.status || "").toUpperCase()
+                            (tr.status || "").toUpperCase(),
                           )) &&
                           [
                             "ONGOING",

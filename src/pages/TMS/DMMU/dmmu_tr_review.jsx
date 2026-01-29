@@ -1,8 +1,8 @@
 // src/pages/TMS/DMMU/dmmu_tr_review.jsx
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API } from "../../../api/axios";
 import { getCanonicalRole } from "../../../utils/roleUtils";
@@ -188,7 +188,7 @@ export default function DmmuTrReview() {
         try {
           if (TMS_API.trainingPartners?.retrieve) {
             const pResp = await TMS_API.trainingPartners.retrieve(
-              trObj.partner
+              trObj.partner,
             );
             partnerObj = pResp?.data ?? pResp ?? null;
           } else {
@@ -357,7 +357,7 @@ export default function DmmuTrReview() {
 
   const mtTotalPages = useMemo(
     () => Math.max(1, Math.ceil(mtTotal / mtPageSize)),
-    [mtTotal, mtPageSize]
+    [mtTotal, mtPageSize],
   );
 
   /* ---------------- approve / revert logic ---------------- */

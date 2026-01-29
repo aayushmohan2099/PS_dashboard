@@ -1,3 +1,4 @@
+// src/pages/LDMS/Support Map/sup_cap_comps/SCRecor.jsx
 import React, { useEffect, useState } from "react";
 import {
   FaLayerGroup,

@@ -1,8 +1,8 @@
 // src/pages/TMS/TRs/batch_certificate.jsx
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { LOOKUP_API, TMS_API } from "../../../api/axios";
 import { getCanonicalRole } from "../../../utils/roleUtils";
@@ -18,7 +18,7 @@ function saveCache(batchId, payload) {
   try {
     localStorage.setItem(
       getCacheKey(batchId),
-      JSON.stringify({ ts: Date.now(), payload })
+      JSON.stringify({ ts: Date.now(), payload }),
     );
   } catch {}
 }
@@ -80,7 +80,7 @@ export default function BatchCertificate() {
     if (!batchId) return null;
     try {
       const resp = await api.get(
-        `/tms/batch-closure-requests/?batch=${batchId}&page_size=1`
+        `/tms/batch-closure-requests/?batch=${batchId}&page_size=1`,
       );
       return resp?.data?.results?.[0] || null;
     } catch (e) {
@@ -93,7 +93,7 @@ export default function BatchCertificate() {
     if (!batchId) return null;
     try {
       const resp = await api.get(
-        `/tms/batch-reports/?batch=${batchId}&page_size=1`
+        `/tms/batch-reports/?batch=${batchId}&page_size=1`,
       );
       return resp?.data?.results?.[0] || null;
     } catch (e) {
@@ -106,7 +106,7 @@ export default function BatchCertificate() {
     if (!trainingPlanId) return null;
     try {
       const resp = await api.get(
-        `/tms/training-plans/${trainingPlanId}/detail/`
+        `/tms/training-plans/${trainingPlanId}/detail/`,
       );
       return resp?.data || null;
     } catch (e) {
@@ -158,7 +158,7 @@ export default function BatchCertificate() {
     if (!districtId) return null;
     try {
       const resp = await api.get(
-        `/lookups/user-geoscope/?district_id=${districtId}&block_id=null`
+        `/lookups/user-geoscope/?district_id=${districtId}&block_id=null`,
       );
       const userIds = resp?.data?.user_ids || [];
       if (userIds.length >= 2) {
@@ -199,7 +199,7 @@ export default function BatchCertificate() {
       const response = await fetch(templatePath);
       if (!response.ok) {
         throw new Error(
-          `HTTP ${response.status}: Template not found at ${templatePath}`
+          `HTTP ${response.status}: Template not found at ${templatePath}`,
         );
       }
 
@@ -529,7 +529,7 @@ export default function BatchCertificate() {
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
-        }
+        },
       );
 
       setReportRow(patchResp?.data);

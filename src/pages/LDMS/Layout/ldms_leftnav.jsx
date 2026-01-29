@@ -84,11 +84,11 @@ export default function LdmsLeftNav({ collapsed, onToggle }) {
 
   return (
     <aside className={`ldms-leftnav ${collapsed ? "collapsed" : ""}`}>
-      {/* LOGO */}
+      {/* LOGO
       <div className="ldms-logo" onClick={() => navigate("/dashboard")}>
         <img src={logo} alt="LDMS" />
-        <span className="logo-text">Back to Home</span>
-      </div>
+        <span className="logo-text">Benefica</span>
+      </div> */}
 
       {/* NAV */}
       <nav className="ldms-nav">

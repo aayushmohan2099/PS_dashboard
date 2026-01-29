@@ -1,8 +1,8 @@
 // src/pages/TMS/DMMU/dmmu_request_closure.jsx
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api from "../../../api/axios";
 
@@ -145,7 +145,7 @@ export default function DmmuRequestClosure() {
     setLoadingBatches(true);
     try {
       const resp = await api.get(
-        `/tms/batches/?request=${requestId}&page_size=500`
+        `/tms/batches/?request=${requestId}&page_size=500`,
       );
       const data = resp?.data ?? resp ?? {};
       const results = data.results || data || [];
@@ -946,7 +946,7 @@ function saveCache(id, payload) {
   try {
     localStorage.setItem(
       DETAIL_CACHE_PREFIX + id,
-      JSON.stringify({ ts: Date.now(), payload })
+      JSON.stringify({ ts: Date.now(), payload }),
     );
   } catch {}
 }
@@ -964,7 +964,7 @@ function BatchDetailForDmmu({ batchId }) {
 
   const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(null);
   const [selectedAttendanceRecords, setSelectedAttendanceRecords] = useState(
-    []
+    [],
   );
   const [loadingSelectedAttendance, setLoadingSelectedAttendance] =
     useState(false);
@@ -1005,7 +1005,7 @@ function BatchDetailForDmmu({ batchId }) {
         if (cached?.payload?.batchData) {
           setBatchData(cached.payload.batchData);
           setTrainingRequestDetail(
-            cached.payload.trainingRequestDetail || null
+            cached.payload.trainingRequestDetail || null,
           );
           setParticipants(cached.payload.participants || []);
           setMasterTrainers(cached.payload.masterTrainers || []);
@@ -1027,7 +1027,7 @@ function BatchDetailForDmmu({ batchId }) {
 
       if (requestId) {
         const trResp = await api.get(
-          `/tms/training-requests/${requestId}/detail/`
+          `/tms/training-requests/${requestId}/detail/`,
         );
         trDetail = trResp?.data || null;
         setTrainingRequestDetail(trDetail);
@@ -1036,7 +1036,7 @@ function BatchDetailForDmmu({ batchId }) {
       if (batchResponse?.centre?.id) {
         const centreId = batchResponse.centre.id;
         const centreResp = await api.get(
-          `/tms/training-partner-centres/${centreId}/detail/`
+          `/tms/training-partner-centres/${centreId}/detail/`,
         );
         fullCentreData = centreResp?.data || batchResponse.centre;
         setCentreDetail(fullCentreData);
@@ -1045,7 +1045,7 @@ function BatchDetailForDmmu({ batchId }) {
       try {
         setLoadingAttendance(true);
         const attResp = await api.get(
-          `/tms/batch-attendance/?batch=${batchId}`
+          `/tms/batch-attendance/?batch=${batchId}`,
         );
         const attData = attResp?.data ?? attResp ?? {};
         attendances = attData.results || attData || [];
@@ -1079,14 +1079,14 @@ function BatchDetailForDmmu({ batchId }) {
     try {
       setLoadingClosureInfo(true);
       const crResp = await api.get(
-        `/tms/batch-closure-requests/?batch=${batchId}`
+        `/tms/batch-closure-requests/?batch=${batchId}`,
       );
       const crData = crResp?.data ?? crResp ?? {};
       const crList = crData.results || crData || [];
       setClosureRequest(crList[0] || null);
 
       const mediaResp = await api.get(
-        `/tms/batch-media/?batch=${batchId}&page_size=500`
+        `/tms/batch-media/?batch=${batchId}&page_size=500`,
       );
       const mData = mediaResp?.data ?? mediaResp ?? {};
       const mList = mData.results || mData || [];
@@ -1129,7 +1129,7 @@ function BatchDetailForDmmu({ batchId }) {
 
     try {
       const attResp = await api.get(
-        `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`
+        `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`,
       );
       const attData = attResp?.data ?? attResp ?? {};
       const attendance = (attData.results || attData || [])[0];
@@ -1139,7 +1139,7 @@ function BatchDetailForDmmu({ batchId }) {
       }
 
       const recResp = await api.get(
-        `/tms/participant-attendance/?attendance=${attendance.id}`
+        `/tms/participant-attendance/?attendance=${attendance.id}`,
       );
       const recData = recResp?.data ?? recResp ?? {};
       const recs = recData.results || recData || [];
@@ -1147,7 +1147,7 @@ function BatchDetailForDmmu({ batchId }) {
     } catch (e) {
       console.error(
         "dmmu_request_closure: fetchAttendanceParticipantsForDate failed",
-        e
+        e,
       );
       setSelectedAttendanceRecords([]);
     } finally {

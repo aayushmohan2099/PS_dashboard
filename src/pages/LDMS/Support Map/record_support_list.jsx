@@ -1,241 +1,316 @@
-import React, { useEffect, useState, useContext } from "react";
-import { FaEye, FaEdit } from "react-icons/fa";
+// src/pages/LDMS/Support Map/record_support_list.jsx
+import React, { useEffect, useState, useContext, useMemo } from "react";
+import {
+  FaEye,
+  FaEdit,
+  FaFilter,
+  FaMapMarkedAlt,
+  FaCheckCircle,
+} from "react-icons/fa";
 import { LDMS_API, LOOKUP_API } from "../../../api/axios";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
+const STATUS_ALL = ["DRAFT", "PENDING", "APPROVED", "REJECTED"];
+const STATUS_NO_DRAFT = ["PENDING", "APPROVED", "REJECTED"];
+
 export default function SupportBucketList() {
   const { user } = useContext(AuthContext) || {};
-  const [blockId, setBlockId] = useState(null);
-  const [loadingGeo, setLoadingGeo] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState([]);
   const navigate = useNavigate();
 
-  /* -------- Load Block ID -------- */
+  const role = user?.role_id;
+  const isBMMU = role == 1;
+  const isDMMU = role == 2;
+  const isSMMU = role == 3;
+
+  const [districtId, setDistrictId] = useState(null);
+  const [blockId, setBlockId] = useState(null);
+
+  const [districts, setDistricts] = useState([]);
+  const [blocks, setBlocks] = useState([]);
+
+  const [onlyAspirational, setOnlyAspirational] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  /* ---------- Resolve District for DMMU ---------- */
   useEffect(() => {
-    async function loadGeoscope() {
-      try {
-        setLoadingGeo(true);
-        if (!user?.id) return;
+    if (!isDMMU || !user?.id) return;
 
-        const res = await LOOKUP_API.userGeoscopeByUserId(user.id);
-        const blocks = res?.data?.blocks || [];
-        if (blocks.length) setBlockId(blocks[0]);
-      } finally {
-        setLoadingGeo(false);
-      }
-    }
-    loadGeoscope();
-  }, [user?.id]);
+    LOOKUP_API.userGeoscopeByUserId(user.id)
+      .then((res) => {
+        const dist = res?.data?.districts?.[0];
+        if (dist) setDistrictId(dist);
+      })
+      .catch(console.error);
+  }, [isDMMU, user?.id]);
 
-  /* -------- Fetch Bucket Approvals -------- */
+  /* ---------- Load Districts for SMMU ---------- */
+  useEffect(() => {
+    if (!isSMMU) return;
+
+    LOOKUP_API.districts
+      .list({ page_size: 80 })
+      .then((res) => setDistricts(res?.data?.results || []))
+      .catch(console.error);
+  }, [isSMMU]);
+
+  /* ---------- Load Blocks ---------- */
+  useEffect(() => {
+    if (!districtId || typeof districtId !== "number") return;
+
+    LOOKUP_API.blocks
+      .retrieve(districtId)
+      .then((res) => {
+        let data = res?.data?.results || [];
+        if (onlyAspirational) {
+          data = data.filter((b) => b.is_aspirational === 1);
+        }
+        setBlocks(data);
+      })
+      .catch((e) =>
+        console.error("Failed to load blocks for district", districtId, e),
+      );
+  }, [districtId, onlyAspirational]);
+
+  /* ---------- BMMU Block Auto Resolve ---------- */
+  useEffect(() => {
+    if (!isBMMU || !user?.id) return;
+
+    LOOKUP_API.userGeoscopeByUserId(user.id)
+      .then((res) => {
+        const blk = res?.data?.blocks?.[0];
+        if (blk) setBlockId(blk);
+      })
+      .catch(console.error);
+  }, [isBMMU, user?.id]);
+
+  /* ---------- Fetch Buckets ---------- */
   useEffect(() => {
     if (!blockId) return;
 
-    async function loadBuckets() {
-      try {
-        setLoading(true);
-        const res = await LDMS_API.BucketApprovals.list({
-          block_id: blockId,
-        });
-        setRows(res?.data?.results || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
+    setLoading(true);
+    LDMS_API.BucketApprovals.list({ block_id: blockId })
+      .then((res) => {
+        let data = res?.data?.results || [];
 
-    loadBuckets();
-  }, [blockId]);
+        if (!isBMMU) {
+          data = data.filter((r) => r.approval_status !== "DRAFT");
+        }
 
-  function renderStatus(status) {
-    return (
-      <span className={`status-pill ${status?.toLowerCase()}`}>{status}</span>
-    );
-  }
+        if (statusFilter !== "ALL") {
+          data = data.filter((r) => r.approval_status === statusFilter);
+        }
+
+        setRows(data);
+      })
+      .finally(() => setLoading(false));
+  }, [blockId, statusFilter, isBMMU]);
+
+  const statusOptions = useMemo(
+    () => (isBMMU ? STATUS_ALL : STATUS_NO_DRAFT),
+    [isBMMU],
+  );
+
+  const renderStatus = (s) => (
+    <span className={`status-pill ${s?.toLowerCase()}`}>{s}</span>
+  );
 
   return (
-    <div className="sb-list">
-      <h2>Support Buckets</h2>
+    <div className="sb-container">
+      <header className="sb-header">
+        <FaMapMarkedAlt />
+        <h2>Support Bucket Approvals</h2>
+      </header>
 
-      {loadingGeo || loading ? (
-        <p className="muted">Loading support buckets…</p>
-      ) : rows.length === 0 ? (
-        <p className="muted">No support buckets found.</p>
-      ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Creation Date</th>
-                <th>Approval Status</th>
-                <th>Rejection Reason</th>
-                <th>Approval Date</th>
-                <th>View</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, idx) => (
-                <tr key={r.id}>
-                  <td>{idx + 1}</td>
-                  <td>
-                    {r.created_at
-                      ? new Date(r.created_at).toLocaleString()
-                      : "-"}
-                  </td>
-                  <td>{renderStatus(r.approval_status)}</td>
-                  <td>{r.rejection_reason || "-"}</td>
-                  <td>
-                    {r.approval_date
-                      ? new Date(r.approval_date).toLocaleDateString()
-                      : "-"}
-                  </td>
-                  <td>
-                    <div className="actions">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigate(`/ldms/support-map-detail/${r.id}`)
-                        }
-                        className="icon-btn"
-                        title="View Support Map"
-                      >
-                        <FaEye />
-                      </button>
+      {/* ---- Filters ---- */}
+      <div className="filters">
+        {isSMMU && (
+          <select onChange={(e) => setDistrictId(Number(e.target.value))}>
+            <option value="">Select District</option>
+            {districts.map((d) => (
+              <option key={d.district_id} value={d.district_id}>
+                {d.district_name_en}
+              </option>
+            ))}
+          </select>
+        )}
 
-                      {r.approval_status === "DRAFT" && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(`/ldms/support-map/edit/${r.id}`)
-                          }
-                          className="icon-btn edit"
-                          title="Edit Draft"
-                        >
-                          <FaEdit />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {(isDMMU || isSMMU) && (
+          <select onChange={(e) => setBlockId(e.target.value)}>
+            <option value="">Select Block</option>
+            {blocks.map((b) => (
+              <option key={b.block_id} value={b.block_id}>
+                {b.block_name_en}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {(isDMMU || isSMMU) && (
+          <label className="aspirational">
+            <input
+              type="checkbox"
+              checked={onlyAspirational}
+              onChange={(e) => setOnlyAspirational(e.target.checked)}
+            />
+            Aspirational Blocks
+          </label>
+        )}
+
+        <div className="status-filter">
+          <FaFilter />
+          <select onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="ALL">All Status</option>
+            {statusOptions.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
         </div>
+      </div>
+
+      {/* ---- Table ---- */}
+      {loading ? (
+        <p className="muted">Loading approvals…</p>
+      ) : rows.length === 0 ? (
+        <p className="muted">No approval requests found.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Created On</th>
+              <th>Status</th>
+              <th>Reason</th>
+              <th>Approved On</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.id}>
+                <td>{i + 1}</td>
+                <td>{new Date(r.created_at).toLocaleString()}</td>
+                <td>{renderStatus(r.approval_status)}</td>
+                <td>{r.rejection_reason || "-"}</td>
+                <td>
+                  {r.approval_date
+                    ? new Date(r.approval_date).toLocaleDateString()
+                    : "-"}
+                </td>
+                <td className="actions">
+                  <button
+                    onClick={() => navigate(`/ldms/support-map-detail/${r.id}`)}
+                  >
+                    <FaEye />
+                  </button>
+                  {isBMMU && r.approval_status === "DRAFT" && (
+                    <button
+                      className="edit"
+                      onClick={() => navigate(`/ldms/support-map/edit/${r.id}`)}
+                    >
+                      <FaEdit />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
-      {/* ---- styles ---- */}
+      {/* ---- Styles ---- */}
       <style>{`
-        .sb-list {
-          background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 12px;
-          padding: 14px;
+        .sb-container {
+          background:#fff;
+          border-radius:14px;
+          padding:16px;
+          border:1px solid #e5e7eb;
         }
 
-        .sb-list h2 {
-          margin: 0 0 12px;
-          color: #400b0b;
-          font-weight: 700;
+        .sb-header {
+          display:flex;
+          align-items:center;
+          gap:10px;
+          color:#7a0c0c;
         }
 
-        .table-wrap {
-          overflow-x: auto;
+        .filters {
+          display:flex;
+          gap:12px;
+          flex-wrap:wrap;
+          margin:14px 0;
+        }
+
+        select {
+          padding:8px 12px;
+          border-radius:8px;
+          border:1px solid #e5e7eb;
+        }
+
+        .aspirational {
+          display:flex;
+          align-items:center;
+          gap:6px;
+          font-weight:600;
+          color:#7a0c0c;
         }
 
         table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 14px;
+          width:100%;
+          border-collapse:collapse;
         }
 
-        thead {
-          background: #fafafa;
-        }
-
-        th,
-        td {
-          padding: 10px 12px;
-          border-bottom: 1px solid #f1f1f1;
-          text-align: left;
-          white-space: nowrap;
+        th, td {
+          padding:10px;
+          border-bottom:1px solid #f1f1f1;
         }
 
         th {
-          font-weight: 700;
-          color: #7a0c0c;
-        }
-
-        tr:hover {
-          background: #fff7f7;
+          background:#fafafa;
+          color:#7a0c0c;
         }
 
         .status-pill {
-          padding: 4px 10px;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 700;
-          display: inline-block;
+          padding:4px 10px;
+          border-radius:999px;
+          font-size:12px;
+          font-weight:700;
         }
 
-        .status-pill.draft {
-          background: #fef3c7;
-          color: #92400e;
+        .status-pill.pending { background:#dbeafe; color:#1e40af; }
+        .status-pill.approved { background:#dcfce7; color:#166534; }
+        .status-pill.rejected { background:#fee2e2; color:#7f1d1d; }
+        .status-pill.draft { background:#fef3c7; color:#92400e; }
+
+        .actions button {
+          margin-right:6px;
+          border:none;
+          background:#fff;
+          border:1px solid #e5e7eb;
+          border-radius:8px;
+          width:36px;
+          height:36px;
+          cursor:pointer;
+          color:#7a0c0c;
         }
 
-        .status-pill.pending {
-          background: #dbeafe;
-          color: #1e40af;
+        .actions button:hover {
+          background:#7a0c0c;
+          color:#fff;
         }
 
-        .status-pill.approved {
-          background: #dcfce7;
-          color: #166534;
-        }
-
-        .status-pill.rejected {
-          background: #fee2e2;
-          color: #7f1d1d;
-        }
-
-        .actions {
-          display: flex;
-          gap: 8px;
-        }
-
-        .icon-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 38px;
-          height: 38px;
-          border-radius: 8px;
-          border: 1px solid #e5e7eb;
-          background: #fff;
-          color: #7a0c0c;
-          cursor: pointer;
-        }
-
-        .icon-btn:hover {
-          background: #7a0c0c;
-          color: #fff;
-        }
-
-        .icon-btn.edit {
-          color: #92400e;
-        }
-
-        .icon-btn.edit:hover {
-          background: #92400e;
-          color: #fff;
+        .actions .edit:hover {
+          background:#92400e;
         }
 
         .muted {
-          color: #9ca3af;
-          font-style: italic;
+          color:#9ca3af;
+          font-style:italic;
         }
       `}</style>
     </div>

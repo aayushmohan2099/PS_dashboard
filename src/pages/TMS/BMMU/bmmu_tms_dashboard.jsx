@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useContext } from "react";
-import LeftNav from "../../../components/layout/LeftNav";
+import LeftNav from "../layout/tms_LeftNav";
 import TopNav from "../../../components/layout/TopNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API } from "../../../api/axios";
@@ -210,7 +210,7 @@ export default function BmmuTmsDashboard() {
             ts: Date.now(),
             kpis: newKpis,
             blockId: bId,
-          })
+          }),
         );
       }
     } catch (e) {

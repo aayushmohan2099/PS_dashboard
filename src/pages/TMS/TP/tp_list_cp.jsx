@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API } from "../../../api/axios";
 
@@ -174,7 +174,7 @@ export default function TpListCP() {
 
   async function handleDelete(cp) {
     const ok = window.confirm(
-      `Are you sure you want to delete "${cp.name}"?\n\nThis will also DISABLE their login.`
+      `Are you sure you want to delete "${cp.name}"?\n\nThis will also DISABLE their login.`,
     );
     if (!ok) return;
 

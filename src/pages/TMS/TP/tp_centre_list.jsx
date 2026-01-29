@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API } from "../../../api/axios";
 
@@ -32,7 +32,7 @@ function saveCache(payload) {
   try {
     localStorage.setItem(
       CACHE_KEY,
-      JSON.stringify({ ts: Date.now(), payload })
+      JSON.stringify({ ts: Date.now(), payload }),
     );
   } catch {}
 }
@@ -350,9 +350,9 @@ export default function TpCentreList() {
   const filtered = useMemo(
     () =>
       centres.filter((c) =>
-        c.venue_name?.toLowerCase().includes(search.toLowerCase())
+        c.venue_name?.toLowerCase().includes(search.toLowerCase()),
       ),
-    [centres, search]
+    [centres, search],
   );
 
   return (

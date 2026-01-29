@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API } from "../../../api/axios";
 
@@ -118,7 +118,7 @@ export default function TpCreateCP() {
 
   async function handleCPSubmit() {
     setStatus(
-      isEditMode ? "Updating contact person…" : "Creating contact person…"
+      isEditMode ? "Updating contact person…" : "Creating contact person…",
     );
 
     try {

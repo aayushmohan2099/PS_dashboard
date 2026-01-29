@@ -1,8 +1,8 @@
 // src/pages/TMS/TRs/training_batch_list.jsx
 import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import LeftNav from "../../../components/layout/LeftNav";
 import TopNav from "../../../components/layout/TopNav";
+import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API, LOOKUP_API } from "../../../api/axios";
 import { getCanonicalRole } from "../../../utils/roleUtils";
@@ -19,7 +19,7 @@ function saveCache(requestIdOrScopeKey, payload, meta = {}) {
   try {
     localStorage.setItem(
       getCacheKey(requestIdOrScopeKey),
-      JSON.stringify({ ts: Date.now(), payload, meta })
+      JSON.stringify({ ts: Date.now(), payload, meta }),
     );
   } catch {}
 }

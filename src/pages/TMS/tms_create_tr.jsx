@@ -7,8 +7,8 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import LeftNav from "../../components/layout/LeftNav";
 import TopNav from "../../components/layout/TopNav";
+import LeftNav from "./layout/tms_LeftNav";
 import { AuthContext } from "../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API, EPSAKHI_API } from "../../api/axios";
 import ShgListTable from "../Dashboard/ShgListTable";
@@ -66,7 +66,7 @@ const TrainerRow = React.memo(function TrainerRow({
     (e) => {
       if (typeof onToggle === "function") onToggle(row, e.target.checked);
     },
-    [onToggle, row]
+    [onToggle, row],
   );
 
   return (
@@ -95,7 +95,7 @@ const MasterTrainerList = React.memo(function MasterTrainerList({
 }) {
   // trainersCache is array of items
   const [trainersCache, setTrainersCache] = useState(
-    Array.isArray(preloadedTrainers) ? preloadedTrainers : []
+    Array.isArray(preloadedTrainers) ? preloadedTrainers : [],
   );
 
   // local filters & UI state
@@ -150,7 +150,7 @@ const MasterTrainerList = React.memo(function MasterTrainerList({
   const pageSafe = Math.min(Math.max(1, page), totalPages);
   const rows = filteredRows.slice(
     (pageSafe - 1) * PAGE_SIZE,
-    pageSafe * PAGE_SIZE
+    pageSafe * PAGE_SIZE,
   );
 
   // stable wrapper for reload button to show spinner in this component only
@@ -302,10 +302,10 @@ export default function CreateTrainingRequest() {
 
   // NOTE: we expect user's geoscope to contain districts/blocks arrays or single ids
   const [blockId, setBlockId] = useState(
-    geoscopeCached?.blocks?.[0] ?? geoscopeCached?.block_id ?? null
+    geoscopeCached?.blocks?.[0] ?? geoscopeCached?.block_id ?? null,
   );
   const [districtId, setDistrictId] = useState(
-    geoscopeCached?.districts?.[0] ?? geoscopeCached?.district_id ?? null
+    geoscopeCached?.districts?.[0] ?? geoscopeCached?.district_id ?? null,
   );
 
   // cached lists & allowed IDs
@@ -327,7 +327,7 @@ export default function CreateTrainingRequest() {
     district_id: null,
   };
   const [preloadedTrainers, setPreloadedTrainers] = useState(
-    initialMasterCache.items || []
+    initialMasterCache.items || [],
   );
   // meta kept for backward compatibility, but we don't paginate server-side anymore
   const [preloadedTrainersMeta, setPreloadedTrainersMeta] = useState({
@@ -340,7 +340,7 @@ export default function CreateTrainingRequest() {
   });
 
   const [preloadThemes, setPreloadThemes] = useState(
-    loadJson(TRAINING_THEMES_CACHE) || []
+    loadJson(TRAINING_THEMES_CACHE) || [],
   );
   const [preloadReloadToken, setPreloadReloadToken] = useState(0);
 
@@ -393,7 +393,7 @@ export default function CreateTrainingRequest() {
   /* ---------- selectedMemberCodes (controlled selection set for member table) ---------- */
   const selectedMemberCodesSet = useMemo(() => {
     return new Set(
-      selectedBeneficiaries.map((b) => String(b.lokos_member_code))
+      selectedBeneficiaries.map((b) => String(b.lokos_member_code)),
     );
   }, [selectedBeneficiaries]);
 
@@ -498,7 +498,7 @@ export default function CreateTrainingRequest() {
           {
             user_role_id: user?.role_id ?? user?.role,
             limit: 500,
-          }
+          },
         );
         saveJson(TRP_SCOPE_CACHE, {
           ts: Date.now(),
@@ -506,7 +506,7 @@ export default function CreateTrainingRequest() {
           allowedTrainingIds: scopes.map((r) => r.training_id),
         });
         setAllowedTrainingIds(
-          Array.from(new Set(scopes.map((r) => r.training_id).filter(Boolean)))
+          Array.from(new Set(scopes.map((r) => r.training_id).filter(Boolean))),
         );
       } catch (e) {
         console.error("preload trpUserScopes failed", e);
@@ -517,10 +517,10 @@ export default function CreateTrainingRequest() {
       try {
         const allPlans = await fetchListOnce(
           (p) => TMS_API.trainingPlans.list(p),
-          { limit: 500 }
+          { limit: 500 },
         );
         const allowedSet = new Set(
-          (scopes || []).map((r) => r.training_id).filter(Boolean)
+          (scopes || []).map((r) => r.training_id).filter(Boolean),
         );
         // if allowedSet empty, show zero; else filter
         const plansCollected =
@@ -550,7 +550,7 @@ export default function CreateTrainingRequest() {
       try {
         const list = await fetchListOnce(
           (p) => TMS_API.trainingThemes.list(p),
-          { limit: 500 }
+          { limit: 500 },
         );
         setPreloadThemes(list || []);
         saveJson(TRAINING_THEMES_CACHE, list || []);
@@ -727,7 +727,7 @@ export default function CreateTrainingRequest() {
   // memoized selected trainer ids set to avoid recreating on every render
   const selectedTrainerIds = useMemo(
     () => new Set(Array.from(selectedTrainersMap.keys())),
-    [selectedTrainersMap]
+    [selectedTrainersMap],
   );
 
   // trainer selection: stable useCallback to avoid re-creating handler on each render
@@ -758,7 +758,7 @@ export default function CreateTrainingRequest() {
         });
       }
     },
-    [] // uses refs and setState (stable)
+    [], // uses refs and setState (stable)
   );
 
   // when user navigates to participants step (2), load only the APIs needed for the chosen 'Applicable For'
@@ -794,7 +794,7 @@ export default function CreateTrainingRequest() {
     if (plan?.theme) {
       try {
         const cachedTheme = (preloadThemes || []).find(
-          (t) => String(t.id) === String(plan.theme)
+          (t) => String(t.id) === String(plan.theme),
         );
         if (cachedTheme) {
           setSelectedTheme(cachedTheme);
@@ -898,8 +898,8 @@ export default function CreateTrainingRequest() {
     ) {
       designation = Array.from(
         new Set(
-          member.member_designations.map((d) => d.designation).filter(Boolean)
-        )
+          member.member_designations.map((d) => d.designation).filter(Boolean),
+        ),
       ).join(", ");
       if (!designation && member.member_designations[0]?.designation) {
         designation = member.member_designations[0].designation;
@@ -1040,11 +1040,11 @@ export default function CreateTrainingRequest() {
       attempts.push(() => EPSAKHI_API.memberDetail(memberCode));
     }
     attempts.push(() =>
-      EPSAKHI_API.get(`/upsrlm/shg-members/?search=${memberCode}`)
+      EPSAKHI_API.get(`/upsrlm/shg-members/?search=${memberCode}`),
     );
     attempts.push(() => EPSAKHI_API.get(`/upsrlm/members/${memberCode}/`));
     attempts.push(() =>
-      EPSAKHI_API.get(`/upsrlm/members/detail/${memberCode}/`)
+      EPSAKHI_API.get(`/upsrlm/members/detail/${memberCode}/`),
     );
     attempts.push(() => EPSAKHI_API.get(`/shg-members/${memberCode}/`));
     attempts.push(() => EPSAKHI_API.get(`/members/${memberCode}/`));
@@ -1105,7 +1105,7 @@ export default function CreateTrainingRequest() {
       const exists = prev.some(
         (p) =>
           String(p.lokos_member_code) === String(lokos_member_code) &&
-          String(p.lokos_shg_code) === String(lokos_shg_code)
+          String(p.lokos_shg_code) === String(lokos_shg_code),
       );
       if (exists) return prev;
       const normalized = {
@@ -1149,8 +1149,8 @@ export default function CreateTrainingRequest() {
           !(
             String(b.lokos_member_code) === String(mcode) &&
             String(b.lokos_shg_code) === String(scode)
-          )
-      )
+          ),
+      ),
     );
     try {
       const key = `${scode}|${mcode}`;
@@ -1394,7 +1394,7 @@ export default function CreateTrainingRequest() {
   /* ---------- small UI helpers ---------- */
   const selectedTrainerList = useMemo(
     () => Array.from(selectedTrainersMap.values()),
-    [selectedTrainersMap]
+    [selectedTrainersMap],
   );
   const selectedPlanTitle =
     selectedPlan &&
@@ -1504,7 +1504,7 @@ export default function CreateTrainingRequest() {
                         onChange={(e) => {
                           const id = e.target.value;
                           const pl = plans.find(
-                            (p) => String(p.id) === String(id)
+                            (p) => String(p.id) === String(id),
                           );
                           handlePlanSelect(pl || null);
                         }}
@@ -1723,7 +1723,7 @@ export default function CreateTrainingRequest() {
                                 setMemberListReloadToken((t) => t + 1);
                                 setTimeout(
                                   () => setSelectedShgLoading(false),
-                                  700
+                                  700,
                                 );
                               }}
                             />
@@ -1781,14 +1781,14 @@ export default function CreateTrainingRequest() {
                                         String(p.lokos_member_code) ===
                                           String(lokos_member_code) &&
                                         String(p.lokos_shg_code) ===
-                                          String(lokos_shg_code)
+                                          String(lokos_shg_code),
                                     );
                                     if (already) return;
 
                                     try {
                                       const detail =
                                         await fetchMemberDetailBestEffort(
-                                          member
+                                          member,
                                         );
                                       const merged = {
                                         ...(detail || {}),
@@ -1889,7 +1889,7 @@ export default function CreateTrainingRequest() {
                           }}
                         >
                           {partners.find(
-                            (p) => String(p.id) === String(form.partner)
+                            (p) => String(p.id) === String(form.partner),
                           )?.name || `Partner ID ${form.partner}`}
                         </div>
                       ) : (
@@ -1949,7 +1949,7 @@ export default function CreateTrainingRequest() {
                                         onClick={() =>
                                           removeSelectedBeneficiary(
                                             b.lokos_member_code,
-                                            b.lokos_shg_code
+                                            b.lokos_shg_code,
                                           )
                                         }
                                       >

@@ -1,3 +1,4 @@
+// src/pages/LDMS/Support Map/sup_cap_comps/SCHeader.jsx
 import React, { useEffect, useState } from "react";
 import {
   FaUniversity,
