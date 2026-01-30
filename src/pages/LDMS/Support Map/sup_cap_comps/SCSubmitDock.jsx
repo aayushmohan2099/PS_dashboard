@@ -80,6 +80,10 @@ export default function SCSubmitDock({
 
       /* ======================= EDIT MODE ======================= */
       if (editMode) {
+        if (!sbTypeId || !supportBucketId) {
+          alert("Draft data still loading. Please wait a moment.");
+          return;
+        }
         /* 1️⃣ Update SBType */
         await LDMS_API.SBTypes.update(sbTypeId, {
           bucket_type:
@@ -91,6 +95,8 @@ export default function SCSubmitDock({
 
         /* 2️⃣ Update Support Bucket */
         await LDMS_API.SupportBuckets.update(supportBucketId, {
+          department: department.id,
+          scheme: scheme.id,
           benefit_name: supportData.benefitName,
           benefit_amount: supportData.benefitAmount,
           benefit_description: supportData.description || "",
@@ -115,37 +121,65 @@ export default function SCSubmitDock({
           }
         }
 
-        /* 4️⃣ Replace Beneficiaries */
-        await LDMS_API.recorPLDS.deleteBySupportBucket(supportBucketId);
+        /* 4️⃣ Sync Beneficiaries (diff-based) */
 
+        /* 4.1 Fetch existing PLDs */
+        const existingPldsRes = await LDMS_API.recorPLDS.list({
+          support_bucket: supportBucketId,
+        });
+
+        const existingPlds = existingPldsRes?.data?.results || [];
+
+        /* 4.2 Build lookup maps */
+        const existingByMember = new Map(
+          existingPlds.map((pld) => [pld.lokos_member_code, pld]),
+        );
+
+        const selectedByMember = new Map(
+          beneficiaries.map(({ member, shg }) => [
+            member.member_code,
+            { member, shg },
+          ]),
+        );
+
+        /* 4.3 Delete unselected PLDs */
         await Promise.all(
-          beneficiaries.map(({ member, shg }) =>
-            LDMS_API.recorPLDS.create({
-              lokos_shg_code: shg.code,
-              lokos_member_code: member.member_code,
-              pld_status: member.pld_status ? "Yes" : "No",
-              member_name: member.member_name,
-              designation: member.member_designations?.[0]?.designation || "",
-              gender: member.gender,
-              religion: member.religion,
-              marital_status: member.marital_status,
-              father_husband_name: member.relation_name,
-              social_category: member.social_category,
-              education: member.education,
-              district_id: shg.districtId,
-              block_id: shg.blockId,
-              panchayat_id: shg.panchayatId,
-              village_id: shg.villageId,
-              mobile: member.member_phones?.[0]?.phone_no || "",
-              age: member.age,
-              support_bucket: supportBucketId,
-              created_by: user.id,
-            }),
-          ),
+          existingPlds
+            .filter((pld) => !selectedByMember.has(pld.lokos_member_code))
+            .map((pld) => LDMS_API.recorPLDS.destroy(pld.id)),
+        );
+
+        /* 4.4 Create newly selected PLDs */
+        await Promise.all(
+          beneficiaries
+            .filter(({ member }) => !existingByMember.has(member.member_code))
+            .map(({ member, shg }) =>
+              LDMS_API.recorPLDS.create({
+                lokos_shg_code: shg.code,
+                lokos_member_code: member.member_code,
+                pld_status: member.pld_status ? "Yes" : "No",
+                member_name: member.member_name,
+                designation: member.member_designations?.[0]?.designation || "",
+                gender: member.gender,
+                religion: member.religion,
+                marital_status: member.marital_status,
+                father_husband_name: member.relation_name,
+                social_category: member.social_category,
+                education: member.education,
+                district_id: shg.districtId,
+                block_id: shg.blockId,
+                panchayat_id: shg.panchayatId,
+                village_id: shg.villageId,
+                mobile: member.member_phones?.[0]?.phone_no || "",
+                age: member.age,
+                support_bucket: supportBucketId,
+                created_by: user.id,
+              }),
+            ),
         );
 
         /* 5️⃣ Update Approval */
-        await LDMS_API.BucketApprovals.update(supportApprovalId, {
+        await LDMS_API.BucketApprovals.partialUpdate(supportApprovalId, {
           approval_status: mode,
           updated_by: user.id,
         });
@@ -169,27 +203,27 @@ export default function SCSubmitDock({
         created_by: user.id,
       });
 
-      const sbTypeId = sbTypeRes.data.id;
+      const createdSbTypeId = sbTypeRes.data.id;
 
       /* ---------- 2. Support Bucket ---------- */
       const bucketRes = await LDMS_API.SupportBuckets.create({
         department: department,
         scheme: scheme.id,
-        bucket_type: sbTypeId,
+        bucket_type: createdSbTypeId,
         benefit_name: supportData.benefitName,
         benefit_amount: supportData.benefitAmount,
         benefit_description: supportData.description || "",
         created_by: user.id,
       });
 
-      const supportBucketId = bucketRes.data.id;
+      const createdSupportBucketId = bucketRes.data.id;
 
       /* ---------- 3. Training Support (if needed) ---------- */
       if (supportData.bucketType === "Training") {
         await LDMS_API.SBTrainings.create({
           training_theme: supportData.trainingTheme,
           training_plan: supportData.trainingPlan,
-          support_bucket: supportBucketId,
+          support_bucket: createdSupportBucketId,
           created_by: user.id,
         });
       }
@@ -227,7 +261,7 @@ export default function SCSubmitDock({
             village_id: shg.villageId,
             mobile: member.member_phones?.[0]?.phone_no || "",
             age: calculateAge(member.dob),
-            support_bucket: supportBucketId,
+            support_bucket: createdSupportBucketId,
             created_by: user.id,
           }),
         ),
@@ -235,7 +269,7 @@ export default function SCSubmitDock({
 
       /* ---------- 5. Bucket Approval ---------- */
       await LDMS_API.BucketApprovals.create({
-        support_bucket: supportBucketId,
+        support_bucket: createdSupportBucketId,
         approval_status: mode,
         block_id: blockId,
         created_by: user.id,

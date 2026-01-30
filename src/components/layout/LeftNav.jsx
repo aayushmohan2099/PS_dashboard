@@ -4,6 +4,10 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 import { getCanonicalRole } from "../../utils/roleUtils";
 import logo from "../../assets/PS_LOGO.jpg";
+import bms_logo from "../../assets/bms_Logo.png";
+import tms_logo from "../../assets/tms_logo.png";
+import ldms_logo from "../../assets/ldms_logo.png";
+import ems_logo from "../../assets/ems_logo.png";
 
 import {
   FaHome,
@@ -43,37 +47,37 @@ const ROLE_LDMS_ROUTE = {
 const MENU = [
   {
     key: "beneficiary",
-    label: "Beneficiary Management",
-    icon: FaUsers,
+    label: "Beneficiary Management System",
+    icon: bms_logo,
     to: "/dashboard",
     roles: ["bmmu", "dmmu", "smmu"],
   },
   {
     key: "tms",
-    label: "Training Management",
-    icon: FaChalkboardTeacher,
+    label: "Training Management System",
+    icon: tms_logo,
     resolveRoute: (roleKey) =>
       ROLE_TMS_ROUTE[roleKey] || ROLE_TMS_ROUTE.default,
   },
   {
     key: "ldms",
     label: "Lakhpati Didi & Analytics",
-    icon: FaChartLine,
+    icon: ldms_logo,
     resolveRoute: (roleKey) =>
       ROLE_LDMS_ROUTE[roleKey] || ROLE_LDMS_ROUTE.default,
   },
   {
     key: "epsakhi",
-    label: "EP-Sakhi",
-    icon: FaHome,
+    label: "Enterprise Sakhi Management System",
+    icon: ems_logo,
     to: "/dashboard",
   },
-  {
-    key: "ecommerce",
-    label: "E-Commerce",
-    icon: FaStore,
-    to: "/dashboard",
-  },
+  // {
+  //   key: "ecommerce",
+  //   label: "E-Commerce Portal",
+  //   icon: FaStore,
+  //   to: "/dashboard",
+  // },
 ];
 
 export default function DashboardLeftNav() {
@@ -110,9 +114,7 @@ export default function DashboardLeftNav() {
         {MENU.map((item) => {
           if (item.roles && !item.roles.includes(roleKey)) return null;
 
-          const to = item.resolveRoute
-            ? item.resolveRoute(roleKey)
-            : item.to;
+          const to = item.resolveRoute ? item.resolveRoute(roleKey) : item.to;
 
           return (
             <NavLink
@@ -121,14 +123,12 @@ export default function DashboardLeftNav() {
               className={({ isActive }) =>
                 classNames(
                   "dash-nav-item",
-                  isActive || location.pathname === to ? "active" : ""
+                  isActive || location.pathname === to ? "active" : "",
                 )
               }
               onClick={() => handleNav(item)}
             >
-              <span className="nav-icon">
-                <item.icon size={20} />
-              </span>
+              <img src={item.icon} className="nav-icon" />
               <span className="nav-label">{item.label}</span>
             </NavLink>
           );
@@ -136,10 +136,7 @@ export default function DashboardLeftNav() {
       </nav>
 
       {/* TOGGLE */}
-      <button
-        className="dash-toggle"
-        onClick={() => setCollapsed((v) => !v)}
-      >
+      <button className="dash-toggle" onClick={() => setCollapsed((v) => !v)}>
         {collapsed ? "→" : "←"}
       </button>
 
@@ -212,7 +209,7 @@ export default function DashboardLeftNav() {
         }
 
         .dash-nav-item:hover {
-          background: #fdecea;
+          background: #eaebfd;
         }
 
         .dash-nav-item.active {
@@ -221,7 +218,7 @@ export default function DashboardLeftNav() {
         }
 
         .nav-icon {
-          min-width: 20px;
+          width: 30px;
           color: #01062e;
           display: flex;
           align-items: center;
@@ -234,6 +231,7 @@ export default function DashboardLeftNav() {
 
         .nav-label {
           transition: opacity 0.2s ease, transform 0.2s ease;
+          text-wrap: wrap;
         }
 
         .dashboard-leftnav.collapsed .nav-label {
@@ -245,20 +243,27 @@ export default function DashboardLeftNav() {
 
         /* TOGGLE */
         .dash-toggle {
-        height: 40px;
-        border: none;
-        background: #133074;
-        color: #ffffff;
-        font-size: 14px;
-        cursor: pointer;
+          height: 40px;
+          border: none;
+          background: #133074;
+          color: #ffffff;
+          font-size: 14px;
+          cursor: pointer;
 
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
+          position: fixed;
+          bottom: 0;
+          left: 0;
 
-        border-top: 1px solid #e5e7eb;
+          width: 220px;           /* match expanded sidebar width */
+          border-top: 1px solid #e5e7eb;
+          z-index: 1000;
         }
+
+        .dashboard-leftnav.collapsed .dash-toggle {
+          width: 64px;
+          text-align: center;
+          padding: 0;
+        }          
       `}</style>
     </aside>
   );

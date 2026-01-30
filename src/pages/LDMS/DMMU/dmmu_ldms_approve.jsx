@@ -1,5 +1,6 @@
 // src/pages/LDMS/DMMU/dmmu_ldms_approve.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
+import { AuthContext } from "../../../contexts/AuthContext";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   FaUniversity,
@@ -19,6 +20,7 @@ import LoadingModal from "../../../components/ui/LoadingModal";
 
 export default function DmmuLdmsApprove() {
   const { id } = useParams();
+  const { user } = useContext(AuthContext) || {};
   const navigate = useNavigate();
 
   const [data, setData] = useState(null);
@@ -39,7 +41,7 @@ export default function DmmuLdmsApprove() {
       try {
         setLoading(true);
         const res = await LDMS_API.BucketApprovals.retrieve(
-          `${id}/full-detail`
+          `${id}/full-detail`,
         );
         setData(res.data);
       } finally {
@@ -77,26 +79,28 @@ export default function DmmuLdmsApprove() {
     return matchesSearch && matchesPLD;
   });
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredData.length / PAGE_SIZE)
-  );
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
 
   const pagedData = filteredData.slice(
     (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
+    currentPage * PAGE_SIZE,
   );
 
   /* ---------------- Actions ---------------- */
   async function handleApprove() {
-    if (!window.confirm("Are you sure you want to approve this support bucket?"))
+    if (
+      !window.confirm("Are you sure you want to approve this support bucket?")
+    )
       return;
 
     setLoading(true);
     try {
       await LDMS_API.BucketApprovals.partialUpdate(id, {
         approval_status: "APPROVED",
+        approved_by: user.id,
+        approval_date: new Date().toISOString().split("T")[0],
       });
+      alert("Support bucket approved successfully!");
       navigate(-1);
     } finally {
       setLoading(false);
@@ -209,7 +213,10 @@ export default function DmmuLdmsApprove() {
             <div>
               <b>Level</b>
               <span>
-                {support_bucket.training_support.training_plan.level_of_training}
+                {
+                  support_bucket.training_support.training_plan
+                    .level_of_training
+                }
               </span>
             </div>
             <div>

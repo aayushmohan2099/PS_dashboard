@@ -54,7 +54,13 @@ export default function SupportCapture() {
         setSelectedBeneficiaries(
           sb.recorded_benefs.map((b) => ({
             member: b,
-            shg: { code: b.lokos_shg_code },
+            shg: {
+              code: b.lokos_shg_code,
+              districtId: b.district_id,
+              blockId: b.block_id,
+              panchayatId: b.panchayat_id,
+              villageId: b.village_id,
+            },
           })),
         );
       } finally {

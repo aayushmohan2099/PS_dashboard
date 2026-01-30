@@ -187,6 +187,7 @@ export default function SupportBucketList() {
               <th>Status</th>
               <th>Reason</th>
               <th>Approved On</th>
+              <th>Approved By</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -202,6 +203,7 @@ export default function SupportBucketList() {
                     ? new Date(r.approval_date).toLocaleDateString()
                     : "-"}
                 </td>
+                <td>{r.approved_by || "-"}</td>
                 <td className="actions">
                   <button
                     onClick={() => navigate(`/ldms/support-map-detail/${r.id}`)}
@@ -219,7 +221,9 @@ export default function SupportBucketList() {
                   {isDMMU && r.approval_status === "PENDING" && (
                     <button
                       className="edit"
-                      onClick={() => navigate(`/ldms/dmmu/approve-support/${r.id}`)}
+                      onClick={() =>
+                        navigate(`/ldms/dmmu/approve-support/${r.id}`)
+                      }
                     >
                       <FaEdit />
                     </button>
