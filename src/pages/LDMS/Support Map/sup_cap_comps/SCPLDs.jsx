@@ -44,28 +44,41 @@ export default function SCPLDs({ beneficiaries = [], onRemove }) {
 
       <div className="scplds-list">
         {pageData.map(({ member, shg }) => {
-          const age = calculateAge(member.dob);
+          const memberCode =
+            member.member_code ||
+            member.lokos_member_code ||
+            member.id ||
+            "-";
+
           const designation =
-            member.member_designations?.[0]?.designation || "-";
-          const isPLD = !!member.pld_status;
+            member.designation ||
+            member.member_designations?.[0]?.designation ||
+            "-";
+
+          const age =
+            member.age ??
+            calculateAge(member.dob) ??
+            "-";
+
+          const isPLD = member.pld_status === true || member.pld_status === "Yes";
 
           return (
             <div
-              key={member.id || member.member_code || member.lokos_member_code}
+              key={member.id || memberCode}
               className={`scplds-card ${isPLD ? "pld" : ""}`}
             >
               <div className="scplds-main">
                 <div className="scplds-name">
                   <FaUser />
-                  {member.member_name}
+                  {member.member_name || "-"}
                 </div>
 
                 <div className="scplds-meta">
                   <span>
-                    <b>Member Code:</b> {member.member_code}
+                    <b>Member Code:</b> {memberCode}
                   </span>
                   <span>
-                    <b>SHG:</b> {shg?.name} ({shg?.code})
+                    <b>SHG:</b> {shg?.name || "-"} ({shg?.code || "-"})
                   </span>
                   <span>
                     <b>Designation:</b> {designation}
@@ -74,7 +87,7 @@ export default function SCPLDs({ beneficiaries = [], onRemove }) {
                     <b>Gender:</b> {member.gender || "-"}
                   </span>
                   <span>
-                    <b>Age:</b> {age ?? "-"}
+                    <b>Age:</b> {age}
                   </span>
                   <span>
                     <b>Social Category:</b> {member.social_category || "-"}
@@ -89,8 +102,9 @@ export default function SCPLDs({ beneficiaries = [], onRemove }) {
 
                 <div className="scplds-location">
                   <FaMapMarkerAlt />
-                  District: {shg?.districtId}, Block: {shg?.blockId}, Panchayat:{" "}
-                  {shg?.panchayatId}, Village: {shg?.villageId}
+                  District: {shg?.districtId || "-"}, Block: {shg?.blockId || "-"},
+                  Panchayat: {shg?.panchayatId || "-"}, Village:{" "}
+                  {shg?.villageId || "-"}
                 </div>
               </div>
 
@@ -103,7 +117,7 @@ export default function SCPLDs({ beneficiaries = [], onRemove }) {
               {onRemove && (
                 <button
                   className="scplds-remove"
-                  onClick={() => onRemove(member.member_code)}
+                  onClick={() => onRemove(memberCode)}
                   title="Remove beneficiary"
                 >
                   <FaTrash />
@@ -114,7 +128,6 @@ export default function SCPLDs({ beneficiaries = [], onRemove }) {
         })}
       </div>
 
-      {/* -------- Pagination -------- */}
       <div className="scplds-pagination">
         <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
           Prev
@@ -129,7 +142,7 @@ export default function SCPLDs({ beneficiaries = [], onRemove }) {
           Next
         </button>
       </div>
-
+      
       {/* ---- styles ---- */}
       <style>{`
         .scplds {

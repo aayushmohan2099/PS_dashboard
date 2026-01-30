@@ -104,7 +104,33 @@ export default function SupportCapture() {
       <div className="ldms-grid-row two-col">
         <div className="ldms-card">
           <h3>Step 3: Select Supported Beneficiaries</h3>
-          <SCDepSche onSelectionChange={setSelectedBeneficiaries} />
+          <SCDepSche
+            selectedMemberCodes={
+              new Set(
+                selectedBeneficiaries.map(
+                  b => b.member.member_code || b.member.lokos_member_code || b.member.id
+                )
+              )
+            }
+            onSelectionChange={({ type, payload }) => {
+              setSelectedBeneficiaries((prev) => {
+                const getMemberKey = (m) =>
+                  m.member_code || m.lokos_member_code || m.id;
+
+                const map = new Map(
+                  prev.map((b) => [getMemberKey(b.member), b])
+                );
+
+                const code = getMemberKey(payload.member);
+                if (!code) return prev;
+
+                if (type === "ADD") map.set(code, payload);
+                if (type === "REMOVE") map.delete(code);
+
+                return Array.from(map.values());
+              });
+            }}
+          />
         </div>
         <div className="ldms-card">
           <h3>Mapped Beneficiaries</h3>
@@ -112,7 +138,12 @@ export default function SupportCapture() {
             beneficiaries={selectedBeneficiaries}
             onRemove={(memberCode) =>
               setSelectedBeneficiaries((prev) =>
-                prev.filter((b) => b.member.member_code !== memberCode),
+                prev.filter(
+                  (b) =>
+                    (b.member.member_code ||
+                    b.member.lokos_member_code ||
+                    b.member.id) !== memberCode
+                )
               )
             }
           />

@@ -145,8 +145,11 @@ export default function ShgMemberListTable({
   useEffect(() => {
     setRows([]);
     setMeta({ page: 1, page_size: 20, total: 0 });
-    // reset internal selection when shg changes
-    setInternalSelected(new Set());
+    // reset internal selection ONLY if uncontrolled
+    if (!controlledSelectedSet) {
+      setInternalSelected(new Set());
+    }
+
     if (shgKey) {
       load(1, { force: reloadToken > 0 });
     }

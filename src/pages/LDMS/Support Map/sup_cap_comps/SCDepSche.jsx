@@ -6,11 +6,13 @@ import ShgListTable from "../../../Dashboard/ShgListTable";
 import ShgMemberListTable from "../../../Dashboard/ShgMemberListTable";
 import { AuthContext } from "../../../../contexts/AuthContext";
 
-export default function SCDepSche({ onSelectionChange }) {
+export default function SCDepSche({
+  onSelectionChange,
+  selectedMemberCodes = new Set(),
+}) {
   const { user } = useContext(AuthContext) || {};
   const [blockId, setBlockId] = useState(null);
   const [selectedShg, setSelectedShg] = useState(null);
-  const [selectedMembers, setSelectedMembers] = useState(new Map());
   const [loadingGeo, setLoadingGeo] = useState(false);
 
   /* ---------------- Load User Block ---------------- */
@@ -30,28 +32,18 @@ export default function SCDepSche({ onSelectionChange }) {
     loadGeoscope();
   }, [user?.id]);
 
-  useEffect(() => {
-    onSelectionChange?.(Array.from(selectedMembers.values()));
-  }, [selectedMembers, onSelectionChange]);
-
   /* ---------------- Toggle Member ---------------- */
   function handleToggleMember(member, checked) {
-    const code = member?.member_code || member?.lokos_member_code || member?.id;
+    const code =
+      member?.member_code || member?.lokos_member_code || member?.id;
     if (!code) return;
 
-    setSelectedMembers((prev) => {
-      const copy = new Map(prev);
-
-      if (checked) {
-        copy.set(String(code), {
-          member,
-          shg: selectedShg,
-        });
-      } else {
-        copy.delete(String(code));
-      }
-
-      return copy;
+    onSelectionChange?.({
+      type: checked ? "ADD" : "REMOVE",
+      payload: {
+        member,
+        shg: selectedShg,
+      },
     });
   }
   return (
@@ -92,7 +84,7 @@ export default function SCDepSche({ onSelectionChange }) {
         <ShgMemberListTable
           shg={selectedShg}
           onToggleMember={handleToggleMember}
-          selectedMemberCodes={new Set(selectedMembers.keys())}
+          selectedMemberCodes={selectedMemberCodes}
         />
       )}
 

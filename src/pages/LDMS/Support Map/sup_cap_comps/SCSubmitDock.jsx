@@ -28,6 +28,10 @@ export default function SCSubmitDock({
   const [supportBucketId, setSupportBucketId] = useState(null);
   const [sbTypeId, setSbTypeId] = useState(null);
   const [trainingSupportId, setTrainingSupportId] = useState(null);
+  const getMemberCode = (member) =>
+    member?.member_code ||
+    member?.lokos_member_code ||
+    member?.id;
 
   /* -------- Load block -------- */
   useEffect(() => {
@@ -69,6 +73,7 @@ export default function SCSubmitDock({
 
   async function handleSubmit(mode = "PENDING") {
     try {
+      const isExisting = !!supportBucketId;
       setSubmitting(true);
       setShowLoader(true);
 
@@ -79,7 +84,8 @@ export default function SCSubmitDock({
       );
 
       /* ======================= EDIT MODE ======================= */
-      if (editMode) {
+
+      if (isExisting) {
         if (!sbTypeId || !supportBucketId) {
           alert("Draft data still loading. Please wait a moment.");
           return;
@@ -94,7 +100,7 @@ export default function SCSubmitDock({
         });
 
         /* 2️⃣ Update Support Bucket */
-        await LDMS_API.SupportBuckets.update(supportBucketId, {
+        await LDMS_API.SupportBuckets.partialUpdate(supportBucketId, {
           department: department.id,
           scheme: scheme.id,
           benefit_name: supportData.benefitName,
@@ -106,7 +112,7 @@ export default function SCSubmitDock({
         /* 3️⃣ Training Support UPSERT */
         if (supportData.bucketType === "Training") {
           if (trainingSupportId) {
-            await LDMS_API.SBTrainings.update(trainingSupportId, {
+            await LDMS_API.SBTrainings.partialUpdate(trainingSupportId, {
               training_theme: supportData.trainingTheme,
               training_plan: supportData.trainingPlan,
               updated_by: user.id,
@@ -137,7 +143,7 @@ export default function SCSubmitDock({
 
         const selectedByMember = new Map(
           beneficiaries.map(({ member, shg }) => [
-            member.member_code,
+            getMemberCode(member),
             { member, shg },
           ]),
         );
@@ -151,12 +157,12 @@ export default function SCSubmitDock({
 
         /* 4.4 Create newly selected PLDs */
         await Promise.all(
-          beneficiaries
-            .filter(({ member }) => !existingByMember.has(member.member_code))
+        beneficiaries
+          .filter(({ member }) => !existingByMember.has(getMemberCode(member)))
             .map(({ member, shg }) =>
               LDMS_API.recorPLDS.create({
                 lokos_shg_code: shg.code,
-                lokos_member_code: member.member_code,
+                lokos_member_code: getMemberCode(member),
                 pld_status: member.pld_status ? "Yes" : "No",
                 member_name: member.member_name,
                 designation: member.member_designations?.[0]?.designation || "",
@@ -207,7 +213,7 @@ export default function SCSubmitDock({
 
       /* ---------- 2. Support Bucket ---------- */
       const bucketRes = await LDMS_API.SupportBuckets.create({
-        department: department,
+        department: department.id,
         scheme: scheme.id,
         bucket_type: createdSbTypeId,
         benefit_name: supportData.benefitName,
@@ -245,7 +251,7 @@ export default function SCSubmitDock({
         beneficiaries.map(({ member, shg }) =>
           LDMS_API.recorPLDS.create({
             lokos_shg_code: shg.code,
-            lokos_member_code: member.member_code,
+            lokos_member_code: getMemberCode(member),
             pld_status: member.pld_status ? "Yes" : "No",
             member_name: member.member_name,
             designation: member.member_designations?.[0]?.designation || "",
@@ -329,7 +335,7 @@ export default function SCSubmitDock({
       await LDMS_API.SBTypes.destroy(sbTypeId);
 
       alert("Support Map deleted successfully.");
-      window.location.href = "/ldms/support-buckets";
+      window.location.href = "/ldms/support-map-list";
     } catch (err) {
       console.error(err);
       alert(
