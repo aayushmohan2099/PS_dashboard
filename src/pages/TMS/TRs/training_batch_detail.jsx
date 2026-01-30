@@ -1,7 +1,7 @@
 // src/pages/TMS/TRs/training_batch_detail.jsx
 import React, { useContext, useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api from "../../../api/axios";
@@ -49,7 +49,7 @@ export default function TrainingBatchDetail() {
   const { id: batchId } = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext) || {};
-
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [loadingAll, setLoadingAll] = useState(false);
   const [batchData, setBatchData] = useState(null);
   const [trainingRequestDetail, setTrainingRequestDetail] = useState(null);
@@ -286,7 +286,10 @@ export default function TrainingBatchDetail() {
   if (loadingAll && !batchData) {
     return (
       <div className="app-shell">
-        <LeftNav />
+        <LeftNav
+          collapsed={navCollapsed}
+          onToggle={() => setNavCollapsed((v) => !v)}
+        />
         <div className="main-area">
           <TopNav
             left={<div className="app-title">Pragati Setu — Batch Detail</div>}
@@ -303,7 +306,10 @@ export default function TrainingBatchDetail() {
 
   return (
     <div className="app-shell">
-      <LeftNav />
+      <LeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={<div className="app-title">Pragati Setu — Batch Detail</div>}

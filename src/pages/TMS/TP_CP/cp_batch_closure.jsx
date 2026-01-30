@@ -2,7 +2,7 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import TmsLeftNav from "../layout/tms_LeftNav";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api from "../../../api/axios";
 
@@ -40,7 +40,7 @@ export default function CpBatchClosure() {
   const { user } = useContext(AuthContext) || {};
   const { id: batchId } = useParams(); // /tms/cp/batch-closure/:id
   const navigate = useNavigate();
-
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [batch, setBatch] = useState(null);
   const [loadingBatch, setLoadingBatch] = useState(false);
 
@@ -127,7 +127,7 @@ export default function CpBatchClosure() {
     setCheckingClosure(true);
     try {
       const resp = await api.get(
-        `/tms/batch-closure-requests/?batch=${batchId}`
+        `/tms/batch-closure-requests/?batch=${batchId}`,
       );
       const results = resp?.data?.results || [];
       setClosureExists(results.length > 0);
@@ -177,7 +177,7 @@ export default function CpBatchClosure() {
     setMediaByDate((prev) => {
       const rows = prev[dateStr] || [];
       const updated = rows.map((r) =>
-        r.id === rowId ? { ...r, [field]: value } : r
+        r.id === rowId ? { ...r, [field]: value } : r,
       );
       return { ...prev, [dateStr]: updated };
     });
@@ -200,7 +200,7 @@ export default function CpBatchClosure() {
 
     if (!hasAnyFile && !hasAnyCost) {
       alert(
-        "Please upload at least one media file or enter costing details before submitting."
+        "Please upload at least one media file or enter costing details before submitting.",
       );
       return;
     }
@@ -251,7 +251,7 @@ export default function CpBatchClosure() {
 
       const costResp = await api.post(
         "/tms/tp-batch-cost-breakups/",
-        payloadCost
+        payloadCost,
       );
       const costId = costResp?.data?.id;
       if (!costId) {
@@ -275,7 +275,7 @@ export default function CpBatchClosure() {
     } catch (e) {
       console.error("cp batch closure submit failed", e);
       alert(
-        "Failed to submit batch closure request. Please check inputs and try again."
+        "Failed to submit batch closure request. Please check inputs and try again.",
       );
     } finally {
       setSubmitting(false);
@@ -290,7 +290,10 @@ export default function CpBatchClosure() {
 
   return (
     <div className="app-shell">
-      <TmsLeftNav />
+      <TmsLeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav left={<div className="app-title">{heading}</div>} />
         <main style={{ padding: 18 }}>
@@ -462,7 +465,7 @@ export default function CpBatchClosure() {
                                           dateStr,
                                           row.id,
                                           "category",
-                                          e.target.value
+                                          e.target.value,
                                         )
                                       }
                                       style={{
@@ -508,7 +511,7 @@ export default function CpBatchClosure() {
                                             dateStr,
                                             row.id,
                                             "file",
-                                            e.target.files?.[0] || null
+                                            e.target.files?.[0] || null,
                                           )
                                         }
                                       />
@@ -521,7 +524,7 @@ export default function CpBatchClosure() {
                                             dateStr,
                                             row.id,
                                             "notes",
-                                            e.target.value
+                                            e.target.value,
                                           )
                                         }
                                         style={{

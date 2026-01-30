@@ -1,6 +1,6 @@
 // src/pages/TMS/SMMU/smmu_create_tp_targets.jsx
 import React, { useEffect, useState, useContext, useMemo } from "react";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API } from "../../../api/axios";
@@ -29,6 +29,7 @@ export default function SmmuCreatePartnerTargets() {
   const [effectiveUserId, setEffectiveUserId] = useState(null);
   const [tokenUserId, setTokenUserId] = useState(null);
   const accessToken = getAccessToken();
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   // lists and state
   const [themes, setThemes] = useState([]);
@@ -696,7 +697,10 @@ export default function SmmuCreatePartnerTargets() {
 
   return (
     <div className="app-shell">
-      <LeftNav />
+      <LeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={<div className="app-title">Pragati Setu — TMS (SMMU)</div>}

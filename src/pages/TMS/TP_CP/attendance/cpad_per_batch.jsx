@@ -2,7 +2,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import TmsLeftNav from "../../layout/tms_LeftNav";
-import TopNav from "../../../../components/layout/TopNav";
+import TopNav from "../../layout/tms_TopNav";
 import { AuthContext } from "../../../../contexts/AuthContext";
 import api, { TMS_API } from "../../../../api/axios";
 
@@ -72,15 +72,15 @@ export default function CpAdPerBatch() {
   const { id: batchId } = useParams();
   const { user } = useContext(AuthContext) || {};
   const navigate = useNavigate();
-
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [batch, setBatch] = useState(
-    () => loadJson(BATCHDETAIL_CACHE_PREFIX + batchId)?.payload || null
+    () => loadJson(BATCHDETAIL_CACHE_PREFIX + batchId)?.payload || null,
   );
   const [schedule, setSchedule] = useState(
-    () => loadJson(SCHEDULE_CACHE_PREFIX + batchId)?.payload || null
+    () => loadJson(SCHEDULE_CACHE_PREFIX + batchId)?.payload || null,
   );
   const [ekyc, setEkyc] = useState(
-    () => loadJson(EKYC_CACHE_PREFIX + batchId)?.payload || []
+    () => loadJson(EKYC_CACHE_PREFIX + batchId)?.payload || [],
   );
 
   const [loadingBatch, setLoadingBatch] = useState(false);
@@ -88,7 +88,7 @@ export default function CpAdPerBatch() {
   const [loadingEkyc, setLoadingEkyc] = useState(false);
 
   const [attendanceToday, setAttendanceToday] = useState(
-    () => loadJson(ATT_TODAY_CACHE_PREFIX + batchId)?.payload || null
+    () => loadJson(ATT_TODAY_CACHE_PREFIX + batchId)?.payload || null,
   );
   const [loadingAttendanceToday, setLoadingAttendanceToday] = useState(false);
 
@@ -215,9 +215,9 @@ export default function CpAdPerBatch() {
         .map(
           (r) =>
             `${(r.participant_role || "").toLowerCase()}-${String(
-              r.participant_id
-            )}`
-        )
+              r.participant_id,
+            )}`,
+        ),
     );
     for (const k of expectedIds) {
       if (!verifiedIds.has(k)) return false;
@@ -233,7 +233,7 @@ export default function CpAdPerBatch() {
     setLoadingAttendanceToday(true);
     try {
       const resp = await api.get(
-        `/tms/batch-attendance/?batch=${batchId}&date=${today}`
+        `/tms/batch-attendance/?batch=${batchId}&date=${today}`,
       );
       const data = resp?.data ?? resp ?? {};
       const rec = (data.results || data || [])[0] || null;
@@ -276,7 +276,7 @@ export default function CpAdPerBatch() {
     setSelectedDateRecords([]);
     try {
       const resp = await api.get(
-        `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`
+        `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`,
       );
       const data = resp?.data ?? resp ?? {};
       const attendance = (data.results || data || [])[0];
@@ -285,7 +285,7 @@ export default function CpAdPerBatch() {
         return;
       }
       const recResp = await api.get(
-        `/tms/participant-attendance/?attendance=${attendance.id}`
+        `/tms/participant-attendance/?attendance=${attendance.id}`,
       );
       const recData = recResp?.data ?? recResp ?? {};
       const recs = recData.results || recData || [];
@@ -311,7 +311,7 @@ export default function CpAdPerBatch() {
     const rows = [];
     (batch.master_trainer_participations || []).forEach((mtp) => {
       const mt = (batch.master_trainers || []).find(
-        (m) => m.id === mtp.master_trainer
+        (m) => m.id === mtp.master_trainer,
       );
       rows.push({
         key: `trainer-${mtp.id}`,
@@ -350,7 +350,7 @@ export default function CpAdPerBatch() {
     const recorded = new Set(
       (attendanceList || [])
         .map((a) => a.date)
-        .filter((d) => d && d >= startDate && d <= stop)
+        .filter((d) => d && d >= startDate && d <= stop),
     );
 
     const toMark = [];
@@ -389,12 +389,12 @@ export default function CpAdPerBatch() {
 
   async function getOrCreateBatchAttendanceForDate(
     dateStr,
-    { allowCreate = true } = {}
+    { allowCreate = true } = {},
   ) {
     // 1) Try GET
     try {
       const resp = await api.get(
-        `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`
+        `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`,
       );
       const data = resp?.data ?? resp ?? {};
       const rec = (data.results || data || [])[0] || null;
@@ -424,13 +424,13 @@ export default function CpAdPerBatch() {
     } catch (e) {
       const nonFieldErrors = e?.response?.data?.non_field_errors || [];
       const isUniqueError = nonFieldErrors.some((msg) =>
-        String(msg).includes("batch, date must make a unique set")
+        String(msg).includes("batch, date must make a unique set"),
       );
       if (isUniqueError) {
         // re-GET in case of soft-deleted / concurrent create
         try {
           const resp2 = await api.get(
-            `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`
+            `/tms/batch-attendance/?batch=${batchId}&date=${dateStr}`,
           );
           const data2 = resp2?.data ?? resp2 ?? {};
           const rec2 = (data2.results || data2 || [])[0] || null;
@@ -447,7 +447,7 @@ export default function CpAdPerBatch() {
 
   async function getExistingParticipantAttendanceIds(attendanceId) {
     const resp = await api.get(
-      `/tms/participant-attendance/?attendance=${attendanceId}`
+      `/tms/participant-attendance/?attendance=${attendanceId}`,
     );
     const data = resp?.data ?? resp ?? {};
     const recs = data.results || data || [];
@@ -455,9 +455,9 @@ export default function CpAdPerBatch() {
       recs.map(
         (r) =>
           `${(r.participant_role || "").toLowerCase()}-${String(
-            r.participant_id
-          )}`
-      )
+            r.participant_id,
+          )}`,
+      ),
     );
     return keys;
   }
@@ -483,7 +483,7 @@ export default function CpAdPerBatch() {
         }
 
         const existingKeys = await getExistingParticipantAttendanceIds(
-          attRec.id
+          attRec.id,
         );
 
         for (const p of participants) {
@@ -588,7 +588,7 @@ export default function CpAdPerBatch() {
     }
     if (missingDates.length) {
       alert(
-        "Please close all previous days' attendance (mark all absent) before taking today's attendance."
+        "Please close all previous days' attendance (mark all absent) before taking today's attendance.",
       );
       return;
     }
@@ -617,7 +617,7 @@ export default function CpAdPerBatch() {
         patchForm.append("csv_upload", csvFile);
         const patchResp = await api.patch(
           `/tms/batch-attendance/${rec.id}/`,
-          patchForm
+          patchForm,
         );
         rec = patchResp?.data ?? patchResp ?? rec;
       }
@@ -667,7 +667,10 @@ export default function CpAdPerBatch() {
 
   return (
     <div className="app-shell">
-      <TmsLeftNav />
+      <TmsLeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={
@@ -693,7 +696,7 @@ export default function CpAdPerBatch() {
                   onClick={() => {
                     try {
                       localStorage.removeItem(
-                        BATCHDETAIL_CACHE_PREFIX + batchId
+                        BATCHDETAIL_CACHE_PREFIX + batchId,
                       );
                       localStorage.removeItem(SCHEDULE_CACHE_PREFIX + batchId);
                       localStorage.removeItem(EKYC_CACHE_PREFIX + batchId);
@@ -971,7 +974,7 @@ export default function CpAdPerBatch() {
                                                     (prev) => ({
                                                       ...prev,
                                                       [p.key]: e.target.checked,
-                                                    })
+                                                    }),
                                                   )
                                                 }
                                               />

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useContext } from "react";
 import LeftNav from "../layout/tms_LeftNav";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API } from "../../../api/axios";
 import { useNavigate } from "react-router-dom";
@@ -76,6 +76,7 @@ function useAnimatedNumber(toVal, ms = 900) {
 export default function BmmuTmsDashboard() {
   const { user } = useContext(AuthContext) || {};
   const navigate = useNavigate();
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   /* State */
   const [effectiveUserId, setEffectiveUserId] = useState(null);
@@ -256,7 +257,10 @@ export default function BmmuTmsDashboard() {
       />
 
       <div className="app-shell" style={{ opacity: loadingFull ? 0.15 : 1 }}>
-        <LeftNav />
+        <LeftNav
+          collapsed={navCollapsed}
+          onToggle={() => setNavCollapsed((v) => !v)}
+        />
 
         <div className="main-area">
           <TopNav

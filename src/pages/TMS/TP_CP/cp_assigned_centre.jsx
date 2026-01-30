@@ -1,12 +1,16 @@
 // src/pages/TMS/TP_CP/cp_assigned_centre.jsx
-import React from "react";
+import React, { useContext, useEffect, useState } from "react";
 import TmsLeftNav from "../layout/tms_LeftNav";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 
 export default function CpAssignedCentre() {
+  const [navCollapsed, setNavCollapsed] = useState(false);
   return (
     <div className="app-shell">
-      <TmsLeftNav />
+      <TmsLeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav />
         <main style={{ padding: 18 }}>

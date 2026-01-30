@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API } from "../../../api/axios";
@@ -21,6 +21,7 @@ export default function TpCreateCP() {
   const navigate = useNavigate();
   const { cpId } = useParams();
   const isEditMode = Boolean(cpId);
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   /* ---------------- STATES ---------------- */
 
@@ -154,7 +155,10 @@ export default function TpCreateCP() {
 
   return (
     <div className="app-shell">
-      <LeftNav />
+      <LeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={

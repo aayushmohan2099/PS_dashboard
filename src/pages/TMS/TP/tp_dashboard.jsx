@@ -1,12 +1,16 @@
 // src/pages/TMS/TP/tp_dashboard.jsx
-import React from "react";
-import TopNav from "../../../components/layout/TopNav";
+import React, { useContext, useEffect, useState } from "react";
+import TopNav from "../layout/tms_TopNav";
 import LeftNav from "../layout/tms_LeftNav";
 
 export default function TpDashboard() {
+  const [navCollapsed, setNavCollapsed] = useState(false);
   return (
     <div className="app-shell">
-      <LeftNav />
+      <LeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav />
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>

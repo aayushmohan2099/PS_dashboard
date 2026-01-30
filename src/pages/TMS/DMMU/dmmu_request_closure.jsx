@@ -1,7 +1,7 @@
 // src/pages/TMS/DMMU/dmmu_request_closure.jsx
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api from "../../../api/axios";
@@ -119,6 +119,7 @@ export default function DmmuRequestClosure() {
 
   const [breakupModalOpen, setBreakupModalOpen] = useState(false);
   const [breakupBatchId, setBreakupBatchId] = useState(null);
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   const refreshTokenRef = useRef(0);
 

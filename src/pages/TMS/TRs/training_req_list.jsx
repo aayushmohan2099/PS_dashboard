@@ -1,7 +1,7 @@
 // src/pages/TMS/TRs/training_req_list.jsx
 import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API } from "../../../api/axios";
@@ -85,7 +85,7 @@ export default function TrainingRequestList() {
   const { user } = useContext(AuthContext) || {};
   const role = getCanonicalRole(user || {});
   const navigate = useNavigate();
-
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState(() => loadCache()?.payload || []);
   const [refreshToken, setRefreshToken] = useState(0);
@@ -261,7 +261,10 @@ export default function TrainingRequestList() {
 
   return (
     <div className="app-shell">
-      <LeftNav />
+      <LeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={

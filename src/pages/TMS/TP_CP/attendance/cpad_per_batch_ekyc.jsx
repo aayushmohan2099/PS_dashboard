@@ -1,14 +1,8 @@
 // src/pages/TMS/TP_CP/cpad_per_batch_ekyc.jsx
-import React, {
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import TmsLeftNav from "../../layout/tms_LeftNav";
-import TopNav from "../../../../components/layout/TopNav";
+import TopNav from "../../layout/tms_TopNav";
 import { AuthContext } from "../../../../contexts/AuthContext";
 import api, { TMS_API } from "../../../../api/axios";
 
@@ -54,21 +48,21 @@ export default function CpAdPerBatchEkyc() {
   const { id: batchId } = useParams();
   const { user } = useContext(AuthContext) || {};
   const navigate = useNavigate();
-
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [batch, setBatch] = useState(
-    () => loadJson(BATCH_DETAIL_CACHE_PREFIX + batchId)?.payload || null
+    () => loadJson(BATCH_DETAIL_CACHE_PREFIX + batchId)?.payload || null,
   );
   const [loadingBatch, setLoadingBatch] = useState(false);
 
   const [schedule, setSchedule] = useState(
-    () => loadJson(SCHEDULE_CACHE_PREFIX + batchId)?.payload || null
+    () => loadJson(SCHEDULE_CACHE_PREFIX + batchId)?.payload || null,
   );
   const [loadingSchedule, setLoadingSchedule] = useState(false);
   const [savingSchedule, setSavingSchedule] = useState(false);
 
   // unified EKYC rows (one row per participation, from base + server)
   const [ekycRows, setEkycRows] = useState(
-    () => loadJson(EKYC_CACHE_PREFIX + batchId)?.payload || []
+    () => loadJson(EKYC_CACHE_PREFIX + batchId)?.payload || [],
   );
   const [loadingEkyc, setLoadingEkyc] = useState(false);
 
@@ -136,7 +130,7 @@ export default function CpAdPerBatchEkyc() {
 
     serverRows.forEach((srv) => {
       const key = `${(srv.participant_role || "").toLowerCase()}-${String(
-        srv.participant_id
+        srv.participant_id,
       )}`;
       const existing = byKey.get(key);
       const merged = {
@@ -175,9 +169,9 @@ export default function CpAdPerBatchEkyc() {
         .map(
           (r) =>
             `${(r.participant_role || "").toLowerCase()}-${String(
-              r.participant_id
-            )}`
-        )
+              r.participant_id,
+            )}`,
+        ),
     );
     for (const k of expected) {
       if (!verified.has(k)) return false;
@@ -226,7 +220,7 @@ export default function CpAdPerBatchEkyc() {
           return;
         }
       }
-      const resp = await TMS_API.batchSchedules?.list
+      const resp = (await TMS_API.batchSchedules?.list)
         ? await TMS_API.batchSchedules.list({ batch: batchId, page_size: 1 })
         : await api.get(`/tms/batch-schedules/?batch=${batchId}`);
       const data = resp?.data ?? resp ?? {};
@@ -296,7 +290,7 @@ export default function CpAdPerBatchEkyc() {
         start_time: timeStr,
         remarks: scheduleRemarks || "",
       };
-      const resp = await TMS_API.batchSchedules?.create
+      const resp = (await TMS_API.batchSchedules?.create)
         ? await TMS_API.batchSchedules.create(payload)
         : await api.post("/tms/batch-schedules/", payload);
       const data = resp?.data ?? resp ?? null;
@@ -359,7 +353,7 @@ export default function CpAdPerBatchEkyc() {
         });
         const updated = resp?.data ?? resp ?? null;
         const next = (ekycRows || []).map((r) =>
-          r.id === row.id ? { ...r, ...updated } : r
+          r.id === row.id ? { ...r, ...updated } : r,
         );
         setEkycRows(next);
         saveJson(EKYC_CACHE_PREFIX + batchId, next);
@@ -420,7 +414,7 @@ export default function CpAdPerBatchEkyc() {
     if (!batch) return map;
     (batch.master_trainer_participations || []).forEach((mtp) => {
       const mt = (batch.master_trainers || []).find(
-        (m) => m.id === mtp.master_trainer
+        (m) => m.id === mtp.master_trainer,
       );
       const name = mt?.full_name || `MasterTrainer #${mtp.master_trainer}`;
       map[`trainer-${mtp.id}`] = { name, roleLabel: "Master Trainer" };
@@ -435,7 +429,7 @@ export default function CpAdPerBatchEkyc() {
 
   function getRowDisplay(row) {
     const key = `${(row.participant_role || "").toLowerCase()}-${String(
-      row.participant_id
+      row.participant_id,
     )}`;
     const info = participantInfoMap[key] || {};
     return {
@@ -462,7 +456,10 @@ export default function CpAdPerBatchEkyc() {
 
   return (
     <div className="app-shell">
-      <TmsLeftNav />
+      <TmsLeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={
@@ -488,11 +485,9 @@ export default function CpAdPerBatchEkyc() {
                   onClick={() => {
                     try {
                       localStorage.removeItem(
-                        BATCH_DETAIL_CACHE_PREFIX + batchId
+                        BATCH_DETAIL_CACHE_PREFIX + batchId,
                       );
-                      localStorage.removeItem(
-                        SCHEDULE_CACHE_PREFIX + batchId
-                      );
+                      localStorage.removeItem(SCHEDULE_CACHE_PREFIX + batchId);
                       localStorage.removeItem(EKYC_CACHE_PREFIX + batchId);
                     } catch {}
                     setEkycRows([]);
@@ -501,7 +496,10 @@ export default function CpAdPerBatchEkyc() {
                 >
                   Refresh
                 </button>
-                <button className="btn btn-outline" onClick={() => navigate(-1)}>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => navigate(-1)}
+                >
                   Back
                 </button>
               </div>
@@ -525,8 +523,7 @@ export default function CpAdPerBatchEkyc() {
                       </span>
                     </div>
                     <div>
-                      <strong>Centre:</strong>{" "}
-                      {batch.centre?.venue_name || "—"}
+                      <strong>Centre:</strong> {batch.centre?.venue_name || "—"}
                     </div>
                     <div>
                       <strong>Dates:</strong> {fmtDate(batch.start_date)} —{" "}
@@ -638,9 +635,7 @@ export default function CpAdPerBatchEkyc() {
                             rows={2}
                             placeholder="Remarks (optional)…"
                             value={scheduleRemarks}
-                            onChange={(e) =>
-                              setScheduleRemarks(e.target.value)
-                            }
+                            onChange={(e) => setScheduleRemarks(e.target.value)}
                             style={{ width: "100%" }}
                           />
                         </div>
@@ -705,8 +700,8 @@ export default function CpAdPerBatchEkyc() {
                               connStatus === "ok"
                                 ? "#15803d"
                                 : connStatus === "failed"
-                                ? "#b91c1c"
-                                : "#6b7280",
+                                  ? "#b91c1c"
+                                  : "#6b7280",
                           }}
                         >
                           {connStatus === "testing" && (
@@ -748,8 +743,9 @@ export default function CpAdPerBatchEkyc() {
                             <tbody>
                               {ekycRows.map((row) => {
                                 const disp = getRowDisplay(row);
-                                const status =
-                                  (row.ekyc_status || "PENDING").toUpperCase();
+                                const status = (
+                                  row.ekyc_status || "PENDING"
+                                ).toUpperCase();
                                 const isVerified = status === "VERIFIED";
                                 const recording = recordingFor === disp.key;
                                 const verifying = verifyingFor === disp.key;

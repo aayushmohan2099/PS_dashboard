@@ -1,7 +1,7 @@
 // src/pages/TMS/SMMU/smmu_tms_dashboard.jsx
 import React, { useEffect, useState, useContext, useRef } from "react";
 import TmsLeftNav from "../layout/tms_LeftNav";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API } from "../../../api/axios";
 import { useNavigate } from "react-router-dom";
@@ -102,6 +102,7 @@ function useAnimatedNumber(toVal, ms = 900) {
 export default function SmmuTmsDashboard() {
   const { user } = useContext(AuthContext) || {};
   const navigate = useNavigate();
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   const [effectiveUserId, setEffectiveUserId] = useState(null);
 
@@ -370,7 +371,10 @@ export default function SmmuTmsDashboard() {
 
   return (
     <div className="app-shell">
-      <TmsLeftNav />
+      <TmsLeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={<div className="app-title">Pragati Setu — TMS (SMMU)</div>}

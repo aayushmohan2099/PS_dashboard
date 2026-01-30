@@ -1,6 +1,6 @@
 // src/pages/TMS/TP/tp_cp_assignment.jsx
 import React, { useContext, useEffect, useState } from "react";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API } from "../../../api/axios";
@@ -153,6 +153,7 @@ function AssignModal({
 
 export default function TpCpAssignment() {
   const { user } = useContext(AuthContext);
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [links, setLinks] = useState([]);
@@ -220,7 +221,10 @@ export default function TpCpAssignment() {
 
   return (
     <div className="app-shell">
-      <LeftNav />
+      <LeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={

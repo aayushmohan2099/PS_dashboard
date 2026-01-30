@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API } from "../../../api/axios";
@@ -54,6 +54,7 @@ export default function TpCentreRegistration() {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const { centreId } = useParams(); // 👈 EDIT MODE
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   const isEdit = Boolean(centreId);
 
@@ -278,7 +279,10 @@ export default function TpCentreRegistration() {
 
   return (
     <div className="app-shell">
-      <LeftNav />
+      <LeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={

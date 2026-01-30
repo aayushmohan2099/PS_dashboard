@@ -1,504 +1,370 @@
 // src/pages/TMS/layout/tms_LeftNav.jsx
-import React, { useContext, useEffect, useMemo } from "react";
+import React, { useContext } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../contexts/AuthContext";
+import logo from "../../../assets/TMS/tms_logo.png";
+import {
+  FaTachometerAlt,
+  FaUsers,
+  FaChartBar,
+  FaBook,
+  FaHandsHelping,
+  FaDatabase,
+  FaAddressBook,
+  FaClipboardCheck,
+  FaBullseye,
+  FaBookDead,
+  FaIndustry,
+  FaBuilding,
+  FaChalkboardTeacher,
+  FaUserCheck,
+  FaUserEdit,
+} from "react-icons/fa";
 
 /**
- * TMS Left Nav — role aware
- * Uses numeric role ids first (from login response), then falls back to role_name or geoscope.
- *
- * This version is fixed-position and small-width; it applies a matching left-margin
- * to the main-area to avoid compressing the header/content.
+ * TMS Left Navigation
+ * - Fully responsive
+ * - Layout-aware (no fixed positioning)
+ * - Icon-only when collapsed
  */
-
-// map numeric role id -> canonical key
-const ROLE_ID_MAP = {
-  1: "bmmu",
-  2: "dmmu",
-  3: "smmu",
-  4: "training_partner",
-  5: "crp_ld",
-  6: "crp_ep",
-  7: "master_trainer",
-  8: "state_admin",
-  9: "pmu_admin",
-  10: "dcnrlm",
-  11: "tp_contact_person",
-};
-
-function getRoleKey(user) {
-  if (!user) return "";
-
-  const id = Number(user.role_id ?? user.role);
-  if (!Number.isNaN(id) && ROLE_ID_MAP[id]) return ROLE_ID_MAP[id];
-
-  if (user.role_name) {
-    const rn = String(user.role_name).toLowerCase();
-    if (rn.includes("bmmu")) return "bmmu";
-    if (rn.includes("dmmu")) return "dmmu";
-    if (rn.includes("smmu") || rn.includes("state_mission")) return "smmu";
-    if (rn.includes("training_partner")) return "training_partner";
-    if (rn.includes("master_trainer")) return "master_trainer";
-    if (rn.includes("dcnrlm")) return "dcnrlm";
-    if (
-      rn.includes("contact") ||
-      rn.includes("tp_cp") ||
-      rn.includes("tp_contact")
-    )
-      return "tp_contact_person";
-    if (rn.includes("crp_ep")) return "crp_ep";
-    if (rn.includes("crp_ld")) return "crp_ld";
-  }
-
-  try {
-    const geo = JSON.parse(
-      window.localStorage.getItem("ps_user_geoscope") || "null",
-    );
-    if (geo?.role) {
-      const g = String(geo.role).toLowerCase();
-      if (g.includes("bmmu")) return "bmmu";
-      if (g.includes("dmmu")) return "dmmu";
-      if (g.includes("smmu") || g.includes("state_mission")) return "smmu";
-      if (g.includes("training_partner")) return "training_partner";
-      if (g.includes("master_trainer")) return "master_trainer";
-      if (g.includes("dcnrlm")) return "dcnrlm";
-      if (
-        g.includes("contact") ||
-        g.includes("tp_cp") ||
-        g.includes("tp_contact")
-      )
-        return "tp_contact_person";
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  return "";
-}
-
-function renderNavItem(item) {
-  return (
-    <NavLink
-      key={item.key}
-      to={item.to}
-      className={({ isActive }) => "ln-item" + (isActive ? " active" : "")}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "8px 10px",
-        borderRadius: 6,
-        textDecoration: "none",
-        color: "#0b2540",
-      }}
-    >
-      <span style={{ fontSize: 14 }}>{item.label}</span>
-    </NavLink>
-  );
-}
 
 const MENU = {
   bmmu: [
-    {
-      label: "TMS Dashboard",
-      to: "/tms/bmmu/dashboard",
-      key: "bmmu-dashboard",
-    },
+    { label: "Dashboard", to: "/tms/bmmu/dashboard", icon: FaTachometerAlt },
     {
       label: "Create Training Request",
-      to: "/tms/bmmu/create-tr",
-      key: "bmmu-create-tr",
-    },
-    {
-      label: "Training Plans",
-      to: "/tms/training-plans",
-      key: "bmmu-training-plans",
-    },
-    {
-      label: "Master Trainers (Block)",
-      to: "/tms/bmmu/master-trainers",
-      key: "bmmu-mt",
+      to: "/tms/create-training-request",
+      icon: FaBookDead,
     },
     {
       label: "Training Requests",
       to: "/tms/training-requests",
-      key: "bmmu-requests",
+      icon: FaChartBar,
     },
     {
-      label: "All Training Batches",
+      label: "Propose Training Plan",
+      to: "/tms/tms/bmmu/create-training-plan",
+      icon: FaBook,
+    },
+    {
+      label: "Training Batches",
       to: "/tms/batches-list/",
-      key: "bmmu-batches",
+      icon: FaBook,
     },
-    {
-      label: "Attendance & Completion",
-      to: "/tms/bmmu/attendance",
-      key: "bmmu-attendance",
-    },
-    { label: "Reports", to: "/tms/bmmu/reports", key: "bmmu-reports" },
+    { label: "Reports", to: "#", icon: FaClipboardCheck },
   ],
-
   dmmu: [
+    { label: "Dashboard", to: "/tms/dmmu/dashboard", icon: FaTachometerAlt },
     {
-      label: "TMS Dashboard",
-      to: "/tms/dmmu/dashboard",
-      key: "dmmu-dashboard",
+      label: "Create Training Request",
+      to: "/tms/create-training-request",
+      icon: FaBookDead,
     },
     {
-      label: "Create / Review TRs",
+      label: "Training Requests",
       to: "/tms/training-requests",
-      key: "dmmu-requests",
+      icon: FaChartBar,
     },
     {
-      label: "Block-wise Progress",
-      to: "/tms/dmmu/block-progress",
-      key: "dmmu-block-progress",
-    },
-    {
-      label: "Assign Master Trainers",
-      to: "/tms/dmmu/assign-mt",
-      key: "dmmu-assign-mt",
-    },
-    {
-      label: "All Training Batches",
+      label: "Training Batches",
       to: "/tms/batches-list/",
-      key: "dmmu-batches",
+      icon: FaBook,
     },
-    {
-      label: "Attendance Aggregation",
-      to: "/tms/dmmu/attendance",
-      key: "dmmu-attendance",
-    },
-    { label: "Reports", to: "/tms/dmmu/reports", key: "dmmu-reports" },
+    { label: "Reports", to: "#", icon: FaClipboardCheck },
   ],
-
   smmu: [
+    { label: "Dashboard", to: "/tms/smmu/dashboard", icon: FaTachometerAlt },
     {
-      label: "TMS Dashboard",
-      to: "/tms/smmu/dashboard",
-      key: "smmu-dashboard",
-    },
-    {
-      label: "Create Partner Targets",
+      label: "Target Assignment",
       to: "/tms/smmu/partner-targets",
-      key: "smmu-targets",
+      icon: FaBullseye,
     },
     {
-      label: "Training Plans & Themes",
-      to: "/tms/training-plans",
-      key: "smmu-plans",
+      label: "Training Requests",
+      to: "/tms/training-requests",
+      icon: FaChartBar,
     },
     {
-      label: "All Training Batches",
+      label: "Training Batches",
       to: "/tms/batches-list/",
-      key: "smmu-batches",
+      icon: FaBook,
     },
-    {
-      label: "Monitoring & Evaluation",
-      to: "/tms/smmu/monitoring",
-      key: "smmu-monitoring",
-    },
-    { label: "State Reports", to: "/tms/smmu/reports", key: "smmu-reports" },
+    { label: "Reports", to: "#", icon: FaClipboardCheck },
   ],
-
   training_partner: [
     {
-      label: "Partner Dashboard",
+      label: "Dashboard",
       to: "/tms/tp/dashboard",
-      key: "tp-dashboard",
+      icon: FaTachometerAlt,
     },
     {
-      label: "My Training Requests",
+      label: "Centre Management",
+      to: "/tms/tp/centre-list",
+      icon: FaIndustry,
+    },
+    {
+      label: "Register New Centre",
+      to: "/tms/tp/centre/new",
+      icon: FaBuilding,
+    },
+    {
+      label: "Training Requests",
       to: "/tms/training-requests",
-      key: "tp-requests",
+      icon: FaChartBar,
     },
     {
-      label: "Create / Manage Centres",
-      to: "/tms/tp/centre-list/",
-      key: "tp-centres",
+      label: "Training Batches",
+      to: "/tms/batches-list/",
+      icon: FaBook,
     },
     {
-      label: "Contact Persons (CP)",
+      label: "Contact Persons",
       to: "/tms/tp/cp-list",
-      key: "tp-cps",
+      icon: FaUsers,
     },
     {
-      label: "Assign Training Centre to Contact Person",
+      label: "Register Contact Persons",
+      to: "/tms/tp/cp/create",
+      icon: FaUserEdit,
+    },
+    {
+      label: "Assign Contact Persons",
       to: "/tms/tp/cp/assign",
-      key: "tp-cp-centre",
+      icon: FaUserCheck,
     },
-    {
-      label: "Create Batch",
-      to: "/tms/tp/create-batch",
-      key: "tp-create-batch",
-    },
-    { label: "Uploads & Closure", to: "/tms/tp/closures", key: "tp-closures" },
-    { label: "Reports", to: "/tms/tp/reports", key: "tp-reports" },
   ],
-
   master_trainer: [
-    { label: "MT Dashboard", to: "/tms/mt/dashboard", key: "mt-dashboard" },
-    { label: "Assigned Batches", to: "/tms/mt/batches", key: "mt-batches" },
     {
-      label: "Attendance / Assessments",
-      to: "/tms/mt/attendance",
-      key: "mt-attendance",
-    },
-    {
-      label: "Profile & Availability",
-      to: "/tms/mt/profile",
-      key: "mt-profile",
+      label: "Dashboard",
+      to: "/tms/mt/dashboard",
+      icon: FaTachometerAlt,
     },
   ],
-
-  // NEW menu for numeric role_id 11 / tp_contact_person
   tp_contact_person: [
     {
-      label: "TMS Dashboard",
+      label: "Dashboard",
       to: "/tms/cp/dashboard",
-      key: "cp-dashboard",
+      icon: FaTachometerAlt,
     },
     {
-      label: "My Profile",
-      to: "/tms/cp/profile",
-      key: "cp-profile",
-    },
-    {
-      label: "View Batches",
+      label: "Training Batches",
       to: "/tms/cp/batch-list",
-      key: "cp-batches",
+      icon: FaBook,
     },
+  ],
+  state_admin: [
     {
-      label: "Centre Details",
-      to: "/tms/cp/centre",
-      key: "cp-centre",
+      label: "Dashboard",
+      to: "/tms/state-admin/dashboard",
+      icon: FaTachometerAlt,
+    },
+  ],
+  pmu_admin: [
+    {
+      label: "Dashboard",
+      to: "/tms/pmu-admin/dashboard",
+      icon: FaTachometerAlt,
     },
   ],
 };
 
-const DEFAULT_MENU = [
-  { label: "TMS Home", to: "/tms", key: "tms-home" },
-  { label: "Training Plans", to: "/tms/training-plans", key: "tms-plans" },
-  { label: "Training Themes", to: "/tms/training-themes", key: "tms-themes" },
-  {
-    label: "Training Requests",
-    to: "/tms/training-requests",
-    key: "tms-requests",
-  },
-  { label: "Reports", to: "/tms/reports", key: "tms-reports" },
-];
+function getRoleKey(user) {
+  const id = Number(user?.role_id ?? user?.role);
+  if (id === 1) return "bmmu";
+  if (id === 2) return "dmmu";
+  if (id === 3) return "smmu";
+  if (id === 4) return "training_partner";
+  if (id === 7) return "master_trainer";
+  if (id === 8) return "state_admin";
+  if (id === 9) return "pmu_admin";
+  if (id === 11) return "tp_contact_person";
+  return "bmmu";
+}
 
-export default function TmsLeftNav() {
+export default function TmsLeftNav({ collapsed, onToggle }) {
   const { user } = useContext(AuthContext) || {};
   const navigate = useNavigate();
 
   const roleKey = getRoleKey(user);
-  const menu = MENU[roleKey] || DEFAULT_MENU;
-
-  const roleLabel =
-    roleKey === "bmmu"
-      ? "BMMU"
-      : roleKey === "dmmu"
-        ? "DMMU"
-        : roleKey === "smmu"
-          ? "SMMU"
-          : roleKey === "training_partner"
-            ? "Training Partner"
-            : roleKey === "master_trainer"
-              ? "Master Trainer"
-              : roleKey === "tp_contact_person" || roleKey === "contact_person"
-                ? "Contact Person"
-                : "TMS User";
-
-  // final width used by nav (px)
-  const NAV_WIDTH = 220;
-
-  // apply margin to main area so header/content aren't smushed
-  useEffect(() => {
-    const mainArea = document.querySelector(".main-area");
-    const appShell = document.querySelector(".app-shell");
-    const originalMainMarginLeft = mainArea ? mainArea.style.marginLeft : null;
-    const originalAppPaddingLeft = appShell ? appShell.style.paddingLeft : null;
-
-    // nav is fixed; push main area right by NAV_WIDTH
-    if (mainArea) {
-      mainArea.style.marginLeft = `${NAV_WIDTH}px`;
-    }
-    // as fallback, also apply small padding to app shell
-    if (appShell) {
-      appShell.style.paddingLeft = "";
-    }
-
-    return () => {
-      if (mainArea) mainArea.style.marginLeft = originalMainMarginLeft || "";
-      if (appShell) appShell.style.paddingLeft = originalAppPaddingLeft || "";
-    };
-  }, []);
-
-  // compact styles to reduce left nav footprint and beautify
-  const asideStyle = {
-    width: NAV_WIDTH,
-    minWidth: NAV_WIDTH,
-    position: "fixed",
-    left: 0,
-    top: 0,
-    height: "100vh",
-    background: "#ffffff",
-    borderRight: "1px solid #eef2f6",
-    padding: "12px 12px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-    zIndex: 30,
-    overflowY: "auto",
-  };
-
-  const logoStyle = {
-    padding: "10px 8px",
-    borderRadius: 8,
-    cursor: "pointer",
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    background: "#fbfdff",
-    alignItems: "flex-start",
-  };
-
-  const logoTitle = { fontSize: 16, fontWeight: 700, color: "#0b2540" };
-  const logoSub = { fontSize: 12, color: "#6c757d" };
-  const logoBadge = {
-    marginTop: 6,
-    background: "#eef6ff",
-    color: "#0b2540",
-    fontSize: 11,
-    padding: "4px 6px",
-    borderRadius: 6,
-  };
-
-  const groupHeaderStyle = {
-    fontSize: 12,
-    color: "#6b7280",
-    fontWeight: 600,
-    padding: "6px 4px",
-  };
-  const submenuStyle = {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-    padding: "6px 2px",
-  };
-
-  // find requests path in role-specific menu (prefer explicit 'requests' key or path containing 'requests')
-  const requestsPath = useMemo(() => {
-    if (!Array.isArray(menu)) return "/tms/training-requests";
-    const foundByKey = menu.find((i) =>
-      String(i.key || "")
-        .toLowerCase()
-        .includes("request"),
-    );
-    if (foundByKey && foundByKey.to) return foundByKey.to;
-    const foundByTo = menu.find((i) =>
-      String(i.to || "")
-        .toLowerCase()
-        .includes("requests"),
-    );
-    if (foundByTo && foundByTo.to) return foundByTo.to;
-    // fallback generic
-    return "/tms/training-requests";
-  }, [menu]);
+  const menu = MENU[roleKey] || [];
 
   return (
-    <aside className="leftnav tms-leftnav" style={asideStyle}>
-      <div style={logoStyle} onClick={() => navigate("/dashboard")}>
-        <div style={logoTitle}>Pragati Setu</div>
-        <div style={logoSub}>Training Management</div>
-        <div style={logoBadge}>{roleLabel}</div>
+    <aside className={`tms-leftnav ${collapsed ? "collapsed" : ""}`}>
+      {/* LOGO */}
+      <div className="tms-logo" onClick={() => navigate("/dashboard")}>
+        <img src={logo} alt="TMS" />
+        <span className="logo-text">Training Management System</span>
       </div>
 
-      <nav
-        className="ln-menu"
-        style={{ display: "flex", flexDirection: "column", gap: 8 }}
-      >
-        {(roleKey === "bmmu" || roleKey === "dmmu" || roleKey === "smmu") && (
-          <div className="ln-group">
-            <div className="ln-group-header" style={groupHeaderStyle}>
-              <span>Beneficiary Management</span>
-            </div>
-            <div className="ln-submenu show" style={submenuStyle}>
-              <NavLink
-                to="/dashboard"
-                className="ln-item"
-                style={{
-                  textDecoration: "none",
-                  color: "#0b2540",
-                  padding: "8px 10px",
-                  borderRadius: 6,
-                }}
-              >
-                <span style={{ fontSize: 14 }}>Dashboard Home</span>
-              </NavLink>
-            </div>
-          </div>
-        )}
-
-        <div className="ln-group">
-          <div className="ln-group-header" style={groupHeaderStyle}>
-            <span>TMS Navigation</span>
-          </div>
-          <div className="ln-submenu show" style={submenuStyle}>
-            {menu.map((item) => renderNavItem(item))}
-          </div>
-        </div>
-
-        <div className="ln-group" style={{ marginTop: "auto" }}>
-          <div className="ln-group-header" style={groupHeaderStyle}>
-            <span>Quick Actions</span>
-          </div>
-          <div className="ln-submenu show" style={submenuStyle}>
-            <NavLink
-              to="/tms/training-plans"
-              className="ln-item"
-              style={{
-                textDecoration: "none",
-                color: "#0b2540",
-                padding: "8px 10px",
-                borderRadius: 6,
-              }}
-            >
-              <span style={{ fontSize: 14 }}>Training Plans</span>
-            </NavLink>
-            <NavLink
-              to="/tms/training-themes"
-              className="ln-item"
-              style={{
-                textDecoration: "none",
-                color: "#0b2540",
-                padding: "8px 10px",
-                borderRadius: 6,
-              }}
-            >
-              <span style={{ fontSize: 14 }}>Training Themes</span>
-            </NavLink>
-
-            {/* Role-aware Training Requests quick link: uses role menu if available, else generic */}
-            <NavLink
-              to={requestsPath}
-              className="ln-item"
-              style={{
-                textDecoration: "none",
-                color: "#0b2540",
-                padding: "8px 10px",
-                borderRadius: 6,
-              }}
-            >
-              <span style={{ fontSize: 14 }}>
-                {roleKey === "training_partner"
-                  ? "My Training Requests"
-                  : "Training Requests"}
-              </span>
-            </NavLink>
-          </div>
-        </div>
+      {/* NAV */}
+      <nav className="tms-nav">
+        {menu.map((item) => (
+          <NavLink
+            key={item.label}
+            to={item.to}
+            className={({ isActive }) =>
+              "tms-nav-item" + (isActive ? " active" : "")
+            }
+          >
+            <span className="nav-icon">
+              <item.icon size={20} />
+            </span>
+            <span className="nav-label">{item.label}</span>
+          </NavLink>
+        ))}
       </nav>
+
+      {/* TOGGLE */}
+      <button className="tms-toggle" onClick={onToggle}>
+        {collapsed ? "→" : "←"}
+      </button>
+
+      {/* STYLES */}
+      <style>{`
+        .tms-leftnav {
+          width: 220px;
+          background: #ffffff;
+          border-right: 1px solid #e5e7eb;
+          display: flex;
+          flex-direction: column;
+          transition: width 0.25s ease;
+          overflow: hidden; 
+        }
+
+        .tms-leftnav.collapsed {
+          width: 64px;
+        }
+
+        /* Logo */
+        .tms-logo {
+          height: 56px;
+          display: flex;
+          justify-content: center;
+          gap: 10px;
+          border-bottom: 1px solid #e5e7eb;
+          cursor: pointer;
+          font-weight: 700;
+          font-size: 15px;
+          color: #061b46;
+          text-wrap: wrap;
+        }
+
+        .tms-logo img {
+          height: 56px;
+          width: auto;
+        }
+
+        .logo-text {
+          transition: opacity 0.2s ease, transform 0.2s ease;
+          align-self: center;
+        }
+
+        .tms-leftnav.collapsed .logo-text {
+          display: none;
+        }
+
+        /* Nav */
+        .tms-nav {
+          flex: 1;
+          padding: 12px 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          overflow-y: auto;
+        }
+
+        .tms-nav-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 12px;
+          border-radius: 8px;
+          text-decoration: none;
+          color: #061b46;;
+          font-size: 14px;
+          transition: background 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .tms-nav-item .dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #061b46;;
+          flex-shrink: 0;
+        }
+
+        /* Label animation */
+        .nav-label {
+          transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .tms-leftnav.collapsed .nav-label {
+          opacity: 0;
+          width: 0;
+          overflow: hidden;
+          margin: 0;
+          padding: 0;
+          pointer-events: none;
+        }
+
+        .tms-nav-item:hover {
+          background: #fdecea;
+        }
+
+        .tms-nav-item.active {
+          background: #061b46;
+          color: #ffffff;
+        }
+
+        .tms-nav-item.active .dot {
+          background: #ffffff;
+        }
+
+        /* Toggle */
+        .tms-toggle {
+          height: 40px;
+          border: none;
+          background: #061b46;
+          border-top: 1px solid #e5e7eb;
+          cursor: pointer;
+          font-size: 14px;
+          color: #fff;
+        }
+        .nav-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 20px;
+          color: #061b46;
+          transition: color 0.2s ease;
+        }
+
+        .tms-nav-item.active .nav-icon {
+          color: #ffffff;
+        }
+
+        /* Center icon when collapsed */
+        .tms-leftnav.collapsed .tms-nav-item {
+          justify-content: center;
+          padding: 10px 0;
+          gap: 0;
+        }
+
+        .tms-leftnav.collapsed .nav-icon {
+          margin: 0 auto;  
+        }          
+          
+        .tms-leftnav.collapsed .tms-logo {
+          justify-content: center;
+          padding: 0;
+        }
+
+        .tms-leftnav.collapsed .tms-logo img {
+          margin: 0 auto;
+          display: block;
+        }          
+      `}</style>
     </aside>
   );
 }

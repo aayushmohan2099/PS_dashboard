@@ -1,7 +1,7 @@
 // src/pages/TMS/TRs/training_batch_list.jsx
 import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API, LOOKUP_API } from "../../../api/axios";
@@ -40,7 +40,7 @@ export default function TrainingBatchList() {
   const { id: requestId } = useParams();
   const navigate = useNavigate();
   const role = getCanonicalRole(user || {});
-
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [batches, setBatches] = useState(() => {
     const scopeKey = requestId || getScopeKey();
@@ -53,11 +53,14 @@ export default function TrainingBatchList() {
 
   function getUserGeoscope() {
     try {
-      const raw = localStorage.getItem("user-geoscope");
+      const raw = localStorage.getItem("ps_user_geoscope");
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
     }
+  }
+  function safeFirst(arr) {
+    return Array.isArray(arr) && arr.length > 0 ? arr[0] : null;
   }
 
   function getScopeKey() {
@@ -68,16 +71,16 @@ export default function TrainingBatchList() {
       geoscope.block_id ||
       geoscope.blockId ||
       geoscope.block ||
-      geoscope?.block?.block_id;
+      safeFirst(geoscope.blocks);
     const districtId =
       geoscope.district_id ||
       geoscope.districtId ||
       geoscope.district ||
-      geoscope?.district?.district_id;
+      safeFirst(geoscope.districts);
 
     if (role === "bmmu" && blockId) return `bmmu_block_${blockId}`;
     if (role === "dmmu" && districtId) return `dmmu_district_${districtId}`;
-    return "no_req";
+    return "smmu_scope";
   }
 
   function getScopeParams() {
@@ -93,12 +96,12 @@ export default function TrainingBatchList() {
       geoscope.block_id ||
       geoscope.blockId ||
       geoscope.block ||
-      geoscope?.block?.block_id;
+      safeFirst(geoscope.blocks);
     const districtId =
       geoscope.district_id ||
       geoscope.districtId ||
       geoscope.district ||
-      geoscope?.district?.district_id;
+      safeFirst(geoscope.districts);
 
     if (role === "bmmu" && blockId) {
       return {
@@ -116,7 +119,7 @@ export default function TrainingBatchList() {
 
     return {
       params: { page_size: 500 },
-      titleSuffix: "",
+      titleSuffix: " (State Scope)",
     };
   }
 
@@ -200,7 +203,10 @@ export default function TrainingBatchList() {
 
   return (
     <div className="app-shell">
-      <LeftNav />
+      <LeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={

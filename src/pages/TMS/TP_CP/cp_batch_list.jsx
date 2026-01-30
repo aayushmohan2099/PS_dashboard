@@ -2,7 +2,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TmsLeftNav from "../layout/tms_LeftNav";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API } from "../../../api/axios";
 
@@ -40,7 +40,7 @@ function fmtDate(iso) {
 export default function CpBatchList() {
   const { user } = useContext(AuthContext) || {};
   const navigate = useNavigate();
-
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [loadingCentreChain, setLoadingCentreChain] = useState(false);
   const [cpRecord, setCpRecord] = useState(null);
   const [centreLink, setCentreLink] = useState(null);
@@ -212,7 +212,10 @@ export default function CpBatchList() {
 
   return (
     <div className="app-shell">
-      <TmsLeftNav />
+      <TmsLeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav />
         <main style={{ padding: 18 }}>

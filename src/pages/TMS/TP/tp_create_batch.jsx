@@ -1,7 +1,7 @@
 // src/pages/TMS/TP/tp_create_batch.jsx
 import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import LeftNav from "../layout/tms_LeftNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API, LOOKUP_API } from "../../../api/axios"; // shared axios instance with interceptors [web:39][web:40]
@@ -813,7 +813,7 @@ export default function TpCreateBatch() {
   const { user } = useContext(AuthContext);
   const { id } = useParams();
   const requestId = id;
-
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [loadingTR, setLoadingTR] = useState(true);
   const [trainingReq, setTrainingReq] = useState(null);
   const [themeName, setThemeName] = useState("");
@@ -1010,7 +1010,10 @@ export default function TpCreateBatch() {
 
   return (
     <div className="app-shell">
-      <LeftNav />
+      <LeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav left={<div className="app-title">Create Batches</div>} />
 

@@ -1,7 +1,7 @@
 // src/pages/TMS/DMMU/dmmu_tms_dashboard.jsx
 import React, { useEffect, useState, useContext, useRef } from "react";
 import TmsLeftNav from "../layout/tms_LeftNav";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API } from "../../../api/axios";
 import { useNavigate } from "react-router-dom";
@@ -82,6 +82,7 @@ function useAnimatedNumber(toVal, ms = 900) {
 export default function DmmuTmsDashboard() {
   const { user } = useContext(AuthContext) || {};
   const navigate = useNavigate();
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   const [districtId, setDistrictId] = useState(null);
   const [kpis, setKpis] = useState({
@@ -171,7 +172,7 @@ export default function DmmuTmsDashboard() {
               ts: Date.now(),
               districtId: district,
               kpis: newKpis,
-            })
+            }),
           );
           setUsingCache(true);
         } catch (e) {
@@ -225,7 +226,10 @@ export default function DmmuTmsDashboard() {
 
   return (
     <div className="app-shell">
-      <TmsLeftNav />
+      <TmsLeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={<div className="app-title">Pragati Setu — TMS (DMMU)</div>}
@@ -444,7 +448,7 @@ export default function DmmuTmsDashboard() {
                     >
                       <strong>PLD Coverage:</strong>{" "}
                       {Math.round(
-                        (kpis.totalPlds / kpis.totalBeneficiaries) * 100
+                        (kpis.totalPlds / kpis.totalBeneficiaries) * 100,
                       ) || 0}
                       %
                       <div style={{ fontSize: 11, marginTop: 4, opacity: 0.8 }}>

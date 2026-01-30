@@ -1,13 +1,8 @@
 // src/pages/TMS/TP_CP/cp_batch_detail.jsx
-import React, {
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import TmsLeftNav from "../layout/tms_LeftNav";
-import TopNav from "../../../components/layout/TopNav";
+import TopNav from "../layout/tms_TopNav";
 import { AuthContext } from "../../../contexts/AuthContext";
 import api, { TMS_API } from "../../../api/axios";
 
@@ -59,9 +54,9 @@ export default function CpBatchDetail() {
   const { id: batchId } = useParams();
   const { user } = useContext(AuthContext) || {};
   const navigate = useNavigate();
-
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [batch, setBatch] = useState(
-    () => loadJson(BATCH_CACHE_KEY_PREFIX + batchId)?.payload || null
+    () => loadJson(BATCH_CACHE_KEY_PREFIX + batchId)?.payload || null,
   );
   const [trainingPlan, setTrainingPlan] = useState(() => {
     const cached = loadJson(PLAN_CACHE_KEY_PREFIX + batchId);
@@ -125,7 +120,7 @@ export default function CpBatchDetail() {
         }
       }
       const planId = batch.request.training_plan;
-      const resp = await TMS_API.trainingPlans.retrieve
+      const resp = (await TMS_API.trainingPlans.retrieve)
         ? await TMS_API.trainingPlans.retrieve(planId)
         : await api.get(`/tms/training-plans/${planId}/`);
       const data = resp?.data || resp || null;
@@ -223,7 +218,7 @@ export default function CpBatchDetail() {
       navigate(`/tms/cp/batch-attendance-ekyc/${batchId}`);
     } catch {
       alert(
-        "Could not save session duration. Please check and try opening the manager again."
+        "Could not save session duration. Please check and try opening the manager again.",
       );
     } finally {
       setOpeningManager(false);
@@ -234,7 +229,10 @@ export default function CpBatchDetail() {
 
   return (
     <div className="app-shell">
-      <TmsLeftNav />
+      <TmsLeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={
@@ -258,7 +256,10 @@ export default function CpBatchDetail() {
                 <button className="btn" onClick={handleRefreshAll}>
                   Refresh
                 </button>
-                <button className="btn btn-outline" onClick={() => navigate(-1)}>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => navigate(-1)}
+                >
                   Back
                 </button>
               </div>
@@ -297,8 +298,7 @@ export default function CpBatchDetail() {
                       </span>
                     </div>
                     <div style={{ marginBottom: 4 }}>
-                      <strong>Centre:</strong>{" "}
-                      {batch.centre?.venue_name || "—"}
+                      <strong>Centre:</strong> {batch.centre?.venue_name || "—"}
                     </div>
                     <div style={{ marginBottom: 4 }}>
                       <strong>Start Date:</strong> {fmtDate(batch.start_date)} |{" "}

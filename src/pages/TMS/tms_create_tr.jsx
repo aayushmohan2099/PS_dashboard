@@ -7,7 +7,7 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import TopNav from "../../components/layout/TopNav";
+import TopNav from "./layout/tms_TopNav";
 import LeftNav from "./layout/tms_LeftNav";
 import { AuthContext } from "../../contexts/AuthContext";
 import { TMS_API, LOOKUP_API, EPSAKHI_API } from "../../api/axios";
@@ -291,6 +291,10 @@ const MasterTrainerList = React.memo(function MasterTrainerList({
 export default function CreateTrainingRequest() {
   const { user } = useContext(AuthContext) || {};
   const roleKey = getRoleKeyFromUser(user);
+  const [navCollapsed, setNavCollapsed] = useState(false);
+  const [selectedBlockForShg, setSelectedBlockForShg] = useState(null);
+  const [blockList, setBlockList] = useState([]);
+  const [blockLoading, setBlockLoading] = useState(false);
 
   const geoscopeCached = useMemo(() => {
     try {
@@ -369,7 +373,7 @@ export default function CreateTrainingRequest() {
   ];
 
   // For beneficiary flow: inner participant steps (SHG -> Members)
-  const [participantSubStep, setParticipantSubStep] = useState(1); // 1 = SHG list, 2 = member list
+  const [participantSubStep, setParticipantSubStep] = useState(0); // 0 = Block (DMMU only), 1 = SHG list, 2 = Members
 
   // For forcing member-table reload when same SHG selected repeatedly
   const [memberListReloadToken, setMemberListReloadToken] = useState(0);
@@ -410,6 +414,25 @@ export default function CreateTrainingRequest() {
     } catch (e) {
       console.error("fetchListOnce error", e);
       return [];
+    }
+  }
+
+  // Fetch Blocks for DMMU
+  async function fetchBlocksForDistrict(districtId) {
+    if (!districtId) return;
+    setBlockLoading(true);
+    try {
+      const resp = await LOOKUP_API.blocks.list({
+        district: Number(districtId),
+        limit: 500,
+      });
+      const payload = resp?.data ?? resp ?? {};
+      setBlockList(payload.results || payload.data || []);
+    } catch (e) {
+      console.error("Failed to fetch blocks", e);
+      setBlockList([]);
+    } finally {
+      setBlockLoading(false);
     }
   }
 
@@ -774,6 +797,18 @@ export default function CreateTrainingRequest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, form.training_type, districtId, blockId]);
 
+  // when DMMU + Beneficiary + step 2, fetch blocks for district
+  useEffect(() => {
+    if (
+      step === 2 &&
+      form.training_type === "BENEFICIARY" &&
+      roleKey === "dmmu"
+    ) {
+      fetchBlocksForDistrict(districtId);
+      setParticipantSubStep(0); // start at Block
+    }
+  }, [step, form.training_type, roleKey, districtId]);
+
   // when user goes to Review & Submit (step 3), fetch partners if not loaded
   useEffect(() => {
     if (step === 3) {
@@ -834,7 +869,8 @@ export default function CreateTrainingRequest() {
       setAutoPartnerAssigned(false);
     }
 
-    setParticipantSubStep(1);
+    // DMMU must start at Block selection
+    setParticipantSubStep(roleKey === "dmmu" ? 0 : 1);
   }
 
   function handleFormChange(e) {
@@ -1407,7 +1443,10 @@ export default function CreateTrainingRequest() {
   /* ---------- render ---------- */
   return (
     <div className="app-shell">
-      <LeftNav />
+      <LeftNav
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((v) => !v)}
+      />
       <div className="main-area">
         <TopNav
           left={
@@ -1665,8 +1704,31 @@ export default function CreateTrainingRequest() {
                         <div
                           style={{ display: "flex", gap: 8, marginBottom: 12 }}
                         >
+                          {roleKey === "dmmu" && (
+                            <div
+                              onClick={() => setParticipantSubStep(0)}
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: 8,
+                                background:
+                                  participantSubStep === 0
+                                    ? "#0b2540"
+                                    : "#f5f7fa",
+                                color:
+                                  participantSubStep === 0 ? "#fff" : "#0b2540",
+                                cursor: "pointer",
+                                fontWeight: 600,
+                              }}
+                            >
+                              1 — Block
+                            </div>
+                          )}
+
                           <div
-                            onClick={() => setParticipantSubStep(1)}
+                            onClick={() => {
+                              if (roleKey === "dmmu" && !blockId) return;
+                              setParticipantSubStep(1);
+                            }}
                             style={{
                               padding: "6px 10px",
                               borderRadius: 8,
@@ -1676,13 +1738,25 @@ export default function CreateTrainingRequest() {
                                   : "#f5f7fa",
                               color:
                                 participantSubStep === 1 ? "#fff" : "#0b2540",
-                              cursor: "pointer",
+                              cursor:
+                                roleKey === "dmmu" && !blockId
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity: roleKey === "dmmu" && !blockId ? 0.5 : 1,
+                              fontWeight: 600,
                             }}
                           >
-                            1 — SHG list
+                            {roleKey === "dmmu"
+                              ? "2 — SHG list"
+                              : "1 — SHG list"}
                           </div>
+
                           <div
-                            onClick={() => setParticipantSubStep(2)}
+                            onClick={() => {
+                              if (roleKey === "dmmu" && !selectedShgForMembers)
+                                return;
+                              setParticipantSubStep(2);
+                            }}
                             style={{
                               padding: "6px 10px",
                               borderRadius: 8,
@@ -1692,16 +1766,26 @@ export default function CreateTrainingRequest() {
                                   : "#f5f7fa",
                               color:
                                 participantSubStep === 2 ? "#fff" : "#0b2540",
-                              cursor: "pointer",
+                              cursor:
+                                roleKey === "dmmu" && !selectedShgForMembers
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity:
+                                roleKey === "dmmu" && !selectedShgForMembers
+                                  ? 0.5
+                                  : 1,
+                              fontWeight: 600,
                             }}
                           >
-                            2 — Members
+                            {roleKey === "dmmu" ? "3 — Members" : "2 — Members"}
                           </div>
                         </div>
 
-                        {participantSubStep === 1 && (
+                        {/* DMMU BLOCK SELECTION */}
+                        {roleKey === "dmmu" && participantSubStep === 0 && (
                           <div>
-                            <h4>SHG list</h4>
+                            <h4>Select Block</h4>
+
                             <div
                               style={{
                                 fontSize: 13,
@@ -1709,28 +1793,97 @@ export default function CreateTrainingRequest() {
                                 marginBottom: 8,
                               }}
                             >
-                              Select an SHG to view members. After selecting an
-                              SHG, go to member sub-step to pick members (or
-                              click a SHG member directly to jump).
+                              Select a block to view SHGs under it.
                             </div>
 
-                            <ShgListTable
-                              blockId={blockId}
-                              onSelectShg={(shg) => {
-                                setSelectedShgLoading(true);
-                                setSelectedShgForMembers(shg);
-                                setParticipantSubStep(2);
-                                setMemberListReloadToken((t) => t + 1);
-                                setTimeout(
-                                  () => setSelectedShgLoading(false),
-                                  700,
-                                );
-                              }}
-                            />
+                            {blockLoading ? (
+                              <div className="table-spinner">
+                                Loading blocks…
+                              </div>
+                            ) : !blockList || blockList.length === 0 ? (
+                              <p className="muted">
+                                No blocks found for this district.
+                              </p>
+                            ) : (
+                              <div style={{ display: "grid", gap: 10 }}>
+                                {blockList.map((b) => (
+                                  <div
+                                    key={
+                                      b.id ??
+                                      b.block_id ??
+                                      `${b.block_name_en}-${b.district_id}`
+                                    }
+                                    onClick={() => {
+                                      setSelectedBlockForShg(b);
+                                      setBlockId(b.block_id);
+
+                                      // RESET downstream selections
+                                      setSelectedShgForMembers(null);
+                                      setMemberListReloadToken((t) => t + 1);
+
+                                      setParticipantSubStep(1); // go to SHG step
+                                    }}
+                                    style={{
+                                      padding: "12px 14px",
+                                      borderRadius: 8,
+                                      border: "1px solid #e5e7eb",
+                                      cursor: "pointer",
+                                      background: "#fff",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                  >
+                                    <strong>{b.block_name || b.name}</strong>
+                                    <div
+                                      style={{ fontSize: 12, color: "#6c757d" }}
+                                    >
+                                      {b.block_id}: {b.block_name_en || b.name}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
 
-                        {participantSubStep === 2 && (
+                        {participantSubStep === 1 &&
+                          (roleKey !== "dmmu" || selectedBlockForShg) && (
+                            <div>
+                              <h4>SHG list</h4>
+                              <div
+                                style={{
+                                  fontSize: 13,
+                                  color: "#6c757d",
+                                  marginBottom: 8,
+                                }}
+                              >
+                                Select an SHG to view members. After selecting
+                                an SHG, go to member sub-step to pick members
+                                (or click a SHG member directly to jump).
+                              </div>
+
+                              {roleKey === "dmmu" && !blockId ? (
+                                <div className="muted">
+                                  Please select a block first.
+                                </div>
+                              ) : (
+                                <ShgListTable
+                                  blockId={blockId}
+                                  onSelectShg={(shg) => {
+                                    setSelectedShgLoading(true);
+                                    setSelectedShgForMembers(shg);
+                                    setParticipantSubStep(2);
+                                    setMemberListReloadToken((t) => t + 1);
+                                    setTimeout(
+                                      () => setSelectedShgLoading(false),
+                                      700,
+                                    );
+                                  }}
+                                />
+                              )}
+                            </div>
+                          )}
+
+                        {participantSubStep === 2 && selectedShgForMembers && (
                           <div>
                             <h4>Members (selected SHG)</h4>
                             <div
