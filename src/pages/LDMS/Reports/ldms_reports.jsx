@@ -1,5 +1,6 @@
 // src/pages/LDMS/Report/ldms_reports.jsx
 import React from "react";
+import ReportHeader from "./report_header";
 
 export default function LdmsReports() {
   return (
@@ -8,7 +9,7 @@ export default function LdmsReports() {
       <div className="ldms-grid-row one-col">
         <div className="ldms-card">
           <h3>Report Filters / Constraints</h3>
-          {/* <ReportHeader /> */}
+          <ReportHeader />
         </div>
       </div>
 
