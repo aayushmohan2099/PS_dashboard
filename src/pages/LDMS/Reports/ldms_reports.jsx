@@ -1,27 +1,31 @@
 // src/pages/LDMS/Report/ldms_reports.jsx
-import React from "react";
+import React, { useState } from "react";
 import ReportHeader from "./report_header";
+import ReportBody from "./report_body";
+import ExportReport from "./export_report";
 
 export default function LdmsReports() {
+  const [filters, setFilters] = React.useState({});
+
   return (
     <div className="bmmu-ldms-dashboard">
       {/* Row 1 */}
       <div className="ldms-grid-row one-col">
         <div className="ldms-card">
           <h3>Report Filters / Constraints</h3>
-          <ReportHeader />
+          <ReportHeader onFetch={setFilters} />
         </div>
       </div>
 
       {/* Row 2 */}
       <div className="ldms-grid-row one-col">
         <div className="ldms-card">
-          <h3>Report Body (Table)</h3>
-          {/* <ReportBody /> */}
+          <h3>Report Table</h3>
+          <ReportBody filters={filters} />
         </div>
-        
+
         {/* Export Button */}
-        {/* <ExcelExport /> */}
+        <ExportReport filters={filters} />
       </div>
 
       {/* ---- styles ---- */}
@@ -51,6 +55,7 @@ export default function LdmsReports() {
           border-radius: 10px;
           padding: 12px;
           min-height: 220px;
+          overflow-x: hidden;                 
         }
 
         .ldms-card h3 {

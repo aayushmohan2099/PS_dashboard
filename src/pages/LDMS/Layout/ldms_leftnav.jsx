@@ -11,7 +11,7 @@ import {
   FaHandsHelping,
   FaDatabase,
   FaAddressBook,
-  FaClipboardCheck
+  FaClipboardCheck,
 } from "react-icons/fa";
 
 /**
@@ -56,7 +56,7 @@ const MENU = {
     },
     { label: "Support benefit Extension", to: "#", icon: FaHandsHelping },
     { label: "PLD Database", to: "/ldms/supported-pld-list", icon: FaDatabase },
-    { label: "Reports", to: "/ldms/reports", icon: FaClipboardCheck },    
+    { label: "Reports", to: "/ldms/reports", icon: FaClipboardCheck },
   ],
   smmu: [
     { label: "Dashboard", to: "/ldms/smmu/dashboard", icon: FaTachometerAlt },
@@ -67,7 +67,7 @@ const MENU = {
     },
     { label: "Support benefit Extension", to: "#", icon: FaHandsHelping },
     { label: "PLD Database", to: "/ldms/supported-pld-list", icon: FaDatabase },
-    { label: "Reports", to: "/ldms/reports", icon: FaClipboardCheck },    
+    { label: "Reports", to: "/ldms/reports", icon: FaClipboardCheck },
   ],
 };
 
@@ -196,6 +196,7 @@ export default function LdmsLeftNav({ collapsed, onToggle }) {
         /* Label animation */
         .nav-label {
           transition: opacity 0.2s ease, transform 0.2s ease;
+          text-wrap: wrap;
         }
 
         .ldms-leftnav.collapsed .nav-label {

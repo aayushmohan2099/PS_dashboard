@@ -4,9 +4,9 @@ import { LOOKUP_API, LDMS_API } from "../../../api/axios";
 import api from "../../../api/axios";
 
 /**
- * Report Filters Header (FULL)
+ * Report Filters Header
  */
-export default function ReportHeader({ onFiltersChange }) {
+export default function ReportHeader({ onFetch }) {
   const { user } = useContext(AuthContext) || {};
   const role = user?.role_id;
 
@@ -14,12 +14,17 @@ export default function ReportHeader({ onFiltersChange }) {
   const isDMMU = role === 2;
   const isSMMU = role === 3;
 
-  /* -------------------- UI state -------------------- */
+  /* ---------------- UI state ---------------- */
   const [activeTab, setActiveTab] = useState("Geography");
   const [applied, setApplied] = useState({});
   const [loading, setLoading] = useState({});
+  const [fetching, setFetching] = useState(false);
 
-  /* -------------------- data -------------------- */
+  /* ---------------- geo ids ---------------- */
+  const [districtId, setDistrictId] = useState(null);
+  const [blockId, setBlockId] = useState(null);
+
+  /* ---------------- data ---------------- */
   const [mandals, setMandals] = useState([]);
   const [districtCategories, setDistrictCategories] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -28,91 +33,97 @@ export default function ReportHeader({ onFiltersChange }) {
 
   const [departments, setDepartments] = useState([]);
   const [schemes, setSchemes] = useState([]);
-
   const [bucketTypes, setBucketTypes] = useState([]);
 
-  /* -------------------- helpers -------------------- */
-  const busy = (k, v) =>
-    setLoading((p) => ({ ...p, [k]: v }));
+  /* ---------------- helpers ---------------- */
+  const busy = (k, v) => setLoading((p) => ({ ...p, [k]: v }));
 
   const apply = (key, value, label) => {
-    const next = { ...applied, [key]: { value, label } };
-    setApplied(next);
-    onFiltersChange?.(
-      Object.fromEntries(
-        Object.entries(next).map(([k, v]) => [k, v.value]),
-      ),
-    );
+    if (!value) return;
+    setApplied((p) => ({ ...p, [key]: { value, label } }));
   };
 
   const remove = (key) => {
-    const next = { ...applied };
-    delete next[key];
-    setApplied(next);
-    onFiltersChange?.(
-      Object.fromEntries(
-        Object.entries(next).map(([k, v]) => [k, v.value]),
-      ),
-    );
+    setApplied((p) => {
+      const n = { ...p };
+      delete n[key];
+      return n;
+    });
   };
 
-  /* -------------------- initial loads -------------------- */
+  const fetchReport = async () => {
+    setFetching(true);
+    const params = Object.fromEntries(
+      Object.entries(applied).map(([k, v]) => [k, v.value]),
+    );
+    onFetch?.(params);
+    setTimeout(() => setFetching(false), 400);
+  };
+
+  /* ---------------- user geoscope ---------------- */
   useEffect(() => {
-    busy("mandals", true);
-    LOOKUP_API.mandals
-      .list({ page_size: 200 })
-      .then((r) => setMandals(r.data?.results || []))
-      .finally(() => busy("mandals", false));
+    if (!user?.id) return;
 
-    busy("districtCategories", true);
-    LOOKUP_API.district_categories
-      .list()
-      .then((r) => setDistrictCategories(r.data?.results || []))
-      .finally(() => busy("districtCategories", false));
+    api
+      .get(`/lookups/user-geoscope/${encodeURIComponent(user.id)}/`)
+      .then((res) => {
+        if (isBMMU) {
+          const blk = res?.data?.blocks?.[0];
+          if (blk) {
+            setBlockId(blk);
+            busy("panchayats", true);
+            LOOKUP_API.panchayats
+              .retrieve(blk, { page_size: 5000 })
+              .then((r) => setPanchayats(r.data?.results || []))
+              .finally(() => busy("panchayats", false));
+          }
+        }
 
-    busy("districts", true);
-    LOOKUP_API.districts
-      .list({ page_size: 100 })
-      .then((r) => setDistricts(r.data?.results || []))
-      .finally(() => busy("districts", false));
+        if (isDMMU) {
+          const dist = res?.data?.districts?.[0];
+          if (dist) {
+            setDistrictId(dist);
+            busy("blocks", true);
+            LOOKUP_API.blocks
+              .retrieve(dist)
+              .then((r) => setBlocks(r.data?.results || []))
+              .finally(() => busy("blocks", false));
+          }
+        }
+      });
+  }, [user, isBMMU, isDMMU]);
 
-    LDMS_API.departments().then((r) =>
-      setDepartments(r.data?.results || []),
-    );
+  /* ---------------- initial loads ---------------- */
+  useEffect(() => {
+    if (isSMMU) {
+      busy("mandals", true);
+      LOOKUP_API.mandals
+        .list({ page_size: 200 })
+        .then((r) => setMandals(r.data?.results || []))
+        .finally(() => busy("mandals", false));
 
-    LDMS_API.SBTypes.list().then((r) =>
-      setBucketTypes(r.data?.results || []),
-    );
-  }, []);
+      busy("districtCategories", true);
+      LOOKUP_API.district_categories
+        .list()
+        .then((r) => setDistrictCategories(r.data?.results || []))
+        .finally(() => busy("districtCategories", false));
 
-  /* -------------------- cascades -------------------- */
-  const loadBlocks = (districtId) => {
-    busy("blocks", true);
-    LOOKUP_API.blocks
-      .retrieve(districtId)
-      .then((r) => setBlocks(r.data?.results || []))
-      .finally(() => busy("blocks", false));
-  };
+      busy("districts", true);
+      LOOKUP_API.districts
+        .list({ page_size: 100 })
+        .then((r) => setDistricts(r.data?.results || []))
+        .finally(() => busy("districts", false));
+    }
 
-  const loadPanchayats = (blockId) => {
-    busy("panchayats", true);
-    LOOKUP_API.panchayats
-      .retrieve(blockId, { page_size: 5000 })
-      .then((r) => setPanchayats(r.data?.results || []))
-      .finally(() => busy("panchayats", false));
-  };
+    LDMS_API.departments().then((r) => setDepartments(r.data?.results || []));
 
-  const loadSchemes = (deptId) => {
-    busy("schemes", true);
-    LDMS_API.schemes({ department: deptId })
-      .then((r) => setSchemes(r.data?.results || []))
-      .finally(() => busy("schemes", false));
-  };
+    LDMS_API.SBTypes.list().then((r) => setBucketTypes(r.data?.results || []));
+  }, [isSMMU]);
 
-  /* -------------------- UI -------------------- */
+  /* ---------------- UI ---------------- */
   return (
     <div className="report-header">
-      {/* TABS */}
+      {/* Tabs */}
       <div className="tabs">
         {[
           "Geography",
@@ -131,71 +142,85 @@ export default function ReportHeader({ onFiltersChange }) {
         ))}
       </div>
 
-      {/* ---------------- Geography ---------------- */}
+      {/* Geography */}
       {activeTab === "Geography" && (
         <div className="filters">
-          {!isBMMU && (
-            <select
-              disabled={loading.mandals}
-              onChange={(e) =>
-                apply("mandal_id", e.target.value, e.target.options[e.target.selectedIndex].text)
-              }
-            >
-              <option>Mandals</option>
-              {mandals.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
+          {isSMMU && (
+            <>
+              <select
+                onChange={(e) =>
+                  apply(
+                    "mandal_id",
+                    e.target.value,
+                    e.target.options[e.target.selectedIndex].text,
+                  )
+                }
+              >
+                <option>Mandals</option>
+                {mandals.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                onChange={(e) =>
+                  apply(
+                    "dc_id",
+                    e.target.value,
+                    e.target.options[e.target.selectedIndex].text,
+                  )
+                }
+              >
+                <option>District Category</option>
+                {districtCategories.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                onChange={(e) => {
+                  const id = e.target.value;
+                  apply(
+                    "district_id",
+                    id,
+                    e.target.options[e.target.selectedIndex].text,
+                  );
+                  busy("blocks", true);
+                  LOOKUP_API.blocks
+                    .retrieve(id)
+                    .then((r) => setBlocks(r.data?.results || []))
+                    .finally(() => busy("blocks", false));
+                }}
+              >
+                <option>District</option>
+                {districts.map((d) => (
+                  <option key={d.district_id} value={d.district_id}>
+                    {d.district_name_en}
+                  </option>
+                ))}
+              </select>
+            </>
           )}
 
-          {!isBMMU && (
-            <select
-              disabled={loading.districtCategories}
-              onChange={(e) =>
-                apply("dc_id", e.target.value, e.target.options[e.target.selectedIndex].text)
-              }
-            >
-              <option>District Category</option>
-              {districtCategories.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {!isBMMU && (
-            <select
-              disabled={loading.districts}
-              onChange={(e) => {
-                apply(
-                  "district_id",
-                  e.target.value,
-                  e.target.options[e.target.selectedIndex].text,
-                );
-                loadBlocks(e.target.value);
-              }}
-            >
-              <option>District</option>
-              {districts.map((d) => (
-                <option
-                  key={d.district_id}
-                  value={d.district_id}
-                >
-                  {d.district_name_en}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {!isBMMU && (
+          {(isSMMU || isDMMU) && (
             <select
               disabled={loading.blocks}
               onChange={(e) => {
-                apply("block_id", e.target.value, e.target.options[e.target.selectedIndex].text);
-                loadPanchayats(e.target.value);
+                const id = e.target.value;
+                apply(
+                  "block_id",
+                  id,
+                  e.target.options[e.target.selectedIndex].text,
+                );
+                busy("panchayats", true);
+                LOOKUP_API.panchayats
+                  .retrieve(id, { page_size: 5000 })
+                  .then((r) => setPanchayats(r.data?.results || []))
+                  .finally(() => busy("panchayats", false));
               }}
             >
               <option>Block</option>
@@ -208,7 +233,7 @@ export default function ReportHeader({ onFiltersChange }) {
           )}
 
           <select
-            disabled={loading.panchayats && !isBMMU}
+            disabled={loading.panchayats}
             onChange={(e) =>
               apply(
                 "panchayat_id",
@@ -219,10 +244,7 @@ export default function ReportHeader({ onFiltersChange }) {
           >
             <option>Panchayat</option>
             {panchayats.map((p) => (
-              <option
-                key={p.panchayat_id}
-                value={p.panchayat_id}
-              >
+              <option key={p.panchayat_id} value={p.panchayat_id}>
                 {p.panchayat_name_en}
               </option>
             ))}
@@ -230,20 +252,20 @@ export default function ReportHeader({ onFiltersChange }) {
         </div>
       )}
 
-      {/* ---------------- Department ---------------- */}
+      {/* Department */}
       {activeTab === "Department" && (
         <div className="filters">
           <select
             onChange={(e) => {
               const id = e.target.value;
-              const name = e.target.options[e.target.selectedIndex].text;         
-                   
               apply(
                 "department_id",
                 id,
-                name,
+                e.target.options[e.target.selectedIndex].text,
               );
-              loadSchemes(e.target.value);
+              LDMS_API.schemes({ department: id }).then((r) =>
+                setSchemes(r.data?.results || []),
+              );
             }}
           >
             <option>Department</option>
@@ -256,13 +278,16 @@ export default function ReportHeader({ onFiltersChange }) {
         </div>
       )}
 
-      {/* ---------------- Scheme ---------------- */}
+      {/* Scheme */}
       {activeTab === "Scheme" && (
         <div className="filters">
           <select
-            disabled={loading.schemes}
             onChange={(e) =>
-              apply("scheme_id", e.target.value, e.target.options[e.target.selectedIndex].text)
+              apply(
+                "scheme_id",
+                e.target.value,
+                e.target.options[e.target.selectedIndex].text,
+              )
             }
           >
             <option>Scheme</option>
@@ -274,7 +299,7 @@ export default function ReportHeader({ onFiltersChange }) {
           </select>
 
           <select
-            onChange={(e) => apply("scope", e.target.value, e.target.options[e.target.selectedIndex].text)}
+            onChange={(e) => apply("scope", e.target.value, e.target.value)}
           >
             <option>Scope</option>
             <option value="CENTRAL">CENTRAL</option>
@@ -282,9 +307,7 @@ export default function ReportHeader({ onFiltersChange }) {
           </select>
 
           <select
-            onChange={(e) =>
-              apply("funding", e.target.value, e.target.options[e.target.selectedIndex].text)
-            }
+            onChange={(e) => apply("funding", e.target.value, e.target.value)}
           >
             <option>Funding</option>
             <option>100% GOI</option>
@@ -294,11 +317,7 @@ export default function ReportHeader({ onFiltersChange }) {
 
           <select
             onChange={(e) =>
-              apply(
-                "contact_point",
-                e.target.value,
-                e.target.options[e.target.selectedIndex].text,
-              )
+              apply("contact_point", e.target.value, e.target.value)
             }
           >
             <option>Contact Point</option>
@@ -308,11 +327,10 @@ export default function ReportHeader({ onFiltersChange }) {
         </div>
       )}
 
-      {/* ---------------- Support Bucket ---------------- */}
+      {/* Support Bucket */}
       {activeTab === "Support Bucket" && (
         <div className="filters">
           <select
-            disabled={loading.bucketTypes}
             onChange={(e) =>
               apply(
                 "bucket_type",
@@ -328,28 +346,20 @@ export default function ReportHeader({ onFiltersChange }) {
               </option>
             ))}
           </select>
-          <span>Approval Date : </span>
+
           <input
             type="date"
             onChange={(e) =>
-              apply(
-                "approval_date",
-                e.target.value,
-                e.target.value,
-              )
+              apply("approval_date", e.target.value, e.target.value)
             }
           />
         </div>
       )}
 
-      {/* ---------------- Beneficiary ---------------- */}
+      {/* Beneficiary */}
       {activeTab === "Beneficiary" && (
         <div className="filters">
-          <select
-            onChange={(e) =>
-              apply("pld_status", e.target.value, "PLD")
-            }
-          >
+          <select onChange={(e) => apply("pld_status", e.target.value, "PLD")}>
             <option>PLD</option>
             <option value="Yes">Yes</option>
             <option value="No">No</option>
@@ -357,11 +367,7 @@ export default function ReportHeader({ onFiltersChange }) {
 
           <select
             onChange={(e) =>
-              apply(
-                "designation",
-                e.target.value,
-                e.target.options[e.target.selectedIndex].text,
-              )
+              apply("designation", e.target.value, e.target.value)
             }
           >
             <option>Designation</option>
@@ -371,9 +377,7 @@ export default function ReportHeader({ onFiltersChange }) {
           </select>
 
           <select
-            onChange={(e) =>
-              apply("religion", e.target.value, e.target.options[e.target.selectedIndex].text)
-            }
+            onChange={(e) => apply("religion", e.target.value, e.target.value)}
           >
             <option>Religion</option>
             <option>HINDU</option>
@@ -383,11 +387,7 @@ export default function ReportHeader({ onFiltersChange }) {
 
           <select
             onChange={(e) =>
-              apply(
-                "marital_status",
-                e.target.value,
-                e.target.options[e.target.selectedIndex].text,
-              )
+              apply("marital_status", e.target.value, e.target.value)
             }
           >
             <option>Marital Status</option>
@@ -398,11 +398,7 @@ export default function ReportHeader({ onFiltersChange }) {
 
           <select
             onChange={(e) =>
-              apply(
-                "social_category",
-                e.target.value,
-                e.target.options[e.target.selectedIndex].text,
-              )
+              apply("social_category", e.target.value, e.target.value)
             }
           >
             <option>Social Category</option>
@@ -415,7 +411,7 @@ export default function ReportHeader({ onFiltersChange }) {
         </div>
       )}
 
-      {/* ---------------- Applied ---------------- */}
+      {/* Applied */}
       <div className="applied">
         {Object.entries(applied).map(([k, v]) => (
           <span key={k} className="pill">
@@ -425,40 +421,67 @@ export default function ReportHeader({ onFiltersChange }) {
         ))}
       </div>
 
-      {/* ---------------- Styles ---------------- */}
+      {/* Fetch */}
+      <div className="fetch-row">
+        <button onClick={fetchReport} disabled={fetching}>
+          {fetching ? <span className="loader" /> : "Fetch Report"}
+        </button>
+      </div>
+
       <style>{`
-        .report-header { display: flex; flex-direction: column; gap: 12px; }
-        .tabs { display: flex; gap: 8px; }
+        /* ================= REPORT HEADER ================= */
+        .report-header {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        /* ================= TABS ================= */
+        .tabs {
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+        }
+
         .tabs button {
           padding: 6px 14px;
           border-radius: 18px;
-          border: 1px solid #e11d48;
-          background: white;
+          border: 1px solid #c62828;
+          background: #fff;
           color: #7f1d1d;
           cursor: pointer;
           transition: 0.2s;
         }
+
         .tabs button.active {
-          background: #e11d48;
-          color: white;
+          background: #c62828;
+          color: #fff;
         }
+
+        /* ================= FILTERS ================= */
         .filters {
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
           animation: fade 0.2s ease;
         }
-        select, input[type="date"] {
+
+        select,
+        input,
+        input[type="date"] {
+          min-width: 180px;
           padding: 6px 10px;
           border-radius: 6px;
           border: 1px solid #e5e7eb;
-          min-width: 180px;
         }
+
+        /* ================= APPLIED FILTER PILLS ================= */
         .applied {
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
         }
+
         .pill {
           background: #fee2e2;
           color: #7f1d1d;
@@ -468,7 +491,41 @@ export default function ReportHeader({ onFiltersChange }) {
           gap: 6px;
           align-items: center;
         }
-        .pill b { cursor: pointer; color: #b91c1c; }
+
+        .pill b {
+          cursor: pointer;
+          color: #c62828;
+        }
+
+        /* ================= FETCH ROW ================= */
+        .fetch-row {
+          display: flex;
+          justify-content: center;
+        }
+
+        .fetch-row button {
+          background: #c62828;
+          color: #fff;
+          padding: 8px 18px;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+
+        /* ================= LOADER ================= */
+        .loader {
+          width: 14px;
+          height: 14px;
+          border: 2px solid #fff;
+          border-top-color: transparent;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        /* ================= ANIMATIONS ================= */
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
         @keyframes fade {
           from { opacity: 0; transform: translateY(-4px); }
           to { opacity: 1; transform: translateY(0); }
