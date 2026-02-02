@@ -312,6 +312,9 @@ export default function ReportHeader({ onFetch }) {
             <option>Funding</option>
             <option>100% GOI</option>
             <option>50% GOI, 50% UPGOV</option>
+            <option>60% GOI, 40% UPGOV</option>
+            <option>90% GOI, 10% UPGOV</option>
+            <option>GOI, UPGOV</option>
             <option>100% UPGOV</option>
           </select>
 
@@ -323,6 +326,39 @@ export default function ReportHeader({ onFetch }) {
             <option>Contact Point</option>
             <option>District Agriculture Officer (DAO)</option>
             <option>Deputy Director Agriculture (DDA)</option>
+            <option>District Horticulture Officer (DHO)</option>
+            <option>District PM-FME Cell</option>
+            <option>District Industries Centre (DIC)</option>
+            <option>Assistant Director (Fisheries)</option>
+            <option>Chief Veterinary Officer (CVO), District Lead Bank Manager (LDM) </option>
+            <option>Chief Veterinary Officer (CVO)</option>
+            <option>District Animal Husbandry Officer </option>
+            <option>Chief Development Officer (CDO)</option>
+            <option>Chief Development Officer (CDO), Deputy Dairy Development Officer</option>
+            <option>District Programme Coordinator (DPC – MGNREGA), District Magistrate (DM), Chief Development Officer (CDO)</option>
+            <option>District Programme Coordinator (Rural Housing/PMAY-G), Project Director, DRDA / PD, Rural Development Agency, Block Development Officer (BDO)</option>
+            <option>Mission Director, UPSRLM, Chief Development Officer (CDO), District Mission Unit (DMU), Block Mission Management Units (BMMUs)</option>
+            <option>Nodal Department, District Nodal Officer</option>
+            <option>Chief Development Officer (CDO), Block Development Officer (BDO)</option>
+            <option>Mandi Samiti office/Secretary, Divisional Deputy Director</option>
+            <option>Principal of agriculture college, Divisional Deputy Director</option>
+            <option>Mandi Samiti office/Secretary</option>
+            <option>District Horticulture Officer, District Development Manager (DDM)</option>
+            <option>District Development Manager (DDM)</option>
+            <option>District Development Manager (DDM), UPSRLM DMMU</option>
+            <option>General Manager / CEO, District Milk Union (cooperative)</option>
+            <option>District Cooperative Officer / ARCS</option>
+            <option>Chief Development Officer (CDO), District Agriculture Officer (DAO)</option>
+            <option>District Water & Sanitation Mission (DWSM) office</option>
+            <option>District Youth Welfare & PRD Office</option>
+            <option>District/Regional Youth welfare Officer</option>
+            <option>Mandi Secretary / Senior Agriculture Marketing Inspector</option>
+            <option>District level AGMARK Lab (where available) and Marketing Officer</option>
+            <option>Export Promotion Bureau (EPB) nodal officer</option>
+            <option>Office of Chairman, District Ganga Committee</option>
+            <option>District Panchayat Raj Officer (DPRO), District Nodal Officer RGSA</option>
+            <option>Executive Engineer / District Minor Irrigation Officer (DMI/EE, Minor Irrigation)</option>
+            <option>District Sericulture Office (DSO), Block Development Office (BDO)</option>
           </select>
         </div>
       )}

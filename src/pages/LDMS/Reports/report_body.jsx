@@ -102,6 +102,7 @@ export default function ReportBody({ filters }) {
                   <th>Scheme Code</th>
                   <th>Bucket</th>
                   <th>Benefit</th>
+                  <th>Benefit Amount</th>
                   <th>Description</th>
                   <th>Training Theme</th>
                   <th>Training Plan</th>
@@ -137,6 +138,7 @@ export default function ReportBody({ filters }) {
                     <td>{col(r.scheme_code)}</td>
                     <td>{col(r.bucket_type)}</td>
                     <td>{col(r.benefit_name)}</td>
+                    <td>{col(r.benefit_amount)}</td>
                     <td>{col(r.benefit_description)}</td>
                     <td>{col(r.training_theme)}</td>
                     <td>{col(r.training_plan)}</td>
